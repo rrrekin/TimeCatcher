@@ -93,12 +93,35 @@ const activeSection = ref('dashboard')
 </script>
 
 <style>
+:root {
+  --verdigris: #57bdaf;
+  --mantis: #59c964;
+  --asparagus: #69966f;
+  --emerald: #56b372;
+  --aero: #1fbff0;
+  
+  --primary: var(--verdigris);
+  --secondary: var(--emerald);
+  --accent: var(--aero);
+  --success: var(--mantis);
+  --neutral: var(--asparagus);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fffe;
+  --text-primary: #2d4a3d;
+  --text-secondary: #4a6b56;
+  --text-muted: #7a9184;
+  --border-color: #e0ede8;
+  --shadow-color: rgba(87, 189, 175, 0.1);
+}
+
 body {
   margin: 0;
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   height: 100vh;
   overflow: hidden;
+  background: var(--bg-secondary);
 }
 
 #app {
@@ -112,21 +135,23 @@ body {
 }
 
 .header {
-  background: #2c3e50;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
   padding: 1.5rem;
   text-align: center;
-  border-bottom: 1px solid #34495e;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .header h1 {
   margin: 0;
   font-size: 2rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .header p {
   margin: 0.5rem 0 0 0;
-  opacity: 0.8;
+  opacity: 0.9;
   font-size: 0.9rem;
 }
 
@@ -137,8 +162,9 @@ body {
 
 .sidebar {
   width: 250px;
-  background: #34495e;
-  border-right: 1px solid #2c3e50;
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 2px 0 8px var(--shadow-color);
 }
 
 .nav-menu {
@@ -149,23 +175,25 @@ body {
 
 .nav-item {
   padding: 1rem 1.5rem;
-  color: #bdc3c7;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  border-bottom: 1px solid #2c3e50;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .nav-item:hover {
-  background: #3c5675;
-  color: white;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
-  background: #3498db;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .nav-icon {
@@ -176,17 +204,21 @@ body {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
 }
 
 .section h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   font-size: 1.8rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .section p {
-  color: #7f8c8d;
+  color: var(--text-muted);
   margin-bottom: 2rem;
 }
 
@@ -197,19 +229,32 @@ body {
 }
 
 .card {
-  background: white;
+  background: var(--bg-primary);
   padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-color);
   text-align: center;
-  color: #34495e;
+  color: var(--text-secondary);
   font-weight: 500;
-  border: 1px solid #e9ecef;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow-color);
+  border-color: var(--primary);
 }
 </style>

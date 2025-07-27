@@ -54,6 +54,55 @@ src/
 └── shared/         # Shared types
 ```
 
+## Color palette
+```css
+/* CSS HEX */
+--verdigris: #57bdafff;
+--mantis: #59c964ff;
+--asparagus: #69966fff;
+--emerald: #56b372ff;
+--aero: #1fbff0ff;
+
+/* CSS HSL */
+--verdigris: hsla(172, 44%, 54%, 1);
+--mantis: hsla(126, 51%, 57%, 1);
+--asparagus: hsla(128, 18%, 50%, 1);
+--emerald: hsla(138, 38%, 52%, 1);
+--aero: hsla(194, 87%, 53%, 1);
+
+/* SCSS HEX */
+$verdigris: #57bdafff;
+$mantis: #59c964ff;
+$asparagus: #69966fff;
+$emerald: #56b372ff;
+$aero: #1fbff0ff;
+
+/* SCSS HSL */
+$verdigris: hsla(172, 44%, 54%, 1);
+$mantis: hsla(126, 51%, 57%, 1);
+$asparagus: hsla(128, 18%, 50%, 1);
+$emerald: hsla(138, 38%, 52%, 1);
+$aero: hsla(194, 87%, 53%, 1);
+
+/* SCSS RGB */
+$verdigris: rgba(87, 189, 175, 1);
+$mantis: rgba(89, 201, 100, 1);
+$asparagus: rgba(105, 150, 111, 1);
+$emerald: rgba(86, 179, 114, 1);
+$aero: rgba(31, 191, 240, 1);
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-right: linear-gradient(90deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-bottom: linear-gradient(180deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-left: linear-gradient(270deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-top-right: linear-gradient(45deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-bottom-right: linear-gradient(135deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-top-left: linear-gradient(225deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-bottom-left: linear-gradient(315deg, #57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+$gradient-radial: radial-gradient(#57bdafff, #59c964ff, #69966fff, #56b372ff, #1fbff0ff);
+```
+
 ## Current Status
 
 - Project structure created
