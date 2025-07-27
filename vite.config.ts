@@ -5,8 +5,12 @@ import { resolve } from 'path'
 export default defineConfig({
     plugins: [vue()],
     base: './',
+    root: 'src/renderer',
     build: {
-        outDir: 'dist/renderer'
+        outDir: '../../dist/renderer'
+    },
+    server: {
+        port: 5173
     },
     resolve: {
         alias: {

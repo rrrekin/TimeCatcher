@@ -13,9 +13,8 @@ Every task has a defined category. Categories are editable in the setup. By defa
 
 Main screen has:
 
-- Menu bar
-- On top a time navigation bar: '<' button to go to the previous day, 'Today' button to set the date to the current day,
-  '>' button to go to the next day, and then a date picker to display the selected date and pick any date directly.
+- On top, a time navigation bar: '<' button to go to the previous day, 'Today' button to set the date to the current day,
+  '>' button to go to the next day, and then a date picker to display the selected date and pick any date directly. On the right end of the navigation bar there is a button to open the setup modal. 
 - On the left side:
   - There is an editable chronological list of task switching events for the selected day consisting of:
     - the task category (dropdown based on configured list of categories)
