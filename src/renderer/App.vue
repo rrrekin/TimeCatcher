@@ -108,14 +108,76 @@
         </div>
       </main>
     </div>
+
+    <!-- Setup Modal -->
+    <div v-if="isSetupModalOpen" class="modal-overlay" @click="closeSetupModal">
+      <div class="modal" @click.stop>
+        <div class="modal-header">
+          <h3>Settings</h3>
+          <button class="close-btn" @click="closeSetupModal">×</button>
+        </div>
+        
+        <div class="modal-content">
+          <div class="setting-group">
+            <h4>Theme</h4>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input 
+                  type="radio" 
+                  name="theme" 
+                  value="light" 
+                  v-model="tempTheme"
+                />
+                <span class="radio-custom"></span>
+                Light mode
+              </label>
+              
+              <label class="radio-option">
+                <input 
+                  type="radio" 
+                  name="theme" 
+                  value="dark" 
+                  v-model="tempTheme"
+                />
+                <span class="radio-custom"></span>
+                Dark mode
+              </label>
+              
+              <label class="radio-option">
+                <input 
+                  type="radio" 
+                  name="theme" 
+                  value="auto" 
+                  v-model="tempTheme"
+                />
+                <span class="radio-custom"></span>
+                Automatic
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="closeSetupModal">
+            Cancel
+          </button>
+          <button class="save-btn" @click="saveSettings">
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const activeSection = ref('dashboard')
 const selectedDate = ref(new Date())
+const isSetupModalOpen = ref(false)
+const currentTheme = ref<'light' | 'dark' | 'auto'>('auto')
+const tempTheme = ref<'light' | 'dark' | 'auto'>('auto')
 
 const formattedDate = computed(() => {
   return selectedDate.value.toLocaleDateString('en-US', {
@@ -150,9 +212,62 @@ const goToToday = () => {
 }
 
 const openSetup = () => {
-  // TODO: Implement setup modal
-  console.log('Opening setup modal...')
+  tempTheme.value = currentTheme.value
+  isSetupModalOpen.value = true
 }
+
+const closeSetupModal = () => {
+  isSetupModalOpen.value = false
+}
+
+const saveSettings = () => {
+  currentTheme.value = tempTheme.value
+  applyTheme(currentTheme.value)
+  localStorage.setItem('theme', currentTheme.value)
+  isSetupModalOpen.value = false
+}
+
+const applyTheme = (theme: 'light' | 'dark' | 'auto') => {
+  const root = document.documentElement
+  
+  if (theme === 'auto') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    theme = prefersDark ? 'dark' : 'light'
+  }
+  
+  if (theme === 'dark') {
+    root.style.setProperty('--bg-primary', '#1a1f2e')
+    root.style.setProperty('--bg-secondary', '#232937')
+    root.style.setProperty('--text-primary', '#e8f0ed')
+    root.style.setProperty('--text-secondary', '#b8c5bf')
+    root.style.setProperty('--text-muted', '#8a9690')
+    root.style.setProperty('--border-color', '#3a4249')
+    root.style.setProperty('--shadow-color', 'rgba(0, 0, 0, 0.3)')
+  } else {
+    root.style.setProperty('--bg-primary', '#ffffff')
+    root.style.setProperty('--bg-secondary', '#f8fffe')
+    root.style.setProperty('--text-primary', '#2d4a3d')
+    root.style.setProperty('--text-secondary', '#4a6b56')
+    root.style.setProperty('--text-muted', '#7a9184')
+    root.style.setProperty('--border-color', '#e0ede8')
+    root.style.setProperty('--shadow-color', 'rgba(87, 189, 175, 0.1)')
+  }
+}
+
+onMounted(() => {
+  const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
+  if (savedTheme) {
+    currentTheme.value = savedTheme
+  }
+  applyTheme(currentTheme.value)
+  
+  // Listen for system theme changes when in auto mode
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (currentTheme.value === 'auto') {
+      applyTheme('auto')
+    }
+  })
+})
 </script>
 
 <style>
@@ -412,5 +527,170 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px var(--shadow-color);
   border-color: var(--primary);
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px var(--shadow-color);
+  width: 400px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: white;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-content {
+  padding: 1.5rem;
+}
+
+.setting-group {
+  margin-bottom: 1.5rem;
+}
+
+.setting-group h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.radio-option:hover {
+  background: var(--bg-secondary);
+}
+
+.radio-option input[type="radio"] {
+  display: none;
+}
+
+.radio-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.cancel-btn, .save-btn {
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.cancel-btn {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.cancel-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.save-btn {
+  background: var(--primary);
+  color: white;
+}
+
+.save-btn:hover {
+  background: var(--secondary);
 }
 </style>
