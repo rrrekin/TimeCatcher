@@ -39,38 +39,80 @@ app.on('window-all-closed', function () {
 })
 
 // IPC handlers for database operations
-ipcMain.handle('db:get-categories', () => {
-  return dbService.getAllCategories()
-})
-
-ipcMain.handle('db:add-category', (_, name: string) => {
-  return dbService.addCategory(name)
-})
-
-ipcMain.handle('db:delete-category', (_, id: number) => {
-  return dbService.deleteCategory(id)
-})
-
-ipcMain.handle('db:category-exists', (_, name: string) => {
-  return dbService.categoryExists(name)
-})
-
-ipcMain.handle('db:update-category', (_, id: number, name: string) => {
-  return dbService.updateCategory(id, name)
-})
-
-ipcMain.handle('db:set-default-category', (_, id: number) => {
-  return dbService.setDefaultCategory(id)
-})
-
-ipcMain.handle('db:get-default-category', () => {
-  return dbService.getDefaultCategory()
-})
-
-// Debug handler to view all data
-ipcMain.handle('db:debug-all', () => {
-  return {
-    categories: dbService.getAllCategories(),
-    taskRecords: dbService.db.prepare('SELECT * FROM task_records').all()
+ipcMain.handle('db:get-categories', async () => {
+  try {
+    return dbService.getAllCategories()
+  } catch (error) {
+    console.error('Failed to get categories:', error)
+    throw new Error(`Failed to retrieve categories: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 })
+
+ipcMain.handle('db:add-category', async (_, name: string) => {
+  try {
+    return dbService.addCategory(name)
+  } catch (error) {
+    console.error('Failed to add category:', error)
+    throw new Error(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:delete-category', async (_, id: number) => {
+  try {
+    return dbService.deleteCategory(id)
+  } catch (error) {
+    console.error('Failed to delete category:', error)
+    throw new Error(`Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:category-exists', async (_, name: string) => {
+  try {
+    return dbService.categoryExists(name)
+  } catch (error) {
+    console.error('Failed to check if category exists:', error)
+    throw new Error(`Failed to check category existence: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:update-category', async (_, id: number, name: string) => {
+  try {
+    return dbService.updateCategory(id, name)
+  } catch (error) {
+    console.error('Failed to update category:', error)
+    throw new Error(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:set-default-category', async (_, id: number) => {
+  try {
+    return dbService.setDefaultCategory(id)
+  } catch (error) {
+    console.error('Failed to set default category:', error)
+    throw new Error(`Failed to set default category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:get-default-category', async () => {
+  try {
+    return dbService.getDefaultCategory()
+  } catch (error) {
+    console.error('Failed to get default category:', error)
+    throw new Error(`Failed to retrieve default category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+// Debug handler to view all data - only available in development
+if (isDevelopment) {
+  ipcMain.handle('db:debug-all', async () => {
+    try {
+      return {
+        categories: dbService.getAllCategories(),
+        taskRecords: dbService.db.prepare('SELECT * FROM task_records').all()
+      }
+    } catch (error) {
+      console.error('Failed to debug database:', error)
+      throw new Error(`Failed to retrieve debug data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  })
+}

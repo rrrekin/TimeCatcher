@@ -1,11 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-export interface Category {
-  id?: number
-  name: string
-  created_at?: string
-}
-
 contextBridge.exposeInMainWorld('electronAPI', {
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),

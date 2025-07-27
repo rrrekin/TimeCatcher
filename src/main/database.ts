@@ -42,8 +42,18 @@ class DatabaseService {
     // Add is_default column if it doesn't exist (for existing databases)
     try {
       this.db.exec(`ALTER TABLE categories ADD COLUMN is_default BOOLEAN DEFAULT FALSE`)
-    } catch (error) {
-      // Column already exists, ignore error
+    } catch (error: any) {
+      // Only ignore "duplicate column name" errors - SQLite error code SQLITE_ERROR (1)
+      // with message containing "duplicate column name"
+      if (error?.message?.includes('duplicate column name') || 
+          error?.message?.includes('column already exists')) {
+        // Column already exists, safe to ignore
+        console.log('is_default column already exists, skipping migration')
+      } else {
+        // Re-throw any other database errors for proper debugging
+        console.error('Failed to add is_default column:', error)
+        throw error
+      }
     }
 
     // Create task_records table (no end_time - calculated from next record)
@@ -98,6 +108,12 @@ class DatabaseService {
   }
 
   deleteCategory(id: number): void {
+    // Check if this is the default category
+    const defaultCategory = this.getDefaultCategory()
+    if (defaultCategory && defaultCategory.id === id) {
+      throw new Error('Cannot delete the default category. Please set another category as default first.')
+    }
+    
     this.db.prepare('DELETE FROM categories WHERE id = ?').run(id)
   }
 
@@ -111,10 +127,16 @@ class DatabaseService {
   }
 
   setDefaultCategory(id: number): void {
-    // First, remove default from all categories
-    this.db.prepare('UPDATE categories SET is_default = FALSE').run()
-    // Then set the specified category as default
-    this.db.prepare('UPDATE categories SET is_default = TRUE WHERE id = ?').run(id)
+    // Use a transaction to ensure atomicity of both updates
+    const transaction = this.db.transaction(() => {
+      // First, remove default from all categories
+      this.db.prepare('UPDATE categories SET is_default = FALSE').run()
+      // Then set the specified category as default
+      this.db.prepare('UPDATE categories SET is_default = TRUE WHERE id = ?').run(id)
+    })
+    
+    // Execute the transaction
+    transaction()
   }
 
   getDefaultCategory(): Category | null {
