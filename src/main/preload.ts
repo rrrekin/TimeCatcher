@@ -1,5 +1,13 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  // Add API methods here as needed
+  // Database operations
+  getCategories: () => ipcRenderer.invoke('db:get-categories'),
+  addCategory: (name: string) => ipcRenderer.invoke('db:add-category', name),
+  deleteCategory: (id: number) => ipcRenderer.invoke('db:delete-category', id),
+  updateCategory: (id: number, name: string) => ipcRenderer.invoke('db:update-category', id, name),
+  categoryExists: (name: string) => ipcRenderer.invoke('db:category-exists', name),
+  setDefaultCategory: (id: number) => ipcRenderer.invoke('db:set-default-category', id),
+  getDefaultCategory: () => ipcRenderer.invoke('db:get-default-category'),
+  debugAll: () => ipcRenderer.invoke('db:debug-all')
 })
