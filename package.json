@@ -1,0 +1,44 @@
+{
+  "name": "timecatcher",
+  "version": "1.0.0",
+  "description": "Task &amp; time tracking desktop app",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"wait-on dist/renderer/index.html && npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "tsc src/main/*.ts --outDir dist/main && electron .",
+    "build": "vue-tsc --noEmit && vite build && tsc src/main/*.ts --outDir dist/main",
+    "build:win": "npm run build && electron-builder --win",
+    "build:mac": "npm run build && electron-builder --mac",
+    "build:linux": "npm run build && electron-builder --linux"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rrrekin/TimeCatcher.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/rrrekin/TimeCatcher/issues"
+  },
+  "homepage": "https://github.com/rrrekin/TimeCatcher#readme",
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "@vue/tsconfig": "^0.7.0",
+    "concurrently": "^9.2.0",
+    "electron": "^37.2.4",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.6",
+    "vue-tsc": "^3.0.4",
+    "wait-on": "^8.0.4"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.2.0",
+    "electron-store": "^10.1.0",
+    "vue": "^3.5.18"
+  }
+}
