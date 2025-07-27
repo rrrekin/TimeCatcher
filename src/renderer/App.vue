@@ -1,9 +1,34 @@
 <template>
   <div id="app">
-    <header class="header">
-      <h1>TimeCatcher</h1>
-      <p>Task & Time Tracking Desktop App</p>
-    </header>
+    <nav class="time-navigation">
+      <div class="nav-controls">
+        <button class="nav-btn" @click="goToPreviousDay" title="Previous Day">
+          <span class="nav-arrow">‹</span>
+        </button>
+        
+        <button class="today-btn" @click="goToToday">
+          Today
+        </button>
+        
+        <button class="nav-btn" @click="goToNextDay" title="Next Day">
+          <span class="nav-arrow">›</span>
+        </button>
+        
+        <div class="date-display">
+          <label class="date-label">{{ formattedDate }}</label>
+          <input 
+            type="date" 
+            v-model="dateInputValue" 
+            class="date-picker"
+          />
+        </div>
+      </div>
+      
+      <button class="setup-btn" @click="openSetup" title="Open Settings">
+        <span class="setup-icon">⚙️</span>
+        Setup
+      </button>
+    </nav>
     
     <div class="layout">
       <nav class="sidebar">
@@ -87,9 +112,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const activeSection = ref('dashboard')
+const selectedDate = ref(new Date())
+
+const formattedDate = computed(() => {
+  return selectedDate.value.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+})
+
+const dateInputValue = computed({
+  get: () => selectedDate.value.toISOString().split('T')[0],
+  set: (value: string) => {
+    selectedDate.value = new Date(value + 'T00:00:00')
+  }
+})
+
+const goToPreviousDay = () => {
+  const newDate = new Date(selectedDate.value)
+  newDate.setDate(newDate.getDate() - 1)
+  selectedDate.value = newDate
+}
+
+const goToNextDay = () => {
+  const newDate = new Date(selectedDate.value)
+  newDate.setDate(newDate.getDate() + 1)
+  selectedDate.value = newDate
+}
+
+const goToToday = () => {
+  selectedDate.value = new Date()
+}
+
+const openSetup = () => {
+  // TODO: Implement setup modal
+  console.log('Opening setup modal...')
+}
 </script>
 
 <style>
@@ -134,37 +197,128 @@ body {
   box-sizing: border-box;
 }
 
-.header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: white;
-  padding: 1.5rem;
-  text-align: center;
+.time-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  box-shadow: 0 1px 2px var(--shadow-color);
+  min-height: 50px;
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 2rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.header p {
-  margin: 0.5rem 0 0 0;
-  opacity: 0.9;
+.nav-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-secondary);
+}
+
+.nav-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.nav-arrow {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.today-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.today-btn:hover {
+  background: var(--mantis);
+}
+
+.date-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.date-label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+  min-width: 180px;
+}
+
+.date-picker {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.date-picker:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.setup-btn {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.setup-btn:hover {
+  background: var(--aero);
+}
+
+.setup-icon {
   font-size: 0.9rem;
 }
 
 .layout {
   display: flex;
-  height: calc(100vh - 120px);
+  height: calc(100vh - 50px);
 }
 
 .sidebar {
-  width: 250px;
+  width: 180px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 2px 0 8px var(--shadow-color);
+  box-shadow: 1px 0 3px var(--shadow-color);
 }
 
 .nav-menu {
@@ -174,43 +328,43 @@ body {
 }
 
 .nav-item {
-  padding: 1rem 1.5rem;
+  padding: 0.75rem 1rem;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   border-bottom: 1px solid var(--border-color);
+  font-size: 0.9rem;
 }
 
 .nav-item:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  transform: translateX(2px);
 }
 
 .nav-item.active {
   background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
   color: white;
-  box-shadow: inset 3px 0 0 var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .nav-icon {
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .main-content {
   flex: 1;
-  padding: 2rem;
+  padding: 1rem;
   overflow-y: auto;
   background: var(--bg-secondary);
 }
 
 .section h2 {
   color: var(--text-primary);
-  margin-bottom: 0.5rem;
-  font-size: 1.8rem;
+  margin-bottom: 0.25rem;
+  font-size: 1.4rem;
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -219,27 +373,29 @@ body {
 
 .section p {
   color: var(--text-muted);
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
 }
 
 .placeholder-content {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
 }
 
 .card {
   background: var(--bg-primary);
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px var(--shadow-color);
+  padding: 1rem;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px var(--shadow-color);
   text-align: center;
   color: var(--text-secondary);
   font-weight: 500;
   border: 1px solid var(--border-color);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  font-size: 0.9rem;
 }
 
 .card::before {
@@ -248,13 +404,13 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 3px;
+  height: 2px;
   background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px var(--shadow-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-color);
   border-color: var(--primary);
 }
 </style>
