@@ -1,5 +1,6 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { dbService } from './database'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -31,5 +32,45 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin') {
+    dbService.close()
+    app.quit()
+  }
+})
+
+// IPC handlers for database operations
+ipcMain.handle('db:get-categories', () => {
+  return dbService.getAllCategories()
+})
+
+ipcMain.handle('db:add-category', (_, name: string) => {
+  return dbService.addCategory(name)
+})
+
+ipcMain.handle('db:delete-category', (_, id: number) => {
+  return dbService.deleteCategory(id)
+})
+
+ipcMain.handle('db:category-exists', (_, name: string) => {
+  return dbService.categoryExists(name)
+})
+
+ipcMain.handle('db:update-category', (_, id: number, name: string) => {
+  return dbService.updateCategory(id, name)
+})
+
+ipcMain.handle('db:set-default-category', (_, id: number) => {
+  return dbService.setDefaultCategory(id)
+})
+
+ipcMain.handle('db:get-default-category', () => {
+  return dbService.getDefaultCategory()
+})
+
+// Debug handler to view all data
+ipcMain.handle('db:debug-all', () => {
+  return {
+    categories: dbService.getAllCategories(),
+    taskRecords: dbService.db.prepare('SELECT * FROM task_records').all()
+  }
 })
