@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
+import type { TaskRecord } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -102,7 +103,7 @@ ipcMain.handle('db:get-default-category', async () => {
   }
 })
 
-ipcMain.handle('db:add-task-record', async (_, record: any) => {
+ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | 'created_at'>) => {
   try {
     return dbService.addTaskRecord(record)
   } catch (error) {

@@ -668,11 +668,40 @@ const initializeNewTask = () => {
 }
 
 const formatTime = (timeString: string): string => {
+  // Input validation
+  if (!timeString) {
+    return '12:00:00 AM'
+  }
+  
+  // Check if timeString has exactly two colons
+  const colonCount = (timeString.match(/:/g) || []).length
+  if (colonCount !== 2) {
+    return '12:00:00 AM'
+  }
+  
   const [hours, minutes, seconds] = timeString.split(':')
-  const hour24 = parseInt(hours)
+  
+  // Validate hours, minutes, and seconds are numbers within valid ranges
+  const hour24 = parseInt(hours, 10)
+  const minuteNum = parseInt(minutes, 10)
+  const secondNum = parseInt(seconds, 10)
+  
+  if (isNaN(hour24) || isNaN(minuteNum) || isNaN(secondNum) ||
+      hour24 < 0 || hour24 > 23 ||
+      minuteNum < 0 || minuteNum > 59 ||
+      secondNum < 0 || secondNum > 59) {
+    return '12:00:00 AM'
+  }
+  
+  // Format to 12-hour time
   const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
   const period = hour24 >= 12 ? 'PM' : 'AM'
-  return `${hour12}:${minutes}:${seconds || '00'} ${period}`
+  
+  // Ensure two-digit formatting for minutes and seconds
+  const formattedMinutes = minutes.padStart(2, '0')
+  const formattedSeconds = seconds.padStart(2, '0')
+  
+  return `${hour12}:${formattedMinutes}:${formattedSeconds} ${period}`
 }
 
 // Watch for date changes to reload task records
