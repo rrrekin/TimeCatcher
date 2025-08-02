@@ -160,3 +160,5 @@ fabric.properties
 
 # Vite cache directory
 .vite/
+
+src/**/*.js

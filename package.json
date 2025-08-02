@@ -2,7 +2,7 @@
   "name": "timecatcher",
   "version": "1.0.0",
   "description": "Task &amp; time tracking desktop app",
-  "main": "dist/main/main.js",
+  "main": "dist/main/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"wait-on dist/renderer/index.html && npm run dev:electron\"",
     "dev:vite": "vite",

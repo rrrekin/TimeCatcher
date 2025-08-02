@@ -86,11 +86,11 @@
               <tr v-else v-for="record in taskRecords" :key="record.id">
                 <td>
                   <select 
-                    :value="getCategoryIdByName(record.category_name)" 
+                    :value="record.category_name" 
                     @change="handleCategoryChange(record.id, $event)"
                     class="editable-cell editable-select"
                   >
-                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                    <option v-for="category in categories" :key="category.name" :value="category.name">
                       {{ category.name }}
                     </option>
                   </select>
@@ -425,11 +425,15 @@ const saveSettings = () => {
 const loadCategories = async () => {
   isLoadingCategories.value = true
   try {
+    console.log('Loading categories from frontend...')
     if (!window.electronAPI) {
+      console.error('electronAPI not available')
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    categories.value = await window.electronAPI.getCategories()
+    const loadedCategories = await window.electronAPI.getCategories()
+    console.log('Categories loaded:', loadedCategories)
+    categories.value = loadedCategories
   } catch (error) {
     console.error('Failed to load categories:', error)
     showToastMessage('Failed to load categories. Please try again.', 'error')
@@ -745,7 +749,7 @@ watch(selectedDate, () => {
   loadTaskRecords()
 }, { immediate: false })
 
-onMounted(() => {
+onMounted(async () => {
   const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
   if (savedTheme) {
     currentTheme.value = savedTheme
@@ -759,13 +763,18 @@ onMounted(() => {
     }
   })
   
-  // Load categories and initialize task form
-  loadCategories().then(() => {
-    initializeNewTask()
-  })
+  // Wait a moment for database initialization to complete, then load categories
+  console.log('App mounted, waiting for database initialization...')
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  console.log('Loading categories and initializing task form...')
+  await loadCategories()
+  initializeNewTask()
   
   // Load task records for today
-  loadTaskRecords()
+  console.log('Loading task records...')
+  await loadTaskRecords()
+  console.log('App initialization complete')
 })
 
 // Toast notification functions
@@ -854,7 +863,7 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
     // Check if any values have actually changed
     let hasChanges = false
     for (const [field, newValue] of Object.entries(updates)) {
-      const currentValue = currentRecord[field as keyof TaskRecord] as string
+      const currentValue = currentRecord[field as keyof TaskRecord]
       if (currentValue !== newValue) {
         hasChanges = true
         break
@@ -915,18 +924,9 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     return
   }
   
-  const categoryId = Number(target.value)
-  if (isNaN(categoryId)) {
-    console.error('Invalid category ID:', target.value)
-    showToastMessage('Invalid category selected. Please refresh the page.', 'error')
-    await loadTaskRecords()
-    return
-  }
-  
-  // Convert category ID to category name
-  const categoryName = getCategoryNameById(categoryId)
+  const categoryName = target.value
   if (!categoryName) {
-    console.error('Category not found for ID:', categoryId)
+    console.error('Invalid category name:', target.value)
     showToastMessage('Invalid category selected. Please refresh the page.', 'error')
     await loadTaskRecords()
     return
@@ -1946,9 +1946,9 @@ body {
 }
 
 /* Time cell specific styles */
-.time-cell {
+.task-table td.time-cell {
   width: 6rem;
-  padding: 0.25rem !important;
+  padding: 0.25rem;
   vertical-align: middle;
 }
 
