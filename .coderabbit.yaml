@@ -11,6 +11,14 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+  auto_approve:
+    enabled: true
+    conditions:
+      - "files_changed <= 5"
+      - "additions <= 100"
+      - "deletions <= 50"
+      - "!has_conflicts"
+      - "!draft"
 
 chat:
   auto_reply: true
