@@ -102,6 +102,24 @@ ipcMain.handle('db:get-default-category', async () => {
   }
 })
 
+ipcMain.handle('db:add-task-record', async (_, record: any) => {
+  try {
+    return dbService.addTaskRecord(record)
+  } catch (error) {
+    console.error('Failed to add task record:', error)
+    throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:get-task-records-by-date', async (_, date: string) => {
+  try {
+    return dbService.getTaskRecordsByDate(date)
+  } catch (error) {
+    console.error('Failed to get task records by date:', error)
+    throw new Error(`Failed to retrieve task records: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
 // Debug handler to view all data - only available in development
 if (isDevelopment) {
   ipcMain.handle('db:debug-all', async () => {
