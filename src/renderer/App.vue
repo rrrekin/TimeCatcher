@@ -86,11 +86,11 @@
               <tr v-else v-for="record in taskRecords" :key="record.id">
                 <td>
                   <select 
-                    :value="record.category_name" 
-                    @change="record.id && handleCategoryChange(record.id, ($event.target as HTMLSelectElement).value)"
+                    :value="getCategoryIdByName(record.category_name)" 
+                    @change="handleCategoryChange(record.id, $event)"
                     class="editable-cell editable-select"
                   >
-                    <option v-for="category in categories" :key="category.id" :value="category.name">
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
                       {{ category.name }}
                     </option>
                   </select>
@@ -99,9 +99,8 @@
                   <input 
                     type="text" 
                     :value="record.task_name"
-                    @input="record.id && updateField(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
-                    @blur="record.id && handleBlur(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
-                    @keydown.enter="record.id && handleEnter(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
+                    @blur="handleBlur(record.id, 'task_name', $event)"
+                    @keydown.enter="handleEnter(record.id, 'task_name', $event)"
                     class="editable-cell editable-input"
                     placeholder="Task name"
                   />
@@ -111,9 +110,8 @@
                     type="time" 
                     step="1"
                     :value="convertToTimeInput(record.start_time)"
-                    @input="record.id && updateField(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
-                    @blur="record.id && handleBlur(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
-                    @keydown.enter="record.id && handleEnter(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
+                    @blur="handleBlur(record.id, 'start_time', $event)"
+                    @keydown.enter="handleEnter(record.id, 'start_time', $event)"
                     class="editable-cell editable-input time-input"
                   />
                 </td>
@@ -691,6 +689,16 @@ const getDefaultCategoryId = (): number | null => {
   return defaultCategory?.id || null
 }
 
+const getCategoryIdByName = (categoryName: string): number | null => {
+  const category = categories.value.find(cat => cat.name === categoryName)
+  return category?.id || null
+}
+
+const getCategoryNameById = (categoryId: number): string | null => {
+  const category = categories.value.find(cat => cat.id === categoryId)
+  return category?.name || null
+}
+
 const initializeNewTask = () => {
   newTask.value.categoryId = getDefaultCategoryId()
 }
@@ -804,14 +812,13 @@ const replayTask = async (record: TaskRecord) => {
   }
 }
 
-const updateField = (recordId: number, field: string, value: string) => {
-  // This function handles immediate value updates for reactive display
-}
+// updateField function removed - unnecessary overhead since Vue handles input display
+// and actual updates happen on blur/enter events via handleBlur
 
-const handleBlur = async (recordId: number, field: string, value: string) => {
-  if (!value.trim()) {
-    // If field is empty, reload to restore previous value
-    await loadTaskRecords()
+// Common task field update logic extracted from handleBlur and handleCategoryChange
+const updateTaskField = async (recordId: number | undefined, updates: Record<string, any>, successMessage: string = 'Task updated successfully!') => {
+  if (recordId === undefined) {
+    console.error('Record ID is undefined')
     return
   }
   
@@ -844,27 +851,24 @@ const handleBlur = async (recordId: number, field: string, value: string) => {
       return
     }
     
-    // Check if value has actually changed
-    let currentValue = currentRecord[field as keyof TaskRecord] as string
-    let newValue = value
-    
-    if (field === 'start_time') {
-      // Convert time input (HH:MM:SS) to proper format for comparison
-      const [hours, minutes, seconds] = value.split(':')
-      newValue = `${hours}:${minutes}:${seconds || '00'}`
+    // Check if any values have actually changed
+    let hasChanges = false
+    for (const [field, newValue] of Object.entries(updates)) {
+      const currentValue = currentRecord[field as keyof TaskRecord] as string
+      if (currentValue !== newValue) {
+        hasChanges = true
+        break
+      }
     }
     
-    // Skip update if no change
-    if (currentValue === newValue) {
+    // Skip update if no changes
+    if (!hasChanges) {
       return
     }
     
-    const update: any = {}
-    update[field] = newValue
-    
-    await window.electronAPI.updateTaskRecord(numericRecordId, update)
+    await window.electronAPI.updateTaskRecord(numericRecordId, updates)
     await loadTaskRecords()
-    showToastMessage('Task updated successfully!', 'success')
+    showToastMessage(successMessage, 'success')
   } catch (error) {
     console.error('Failed to update task:', error)
     showToastMessage(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
@@ -872,52 +876,63 @@ const handleBlur = async (recordId: number, field: string, value: string) => {
   }
 }
 
-const handleEnter = async (recordId: number, field: string, value: string) => {
-  await handleBlur(recordId, field, value)
+const handleBlur = async (recordId: number | undefined, field: string, event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLInputElement)) {
+    console.error('Event target is not an HTMLInputElement')
+    return
+  }
+  
+  const value = target.value
+  if (!value.trim()) {
+    // If field is empty, reload to restore previous value
+    await loadTaskRecords()
+    return
+  }
+  
+  // Process the field value based on field type
+  let processedValue = value
+  if (field === 'start_time') {
+    // Convert time input (HH:MM:SS) to proper format
+    const [hours, minutes, seconds] = value.split(':')
+    processedValue = `${hours}:${minutes}:${seconds || '00'}`
+  }
+  
+  const updates: Record<string, any> = {}
+  updates[field] = processedValue
+  
+  await updateTaskField(recordId, updates)
 }
 
-const handleCategoryChange = async (recordId: number, value: string) => {
-  try {
-    if (!window.electronAPI) {
-      showToastMessage('API not available. Please restart the application.', 'error')
-      return
-    }
-    
-    if (!window.electronAPI.updateTaskRecord) {
-      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
-      await loadTaskRecords()
-      return
-    }
-    
-    const numericRecordId = Number(recordId)
-    if (isNaN(numericRecordId)) {
-      console.error('Invalid record ID:', recordId)
-      showToastMessage('Invalid record ID. Please refresh the page.', 'error')
-      await loadTaskRecords()
-      return
-    }
-    
-    // Get current record to compare values
-    const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
-    if (!currentRecord) {
-      console.error('Record not found:', numericRecordId)
-      await loadTaskRecords()
-      return
-    }
-    
-    // Skip update if no change
-    if (currentRecord.category_name === value) {
-      return
-    }
-    
-    await window.electronAPI.updateTaskRecord(numericRecordId, { category_name: value })
-    await loadTaskRecords()
-    showToastMessage('Category updated successfully!', 'success')
-  } catch (error) {
-    console.error('Failed to update category:', error)
-    showToastMessage(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
-    await loadTaskRecords()
+const handleEnter = async (recordId: number | undefined, field: string, event: Event) => {
+  await handleBlur(recordId, field, event)
+}
+
+const handleCategoryChange = async (recordId: number | undefined, event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLSelectElement)) {
+    console.error('Event target is not an HTMLSelectElement')
+    return
   }
+  
+  const categoryId = Number(target.value)
+  if (isNaN(categoryId)) {
+    console.error('Invalid category ID:', target.value)
+    showToastMessage('Invalid category selected. Please refresh the page.', 'error')
+    await loadTaskRecords()
+    return
+  }
+  
+  // Convert category ID to category name
+  const categoryName = getCategoryNameById(categoryId)
+  if (!categoryName) {
+    console.error('Category not found for ID:', categoryId)
+    showToastMessage('Invalid category selected. Please refresh the page.', 'error')
+    await loadTaskRecords()
+    return
+  }
+  
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 const convertToTimeInput = (timeString: string): string => {
@@ -1932,18 +1947,18 @@ body {
 
 /* Time cell specific styles */
 .time-cell {
-  width: 90px;
-  padding: 0.4rem 0.4rem !important;
+  width: 6rem;
+  padding: 0.25rem !important;
   vertical-align: middle;
 }
 
 .time-input {
-  width: 80px;
-  min-width: 80px;
-  padding: 0.35rem 0.3rem !important;
-  margin: -0.35rem -0.3rem !important;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.4rem 0.25rem;
   font-size: 0.85rem;
   text-align: center;
+  box-sizing: border-box;
 }
 
 /* Hide the native time picker icon */
@@ -1956,12 +1971,12 @@ body {
 }
 
 /* Replay button green styling */
-.replay-btn {
-  background: var(--success) !important;
-  color: white !important;
+.action-btn.replay-btn {
+  background: var(--success);
+  color: white;
 }
 
-.replay-btn:hover:not(:disabled) {
-  background: var(--mantis) !important;
+.action-btn.replay-btn:hover:not(:disabled) {
+  background: var(--mantis);
 }
 </style>
