@@ -84,13 +84,41 @@
                 </td>
               </tr>
               <tr v-else v-for="record in taskRecords" :key="record.id">
-                <td><span class="category-tag">{{ record.category_name }}</span></td>
-                <td>{{ record.task_name }}</td>
-                <td>{{ formatTime(record.start_time) }}</td>
                 <td>
-                  <button class="action-btn" title="Replay task" @click="replayTask(record)">🔄</button>
-                  <button class="action-btn" title="Edit task (coming soon)" disabled>✏️</button>
-                  <button class="action-btn" title="Delete task (coming soon)" disabled>🗑️</button>
+                  <select 
+                    :value="record.category_name" 
+                    @change="record.id && handleCategoryChange(record.id, ($event.target as HTMLSelectElement).value)"
+                    class="editable-cell editable-select"
+                  >
+                    <option v-for="category in categories" :key="category.id" :value="category.name">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <input 
+                    type="text" 
+                    :value="record.task_name"
+                    @input="record.id && updateField(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
+                    @blur="record.id && handleBlur(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
+                    @keydown.enter="record.id && handleEnter(record.id, 'task_name', ($event.target as HTMLInputElement).value)"
+                    class="editable-cell editable-input"
+                    placeholder="Task name"
+                  />
+                </td>
+                <td class="time-cell">
+                  <input
+                    type="time" 
+                    step="1"
+                    :value="convertToTimeInput(record.start_time)"
+                    @input="record.id && updateField(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
+                    @blur="record.id && handleBlur(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
+                    @keydown.enter="record.id && handleEnter(record.id, 'start_time', ($event.target as HTMLInputElement).value)"
+                    class="editable-cell editable-input time-input"
+                  />
+                </td>
+                <td>
+                  <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
                 </td>
               </tr>
             </tbody>
@@ -775,6 +803,135 @@ const replayTask = async (record: TaskRecord) => {
     showToastMessage('Failed to replay task. Please try again.', 'error')
   }
 }
+
+const updateField = (recordId: number, field: string, value: string) => {
+  // This function handles immediate value updates for reactive display
+}
+
+const handleBlur = async (recordId: number, field: string, value: string) => {
+  if (!value.trim()) {
+    // If field is empty, reload to restore previous value
+    await loadTaskRecords()
+    return
+  }
+  
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+    
+    if (!window.electronAPI.updateTaskRecord) {
+      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    // Ensure recordId is a number
+    const numericRecordId = Number(recordId)
+    if (isNaN(numericRecordId)) {
+      console.error('Invalid record ID:', recordId)
+      showToastMessage('Invalid record ID. Please refresh the page.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    // Get current record to compare values
+    const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
+    if (!currentRecord) {
+      console.error('Record not found:', numericRecordId)
+      await loadTaskRecords()
+      return
+    }
+    
+    // Check if value has actually changed
+    let currentValue = currentRecord[field as keyof TaskRecord] as string
+    let newValue = value
+    
+    if (field === 'start_time') {
+      // Convert time input (HH:MM:SS) to proper format for comparison
+      const [hours, minutes, seconds] = value.split(':')
+      newValue = `${hours}:${minutes}:${seconds || '00'}`
+    }
+    
+    // Skip update if no change
+    if (currentValue === newValue) {
+      return
+    }
+    
+    const update: any = {}
+    update[field] = newValue
+    
+    await window.electronAPI.updateTaskRecord(numericRecordId, update)
+    await loadTaskRecords()
+    showToastMessage('Task updated successfully!', 'success')
+  } catch (error) {
+    console.error('Failed to update task:', error)
+    showToastMessage(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+    await loadTaskRecords() // Restore previous values on error
+  }
+}
+
+const handleEnter = async (recordId: number, field: string, value: string) => {
+  await handleBlur(recordId, field, value)
+}
+
+const handleCategoryChange = async (recordId: number, value: string) => {
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+    
+    if (!window.electronAPI.updateTaskRecord) {
+      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    const numericRecordId = Number(recordId)
+    if (isNaN(numericRecordId)) {
+      console.error('Invalid record ID:', recordId)
+      showToastMessage('Invalid record ID. Please refresh the page.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    // Get current record to compare values
+    const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
+    if (!currentRecord) {
+      console.error('Record not found:', numericRecordId)
+      await loadTaskRecords()
+      return
+    }
+    
+    // Skip update if no change
+    if (currentRecord.category_name === value) {
+      return
+    }
+    
+    await window.electronAPI.updateTaskRecord(numericRecordId, { category_name: value })
+    await loadTaskRecords()
+    showToastMessage('Category updated successfully!', 'success')
+  } catch (error) {
+    console.error('Failed to update category:', error)
+    showToastMessage(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+    await loadTaskRecords()
+  }
+}
+
+const convertToTimeInput = (timeString: string): string => {
+  // Convert HH:MM:SS format to time input value
+  if (!timeString) return '00:00:00'
+  
+  const parts = timeString.split(':')
+  if (parts.length >= 3) {
+    return timeString
+  } else if (parts.length === 2) {
+    return `${timeString}:00`
+  }
+  return '00:00:00'
+}
 </script>
 
 <style>
@@ -992,16 +1149,17 @@ body {
 .task-table th {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem 0.4rem;
   text-align: left;
   border-bottom: 2px solid var(--border-color);
   font-weight: 500;
   position: sticky;
   top: 0;
+  font-size: 0.85rem;
 }
 
 .task-table td {
-  padding: 0.75rem 0.5rem;
+  padding: 0.4rem 0.4rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
@@ -1728,5 +1886,82 @@ body {
 
 .loading-cell .loading-indicator {
   padding: 0;
+}
+
+/* Editable cell styles */
+.editable-cell {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.editable-cell:focus {
+  outline: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.editable-input {
+  cursor: text;
+}
+
+.editable-input:hover {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.editable-select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.editable-select:hover {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+/* Time cell specific styles */
+.time-cell {
+  width: 90px;
+  padding: 0.4rem 0.4rem !important;
+  vertical-align: middle;
+}
+
+.time-input {
+  width: 80px;
+  min-width: 80px;
+  padding: 0.35rem 0.3rem !important;
+  margin: -0.35rem -0.3rem !important;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Hide the native time picker icon */
+.time-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.time-input::-webkit-clear-button {
+  display: none;
+}
+
+/* Replay button green styling */
+.replay-btn {
+  background: var(--success) !important;
+  color: white !important;
+}
+
+.replay-btn:hover:not(:disabled) {
+  background: var(--mantis) !important;
 }
 </style>

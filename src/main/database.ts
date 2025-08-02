@@ -1,4 +1,4 @@
-import * as Database from 'better-sqlite3'
+import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
 
@@ -23,7 +23,7 @@ class DatabaseService {
 
   constructor() {
     const dbPath = join(app.getPath('userData'), 'timecatcher.db')
-    this.db = new (Database as any)(dbPath)
+    this.db = new Database(dbPath)
     this.initializeTables()
     this.initializeDefaultCategories()
   }
@@ -155,6 +155,36 @@ class DatabaseService {
 
   getTaskRecordsByDate(date: string): TaskRecord[] {
     return this.db.prepare('SELECT * FROM task_records WHERE date = ? ORDER BY start_time').all(date) as TaskRecord[]
+  }
+
+  updateTaskRecord(id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>): void {
+    const fields: string[] = []
+    const values: any[] = []
+    
+    if (record.category_name !== undefined) {
+      fields.push('category_name = ?')
+      values.push(record.category_name)
+    }
+    if (record.task_name !== undefined) {
+      fields.push('task_name = ?')
+      values.push(record.task_name)
+    }
+    if (record.start_time !== undefined) {
+      fields.push('start_time = ?')
+      values.push(record.start_time)
+    }
+    if (record.date !== undefined) {
+      fields.push('date = ?')
+      values.push(record.date)
+    }
+    
+    if (fields.length === 0) {
+      throw new Error('No fields to update')
+    }
+    
+    values.push(id)
+    const sql = `UPDATE task_records SET ${fields.join(', ')} WHERE id = ?`
+    this.db.prepare(sql).run(...values)
   }
 
   close() {
