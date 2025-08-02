@@ -121,6 +121,15 @@ ipcMain.handle('db:get-task-records-by-date', async (_, date: string) => {
   }
 })
 
+ipcMain.handle('db:update-task-record', async (_, id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => {
+  try {
+    return dbService.updateTaskRecord(id, record)
+  } catch (error) {
+    console.error('Failed to update task record:', error)
+    throw new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
 // Debug handler to view all data - only available in development
 if (isDevelopment) {
   ipcMain.handle('db:debug-all', async () => {

@@ -24,6 +24,7 @@ export interface ElectronAPI {
   getDefaultCategory: () => Promise<Category | null>
   addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => Promise<TaskRecord>
   getTaskRecordsByDate: (date: string) => Promise<TaskRecord[]>
+  updateTaskRecord: (id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => Promise<void>
   debugAll?: () => Promise<any>
 }
 
