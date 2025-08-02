@@ -88,9 +88,9 @@
                 <td>{{ record.task_name }}</td>
                 <td>{{ formatTime(record.start_time) }}</td>
                 <td>
-                  <button class="action-btn" title="Replay task">🔄</button>
-                  <button class="action-btn" title="Edit task">✏️</button>
-                  <button class="action-btn" title="Delete task">🗑️</button>
+                  <button class="action-btn" title="Replay task" @click="replayTask(record)">🔄</button>
+                  <button class="action-btn" title="Edit task (coming soon)" disabled>✏️</button>
+                  <button class="action-btn" title="Delete task (coming soon)" disabled>🗑️</button>
                 </td>
               </tr>
             </tbody>
@@ -747,6 +747,34 @@ const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 
 const hideToast = () => {
   showToast.value = false
 }
+
+// Task action functions
+const replayTask = async (record: TaskRecord) => {
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const now = new Date()
+    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+
+    const taskRecord = {
+      category_name: record.category_name,
+      task_name: record.task_name,
+      start_time: timeString,
+      date: dateString
+    }
+
+    await window.electronAPI.addTaskRecord(taskRecord)
+    await loadTaskRecords()
+    showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+  } catch (error) {
+    console.error('Failed to replay task:', error)
+    showToastMessage('Failed to replay task. Please try again.', 'error')
+  }
+}
 </script>
 
 <style>
@@ -1022,8 +1050,13 @@ body {
   justify-content: center;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   background: var(--bg-secondary);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .category-tag {

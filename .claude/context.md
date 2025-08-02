@@ -55,6 +55,7 @@ src/
 ```
 
 ## Color palette
+
 ```
 /* CSS HEX */
 --verdigris: #57bdafff;
@@ -106,6 +107,7 @@ $gradient-radial: radial-gradient(#57bdafff, #59c964ff, #69966fff, #56b372ff, #1
 ## Current Status
 
 ### Completed ✅
+
 - ✅ Project structure created
 - ✅ Dependencies installed  
 - ✅ Configuration files set up
@@ -185,10 +187,12 @@ $gradient-radial: radial-gradient(#57bdafff, #59c964ff, #69966fff, #56b372ff, #1
   - **Error Handling**: User-friendly toast notifications for all operations
 
 ### In Progress 🔄
+
 - Right panel for daily time reports and analytics
 - Advanced task management features (edit, delete, replay)
 
 ### Next Steps 📋
+
 1. **Time Calculation Features**
    - Calculate time spent per task based on chronological records
    - Right panel time summary by category
