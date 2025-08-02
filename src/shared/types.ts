@@ -5,6 +5,15 @@ export interface Category {
   created_at?: string
 }
 
+export interface TaskRecord {
+  id?: number
+  category_name: string
+  task_name: string
+  start_time: string
+  date: string
+  created_at?: string
+}
+
 export interface ElectronAPI {
   getCategories: () => Promise<Category[]>
   addCategory: (name: string) => Promise<Category>
@@ -13,6 +22,8 @@ export interface ElectronAPI {
   categoryExists: (name: string) => Promise<boolean>
   setDefaultCategory: (id: number) => Promise<void>
   getDefaultCategory: () => Promise<Category | null>
+  addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => Promise<TaskRecord>
+  getTaskRecordsByDate: (date: string) => Promise<TaskRecord[]>
   debugAll?: () => Promise<any>
 }
 

@@ -1,8 +1,0 @@
-autolabel: true
-automerge: false
-review:
-  enabled: true
-  reviewers:
-    - coderabbit
-  instructions: |
-    Please focus on code quality, security, and documentation.

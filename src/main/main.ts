@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
+import type { TaskRecord } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -99,6 +100,24 @@ ipcMain.handle('db:get-default-category', async () => {
   } catch (error) {
     console.error('Failed to get default category:', error)
     throw new Error(`Failed to retrieve default category: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | 'created_at'>) => {
+  try {
+    return dbService.addTaskRecord(record)
+  } catch (error) {
+    console.error('Failed to add task record:', error)
+    throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:get-task-records-by-date', async (_, date: string) => {
+  try {
+    return dbService.getTaskRecordsByDate(date)
+  } catch (error) {
+    console.error('Failed to get task records by date:', error)
+    throw new Error(`Failed to retrieve task records: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 })
 

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { TaskRecord } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Database operations
@@ -9,5 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   categoryExists: (name: string) => ipcRenderer.invoke('db:category-exists', name),
   setDefaultCategory: (id: number) => ipcRenderer.invoke('db:set-default-category', id),
   getDefaultCategory: () => ipcRenderer.invoke('db:get-default-category'),
+  addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => ipcRenderer.invoke('db:add-task-record', record),
+  getTaskRecordsByDate: (date: string) => ipcRenderer.invoke('db:get-task-records-by-date', date),
   debugAll: () => ipcRenderer.invoke('db:debug-all')
 })

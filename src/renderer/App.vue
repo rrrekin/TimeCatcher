@@ -31,30 +31,72 @@
     </nav>
     
     <div class="layout">
-      <nav class="sidebar">
-        <ul class="nav-menu">
-          <li class="nav-item" :class="{ active: activeSection === 'dashboard' }" @click="activeSection = 'dashboard'">
-            <span class="nav-icon">📊</span>
-            Dashboard
-          </li>
-          <li class="nav-item" :class="{ active: activeSection === 'tracking' }" @click="activeSection = 'tracking'">
-            <span class="nav-icon">⏱️</span>
-            Time Tracking
-          </li>
-          <li class="nav-item" :class="{ active: activeSection === 'projects' }" @click="activeSection = 'projects'">
-            <span class="nav-icon">📁</span>
-            Projects
-          </li>
-          <li class="nav-item" :class="{ active: activeSection === 'reports' }" @click="activeSection = 'reports'">
-            <span class="nav-icon">📈</span>
-            Reports
-          </li>
-          <li class="nav-item" :class="{ active: activeSection === 'settings' }" @click="activeSection = 'settings'">
-            <span class="nav-icon">⚙️</span>
-            Settings
-          </li>
-        </ul>
-      </nav>
+      <div class="task-table-pane">
+        <div class="task-table-header">
+          <h3>Tasks</h3>
+          <button class="add-task-btn" @click="showAddTaskForm = !showAddTaskForm">+ Add Task</button>
+        </div>
+        
+        <!-- Add Task Form -->
+        <div v-if="showAddTaskForm" class="add-task-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <select v-model="newTask.categoryId" class="form-select">
+                <option v-for="category in categories" :key="category.id" :value="category.id">
+                  {{ category.name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Task</label>
+              <input v-model="newTask.name" class="form-input" placeholder="Enter task name" />
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="form-btn form-btn-primary" @click="addTask">Add Task</button>
+            <button class="form-btn form-btn-secondary" @click="cancelAddTask">Cancel</button>
+          </div>
+        </div>
+        
+        <div class="task-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Task</th>
+                <th>Start time</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="isLoadingTasks">
+                <td colspan="4" class="loading-cell">
+                  <div class="loading-indicator">
+                    <span class="loading-spinner"></span>
+                    Loading tasks...
+                  </div>
+                </td>
+              </tr>
+              <tr v-else-if="taskRecords.length === 0">
+                <td colspan="4" class="empty-cell">
+                  No tasks recorded for {{ formattedDate.split(',')[0] }}
+                </td>
+              </tr>
+              <tr v-else v-for="record in taskRecords" :key="record.id">
+                <td><span class="category-tag">{{ record.category_name }}</span></td>
+                <td>{{ record.task_name }}</td>
+                <td>{{ formatTime(record.start_time) }}</td>
+                <td>
+                  <button class="action-btn" title="Replay task" @click="replayTask(record)">🔄</button>
+                  <button class="action-btn" title="Edit task (coming soon)" disabled>✏️</button>
+                  <button class="action-btn" title="Delete task (coming soon)" disabled>🗑️</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       
       <main class="main-content">
         <div v-if="activeSection === 'dashboard'" class="section">
@@ -255,8 +297,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import type { Category } from '../shared/types'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import type { Category, TaskRecord } from '../shared/types'
 
 const activeSection = ref('dashboard')
 const selectedDate = ref(new Date())
@@ -275,6 +317,15 @@ const editingCategoryName = ref('')
 const toastMessage = ref('')
 const toastType = ref<'success' | 'error' | 'info'>('info')
 const showToast = ref(false)
+
+// Task management
+const showAddTaskForm = ref(false)
+const newTask = ref({
+  categoryId: null as number | null,
+  name: ''
+})
+const taskRecords = ref<TaskRecord[]>([])
+const isLoadingTasks = ref(false)
 
 // Loading states
 const isLoadingCategories = ref(false)
@@ -535,6 +586,129 @@ const applyTheme = (theme: 'light' | 'dark' | 'auto') => {
   }
 }
 
+// Task record management functions
+const loadTaskRecords = async () => {
+  isLoadingTasks.value = true
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+    const dateString = selectedDate.value.toISOString().split('T')[0]
+    taskRecords.value = await window.electronAPI.getTaskRecordsByDate(dateString)
+  } catch (error) {
+    console.error('Failed to load task records:', error)
+    showToastMessage('Failed to load task records. Please try again.', 'error')
+  } finally {
+    isLoadingTasks.value = false
+  }
+}
+
+// Task management functions
+const addTask = async () => {
+  if (!newTask.value.name.trim() || !newTask.value.categoryId) {
+    showToastMessage('Please fill in all fields', 'error')
+    return
+  }
+
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    const category = categories.value.find(cat => cat.id === newTask.value.categoryId)
+    if (!category) {
+      showToastMessage('Selected category not found', 'error')
+      return
+    }
+
+    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const now = new Date()
+    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+
+    const taskRecord = {
+      category_name: category.name,
+      task_name: newTask.value.name,
+      start_time: timeString,
+      date: dateString
+    }
+
+    await window.electronAPI.addTaskRecord(taskRecord)
+    await loadTaskRecords()
+    showToastMessage('Task added successfully!', 'success')
+
+    // Reset form
+    newTask.value = {
+      categoryId: getDefaultCategoryId(),
+      name: ''
+    }
+    showAddTaskForm.value = false
+  } catch (error) {
+    console.error('Failed to add task:', error)
+    showToastMessage('Failed to add task. Please try again.', 'error')
+  }
+}
+
+const cancelAddTask = () => {
+  newTask.value = {
+    categoryId: getDefaultCategoryId(),
+    name: ''
+  }
+  showAddTaskForm.value = false
+}
+
+const getDefaultCategoryId = (): number | null => {
+  const defaultCategory = categories.value.find(cat => cat.is_default)
+  return defaultCategory?.id || null
+}
+
+const initializeNewTask = () => {
+  newTask.value.categoryId = getDefaultCategoryId()
+}
+
+const formatTime = (timeString: string): string => {
+  // Input validation
+  if (!timeString) {
+    return '12:00:00 AM'
+  }
+  
+  // Check if timeString has exactly two colons
+  const colonCount = (timeString.match(/:/g) || []).length
+  if (colonCount !== 2) {
+    return '12:00:00 AM'
+  }
+  
+  const [hours, minutes, seconds] = timeString.split(':')
+  
+  // Validate hours, minutes, and seconds are numbers within valid ranges
+  const hour24 = parseInt(hours, 10)
+  const minuteNum = parseInt(minutes, 10)
+  const secondNum = parseInt(seconds, 10)
+  
+  if (isNaN(hour24) || isNaN(minuteNum) || isNaN(secondNum) ||
+      hour24 < 0 || hour24 > 23 ||
+      minuteNum < 0 || minuteNum > 59 ||
+      secondNum < 0 || secondNum > 59) {
+    return '12:00:00 AM'
+  }
+  
+  // Format to 12-hour time
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
+  const period = hour24 >= 12 ? 'PM' : 'AM'
+  
+  // Ensure two-digit formatting for minutes and seconds
+  const formattedMinutes = minutes.padStart(2, '0')
+  const formattedSeconds = seconds.padStart(2, '0')
+  
+  return `${hour12}:${formattedMinutes}:${formattedSeconds} ${period}`
+}
+
+// Watch for date changes to reload task records
+watch(selectedDate, () => {
+  loadTaskRecords()
+}, { immediate: false })
+
 onMounted(() => {
   const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
   if (savedTheme) {
@@ -548,6 +722,14 @@ onMounted(() => {
       applyTheme('auto')
     }
   })
+  
+  // Load categories and initialize task form
+  loadCategories().then(() => {
+    initializeNewTask()
+  })
+  
+  // Load task records for today
+  loadTaskRecords()
 })
 
 // Toast notification functions
@@ -564,6 +746,34 @@ const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 
 
 const hideToast = () => {
   showToast.value = false
+}
+
+// Task action functions
+const replayTask = async (record: TaskRecord) => {
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const now = new Date()
+    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+
+    const taskRecord = {
+      category_name: record.category_name,
+      task_name: record.task_name,
+      start_time: timeString,
+      date: dateString
+    }
+
+    await window.electronAPI.addTaskRecord(taskRecord)
+    await loadTaskRecords()
+    showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+  } catch (error) {
+    console.error('Failed to replay task:', error)
+    showToastMessage('Failed to replay task. Please try again.', 'error')
+  }
 }
 </script>
 
@@ -726,48 +936,217 @@ body {
   height: calc(100vh - 50px);
 }
 
-.sidebar {
-  width: 180px;
+.task-table-pane {
+  width: 60%;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   box-shadow: 1px 0 3px var(--shadow-color);
+  display: flex;
+  flex-direction: column;
 }
 
-.nav-menu {
-  list-style: none;
-  padding: 0;
+.task-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.task-table-header h3 {
   margin: 0;
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  font-weight: 500;
 }
 
-.nav-item {
-  padding: 0.75rem 1rem;
-  color: var(--text-secondary);
+.add-task-btn {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
   font-size: 0.9rem;
 }
 
-.nav-item:hover {
+.add-task-btn:hover {
+  background: var(--secondary);
+}
+
+.task-table {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.task-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.task-table th {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+  font-weight: 500;
+  position: sticky;
+  top: 0;
+}
+
+.task-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.task-table tr:hover {
+  background: var(--bg-secondary);
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.status-active {
+  background: var(--success);
+  color: white;
+}
+
+.status-completed {
+  background: var(--neutral);
+  color: white;
+}
+
+.status-pending {
+  background: var(--text-muted);
+  color: white;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  margin: 0 0.125rem;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+
+.action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.category-tag {
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Add Task Form Styles */
+.add-task-form {
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.form-group label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-input, .form-select {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.form-btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.form-btn-primary:hover {
+  background: var(--secondary);
+}
+
+.form-btn-secondary {
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.form-btn-secondary:hover {
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
-.nav-item.active {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-  color: white;
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.nav-icon {
-  font-size: 1rem;
-}
-
 .main-content {
-  flex: 1;
+  width: 40%;
   padding: 1rem;
   overflow-y: auto;
   background: var(--bg-secondary);
@@ -1337,5 +1716,17 @@ body {
 .toast-info .toast-icon {
   background: var(--accent);
   color: white;
+}
+
+/* Table loading and empty cell styles */
+.loading-cell, .empty-cell {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.loading-cell .loading-indicator {
+  padding: 0;
 }
 </style>
