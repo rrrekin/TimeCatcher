@@ -130,6 +130,15 @@ ipcMain.handle('db:update-task-record', async (_, id: number, record: Partial<Om
   }
 })
 
+ipcMain.handle('db:delete-task-record', async (_, id: number) => {
+  try {
+    return dbService.deleteTaskRecord(id)
+  } catch (error) {
+    console.error('Failed to delete task record:', error)
+    throw new Error(`Failed to delete task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
 // Debug handler to view all data - only available in development
 if (isDevelopment) {
   ipcMain.handle('db:debug-all', async () => {

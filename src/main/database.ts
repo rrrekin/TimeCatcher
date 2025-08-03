@@ -285,6 +285,10 @@ class DatabaseService {
     this.db.prepare(sql).run(...values)
   }
 
+  deleteTaskRecord(id: number): void {
+    this.db.prepare('DELETE FROM task_records WHERE id = ?').run(id)
+  }
+
   close() {
     this.db.close()
   }
