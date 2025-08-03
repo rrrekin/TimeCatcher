@@ -43,10 +43,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Database Architecture
 
-Uses SQLite with automatic schema migrations. Key patterns:
+Uses SQLite with clean table initialization. Key patterns:
 
 - **Historical Data Preservation**: Tasks store `category_name` directly (not foreign key)
-- **Migration System**: Handles schema changes with transaction-based migrations
+- **Simple Schema**: Clean table creation without migrations (pre-release version)
 - **Default Category Protection**: Cannot delete category marked as default
 
 Database schema:

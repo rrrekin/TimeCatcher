@@ -29,7 +29,7 @@ class DatabaseService {
   }
 
   private initializeTables() {
-    // Create categories table
+    // Create categories table with final schema
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,119 +39,17 @@ class DatabaseService {
       )
     `)
 
-    // Add is_default column if it doesn't exist (for existing databases)
-    try {
-      this.db.exec(`ALTER TABLE categories ADD COLUMN is_default BOOLEAN DEFAULT FALSE`)
-    } catch (error: any) {
-      // Only ignore "duplicate column name" errors - SQLite error code SQLITE_ERROR (1)
-      // with message containing "duplicate column name"
-      if (error?.message?.includes('duplicate column name') || 
-          error?.message?.includes('column already exists')) {
-        // Column already exists, safe to ignore
-        console.log('is_default column already exists, skipping migration')
-      } else {
-        // Re-throw any other database errors for proper debugging
-        console.error('Failed to add is_default column:', error)
-        throw error
-      }
-    }
-
-    // Migration: Convert from category_id to category_name if needed
-    try {
-      // First, create the table with old schema if it doesn't exist (for new installations)
-      this.db.exec(`
-        CREATE TABLE IF NOT EXISTS task_records (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          category_name TEXT NOT NULL,
-          task_name TEXT NOT NULL,
-          start_time DATETIME NOT NULL,
-          date TEXT NOT NULL,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-
-      // Check if the table has category_id column (old schema that needs migration)
-      const columns = this.db.prepare("PRAGMA table_info(task_records)").all() as any[]
-      const hasCategoryId = columns.some((col: any) => col.name === 'category_id')
-      const hasCategoryName = columns.some((col: any) => col.name === 'category_name')
-
-
-      if (hasCategoryId && !hasCategoryName) {
-        console.log('Migrating task_records from category_id to category_name...')
-        
-        // Use transaction for atomic migration
-        const migration = this.db.transaction(() => {
-          // Add category_name column
-          this.db.exec(`ALTER TABLE task_records ADD COLUMN category_name TEXT`)
-          
-          // Get the default category name to use for orphaned records
-          const defaultCategory = this.db.prepare('SELECT name FROM categories WHERE is_default = 1 LIMIT 1').get() as { name: string } | undefined
-          const fallbackCategoryName = defaultCategory?.name || 'Development'
-          
-          // Populate category_name from category_id for valid category references
-          const updateValidRecords = this.db.prepare(`
-            UPDATE task_records 
-            SET category_name = (
-              SELECT name FROM categories WHERE id = task_records.category_id
-            ) 
-            WHERE category_name IS NULL 
-            AND category_id IN (SELECT id FROM categories)
-          `)
-          updateValidRecords.run()
-          
-          // Handle orphaned records (category_id doesn't exist in categories table)
-          const updateOrphanedRecords = this.db.prepare(`
-            UPDATE task_records 
-            SET category_name = ?
-            WHERE category_name IS NULL
-          `)
-          const orphanedCount = updateOrphanedRecords.run(fallbackCategoryName).changes
-          
-          if (orphanedCount > 0) {
-            console.log(`Fixed ${orphanedCount} orphaned records with invalid category_id, assigned to: ${fallbackCategoryName}`)
-          }
-          
-          // Create new table with correct schema
-          this.db.exec(`
-            CREATE TABLE task_records_new (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              category_name TEXT NOT NULL,
-              task_name TEXT NOT NULL,
-              start_time DATETIME NOT NULL,
-              date TEXT NOT NULL,
-              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-          `)
-          
-          // Copy all data to new table (all records should now have category_name)
-          const copyResult = this.db.exec(`
-            INSERT INTO task_records_new (id, category_name, task_name, start_time, date, created_at)
-            SELECT id, category_name, task_name, start_time, date, created_at FROM task_records
-            WHERE category_name IS NOT NULL
-          `)
-          
-          // Verify no data was lost during migration
-          const originalCount = this.db.prepare('SELECT COUNT(*) as count FROM task_records').get() as { count: number }
-          const newCount = this.db.prepare('SELECT COUNT(*) as count FROM task_records_new').get() as { count: number }
-          
-          if (originalCount.count !== newCount.count) {
-            throw new Error(`Migration data loss detected: original=${originalCount.count}, migrated=${newCount.count}`)
-          }
-          
-          // Drop old table and rename new one
-          this.db.exec(`DROP TABLE task_records`)
-          this.db.exec(`ALTER TABLE task_records_new RENAME TO task_records`)
-        })
-        
-        // Execute the migration transaction
-        migration()
-        
-        console.log('Migration from category_id to category_name completed successfully with transaction safety')
-      }
-    } catch (error: any) {
-      console.error('Migration error:', error)
-      // If migration fails, continue with existing table structure
-    }
+    // Create task_records table with final schema
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS task_records (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name TEXT NOT NULL,
+        task_name TEXT NOT NULL,
+        start_time DATETIME NOT NULL,
+        date TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
   }
 
   private initializeDefaultCategories() {
