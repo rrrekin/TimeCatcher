@@ -42,11 +42,25 @@
           <div class="form-row">
             <div class="form-group">
               <label>Category</label>
-              <select v-model="newTask.categoryId" class="form-select">
-                <option v-for="category in categories" :key="category.id" :value="category.id">
-                  {{ category.name }}
-                </option>
-              </select>
+              <div class="custom-dropdown" :class="{ open: showFormCategoryDropdown }">
+                <div class="dropdown-trigger" @click="toggleFormDropdown">
+                  <span class="dropdown-value">
+                    {{ getSelectedCategoryName() || 'Select category' }}
+                  </span>
+                  <span class="dropdown-arrow">▼</span>
+                </div>
+                <div v-if="showFormCategoryDropdown" class="dropdown-menu">
+                  <div 
+                    v-for="category in categories" 
+                    :key="category.id"
+                    class="dropdown-item"
+                    :class="{ selected: newTask.categoryId === category.id }"
+                    @click="selectFormCategory(category)"
+                  >
+                    {{ category.name }}
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="form-group">
               <label>Task</label>
@@ -66,12 +80,13 @@
                 <th>Category</th>
                 <th>Task</th>
                 <th>Start time</th>
+                <th>Duration</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               <tr v-if="isLoadingTasks">
-                <td colspan="4" class="loading-cell">
+                <td colspan="5" class="loading-cell">
                   <div class="loading-indicator">
                     <span class="loading-spinner"></span>
                     Loading tasks...
@@ -79,21 +94,29 @@
                 </td>
               </tr>
               <tr v-else-if="taskRecords.length === 0">
-                <td colspan="4" class="empty-cell">
+                <td colspan="5" class="empty-cell">
                   No tasks recorded for {{ formattedDate.split(',')[0] }}
                 </td>
               </tr>
               <tr v-else v-for="record in taskRecords" :key="record.id">
                 <td>
-                  <select 
-                    :value="record.category_name" 
-                    @change="handleCategoryChange(record.id, $event)"
-                    class="editable-cell editable-select"
-                  >
-                    <option v-for="category in categories" :key="category.name" :value="category.name">
-                      {{ category.name }}
-                    </option>
-                  </select>
+                  <div class="custom-dropdown table-dropdown" :class="{ open: showInlineDropdown[record.id] }">
+                    <div class="dropdown-trigger" @click="toggleInlineDropdown(record.id)">
+                      <span class="dropdown-value">{{ record.category_name }}</span>
+                      <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div v-if="showInlineDropdown[record.id]" class="dropdown-menu">
+                      <div 
+                        v-for="category in categories" 
+                        :key="category.name"
+                        class="dropdown-item"
+                        :class="{ selected: record.category_name === category.name }"
+                        @click="selectInlineCategory(record.id, category.name)"
+                      >
+                        {{ category.name }}
+                      </div>
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <input 
@@ -115,6 +138,9 @@
                     class="editable-cell editable-input time-input"
                   />
                 </td>
+                <td class="duration-cell">
+                  {{ calculateDuration(record, taskRecords) }}
+                </td>
                 <td>
                   <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
                   <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
@@ -127,12 +153,97 @@
       
       <main class="main-content">
         <div v-if="activeSection === 'dashboard'" class="section">
-          <h2>Dashboard</h2>
-          <p>Overview of your productivity metrics and recent activity.</p>
-          <div class="placeholder-content">
-            <div class="card">Today's Progress</div>
-            <div class="card">Recent Tasks</div>
-            <div class="card">Time Summary</div>
+          <h2>Daily Report</h2>
+          <p>{{ formattedDate.split(',')[0] }} - Overview of your time and productivity</p>
+          
+          <!-- Time Summary Stats -->
+          <div class="report-stats">
+            <div class="stat-card">
+              <div class="stat-label">Total Time Tracked</div>
+              <div class="stat-value">{{ getTotalTimeTracked() }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Tasks Completed</div>
+              <div class="stat-value">{{ taskRecords.length }}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Categories Used</div>
+              <div class="stat-value">{{ getUniqueCategoriesCount() }}</div>
+            </div>
+          </div>
+
+          <!-- Category Summary Cards -->
+          <div v-if="taskRecords.length > 0" class="report-section">
+            <h3>Category Summary</h3>
+            <div class="category-summary-grid">
+              <div 
+                v-for="categoryData in getCategoryBreakdown().slice(0, 4)" 
+                :key="categoryData.name"
+                class="category-summary-card"
+              >
+                <div class="category-summary-header">
+                  <span class="category-summary-name">{{ categoryData.name }}</span>
+                  <span class="category-summary-percentage">{{ categoryData.percentage }}%</span>
+                </div>
+                <div class="category-summary-time">{{ categoryData.totalTime }}</div>
+                <div class="category-summary-tasks">{{ categoryData.taskCount }} task{{ categoryData.taskCount !== 1 ? 's' : '' }}</div>
+                <div class="category-summary-bar">
+                  <div 
+                    class="category-summary-progress" 
+                    :style="{ width: categoryData.percentage + '%' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category Breakdown -->
+          <div class="report-section">
+            <h3>Detailed Time by Category</h3>
+            <div v-if="taskRecords.length === 0" class="empty-report">
+              No tasks recorded for this day
+            </div>
+            <div v-else class="category-breakdown">
+              <div 
+                v-for="categoryData in getCategoryBreakdown()" 
+                :key="categoryData.name"
+                class="category-row"
+              >
+                <div class="category-info">
+                  <span class="category-name">{{ categoryData.name }}</span>
+                  <span class="category-tasks">{{ categoryData.taskCount }} tasks</span>
+                </div>
+                <div class="category-time">{{ categoryData.totalTime }}</div>
+                <div class="category-bar">
+                  <div 
+                    class="category-progress" 
+                    :style="{ width: categoryData.percentage + '%' }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Tasks -->
+          <div class="report-section">
+            <h3>Today's Timeline</h3>
+            <div v-if="taskRecords.length === 0" class="empty-report">
+              No tasks recorded for this day
+            </div>
+            <div v-else class="timeline">
+              <div 
+                v-for="record in getSortedTaskRecords()" 
+                :key="record.id"
+                class="timeline-item"
+              >
+                <div class="timeline-time">{{ formatTime12Hour(record.start_time) }}</div>
+                <div class="timeline-content">
+                  <div class="timeline-task">{{ record.task_name }}</div>
+                  <div class="timeline-category">{{ record.category_name }}</div>
+                  <div class="timeline-duration">{{ calculateDuration(record, taskRecords) }}</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -391,6 +502,11 @@ const isSettingDefault = ref(false)
 const showDeleteModal = ref(false)
 const taskToDelete = ref<TaskRecord | null>(null)
 const isDeletingTask = ref(false)
+
+// Custom dropdown state
+const showFormCategoryDropdown = ref(false)
+const showInlineDropdown = ref<{ [key: number]: boolean }>({})
+const selectedCategoryForForm = ref('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
@@ -981,6 +1097,80 @@ const convertToTimeInput = (timeString: string): string => {
   return '00:00:00'
 }
 
+// Duration calculation function
+const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]): string => {
+  if (!currentRecord || !allRecords || allRecords.length === 0) {
+    return '-'
+  }
+
+  // Sort records by start time to find the next task
+  const sortedRecords = allRecords
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = a.start_time.split(':').map(Number)
+      const timeB = b.start_time.split(':').map(Number)
+      return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) - 
+             (timeB[0] * 3600 + timeB[1] * 60 + (timeB[2] || 0))
+    })
+
+  // Find the current record index
+  const currentIndex = sortedRecords.findIndex(record => record.id === currentRecord.id)
+  if (currentIndex === -1) {
+    return '-'
+  }
+
+  // If this is the last task, show "ongoing"
+  if (currentIndex === sortedRecords.length - 1) {
+    return 'Ongoing'
+  }
+
+  // Get the next task
+  const nextRecord = sortedRecords[currentIndex + 1]
+  if (!nextRecord) {
+    return 'Ongoing'
+  }
+
+  // Calculate duration between current and next task
+  const currentTime = parseTimeString(currentRecord.start_time)
+  const nextTime = parseTimeString(nextRecord.start_time)
+
+  if (currentTime === null || nextTime === null) {
+    return '-'
+  }
+
+  const durationMinutes = nextTime - currentTime
+  
+  if (durationMinutes <= 0) {
+    return '-'
+  }
+
+  return formatDurationMinutes(durationMinutes)
+}
+
+const parseTimeString = (timeString: string): number | null => {
+  if (!timeString) return null
+  
+  const parts = timeString.split(':').map(Number)
+  if (parts.length < 2 || parts.some(isNaN)) return null
+  
+  const hours = parts[0] || 0
+  const minutes = parts[1] || 0
+  const seconds = parts[2] || 0
+  
+  return hours * 60 + minutes + seconds / 60
+}
+
+const formatDurationMinutes = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = Math.floor(totalMinutes % 60)
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`
+  } else {
+    return `${minutes}m`
+  }
+}
+
 // Delete task functions
 const confirmDeleteTask = (record: TaskRecord) => {
   taskToDelete.value = record
@@ -1021,6 +1211,203 @@ const confirmDeleteTaskFinal = async () => {
   } finally {
     isDeletingTask.value = false
   }
+}
+
+// Custom dropdown functions
+const toggleFormDropdown = () => {
+  showFormCategoryDropdown.value = !showFormCategoryDropdown.value
+}
+
+const selectFormCategory = (category: Category) => {
+  newTask.value.categoryId = category.id
+  showFormCategoryDropdown.value = false
+}
+
+const getSelectedCategoryName = (): string => {
+  const category = categories.value.find(cat => cat.id === newTask.value.categoryId)
+  return category?.name || ''
+}
+
+// Inline dropdown functions for task table
+const toggleInlineDropdown = (recordId: number | undefined) => {
+  if (recordId === undefined) return
+  
+  // Close all other dropdowns first
+  Object.keys(showInlineDropdown.value).forEach(key => {
+    const id = Number(key)
+    if (id !== recordId) {
+      showInlineDropdown.value[id] = false
+    }
+  })
+  
+  // Toggle the current dropdown
+  showInlineDropdown.value[recordId] = !showInlineDropdown.value[recordId]
+}
+
+const selectInlineCategory = async (recordId: number | undefined, categoryName: string) => {
+  if (recordId === undefined) return
+  
+  // Close the dropdown
+  showInlineDropdown.value[recordId] = false
+  
+  // Update the category
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
+}
+
+// Close dropdown when clicking outside
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  if (!target.closest('.custom-dropdown')) {
+    showFormCategoryDropdown.value = false
+    // Close all inline dropdowns
+    Object.keys(showInlineDropdown.value).forEach(key => {
+      showInlineDropdown.value[Number(key)] = false
+    })
+  }
+}
+
+// Add click outside listener function
+onMounted(async () => {
+  const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
+  if (savedTheme) {
+    currentTheme.value = savedTheme
+  }
+  applyTheme(currentTheme.value)
+  
+  // Listen for system theme changes when in auto mode
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (currentTheme.value === 'auto') {
+      applyTheme('auto')
+    }
+  })
+  
+  // Wait a moment for database initialization to complete, then load categories
+  console.log('App mounted, waiting for database initialization...')
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  console.log('Loading categories and initializing task form...')
+  await loadCategories()
+  initializeNewTask()
+  
+  // Load task records for today
+  console.log('Loading task records...')
+  await loadTaskRecords()
+  console.log('App initialization complete')
+  
+  // Add click outside listener for custom dropdown
+  document.addEventListener('click', handleClickOutside)
+})
+
+// Clean up event listener
+const cleanup = () => {
+  document.removeEventListener('click', handleClickOutside)
+}
+
+// Daily report functions
+const getTotalTimeTracked = (): string => {
+  if (taskRecords.value.length === 0) return '0h 0m'
+  
+  const sortedRecords = taskRecords.value
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = parseTimeString(a.start_time) || 0
+      const timeB = parseTimeString(b.start_time) || 0
+      return timeA - timeB
+    })
+
+  let totalMinutes = 0
+  for (let i = 0; i < sortedRecords.length - 1; i++) {
+    const currentTime = parseTimeString(sortedRecords[i].start_time)
+    const nextTime = parseTimeString(sortedRecords[i + 1].start_time)
+    if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+      totalMinutes += nextTime - currentTime
+    }
+  }
+
+  return formatDurationMinutes(totalMinutes)
+}
+
+const getUniqueCategoriesCount = (): number => {
+  const uniqueCategories = new Set(taskRecords.value.map(record => record.category_name))
+  return uniqueCategories.size
+}
+
+const getCategoryBreakdown = () => {
+  if (taskRecords.value.length === 0) return []
+
+  const categoryMap = new Map()
+  const sortedRecords = taskRecords.value
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = parseTimeString(a.start_time) || 0
+      const timeB = parseTimeString(b.start_time) || 0
+      return timeA - timeB
+    })
+
+  // Initialize category tracking
+  for (const record of taskRecords.value) {
+    if (!categoryMap.has(record.category_name)) {
+      categoryMap.set(record.category_name, {
+        name: record.category_name,
+        totalMinutes: 0,
+        taskCount: 0
+      })
+    }
+    categoryMap.get(record.category_name).taskCount++
+  }
+
+  // Calculate time for each category
+  for (let i = 0; i < sortedRecords.length - 1; i++) {
+    const currentRecord = sortedRecords[i]
+    const nextRecord = sortedRecords[i + 1]
+    const currentTime = parseTimeString(currentRecord.start_time)
+    const nextTime = parseTimeString(nextRecord.start_time)
+    
+    if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+      const duration = nextTime - currentTime
+      categoryMap.get(currentRecord.category_name).totalMinutes += duration
+    }
+  }
+
+  // Calculate total time for percentage calculation
+  const totalMinutes = Array.from(categoryMap.values())
+    .reduce((sum, cat) => sum + cat.totalMinutes, 0)
+
+  // Convert to array and add percentage
+  return Array.from(categoryMap.values())
+    .map(category => ({
+      ...category,
+      totalTime: formatDurationMinutes(category.totalMinutes),
+      percentage: totalMinutes > 0 ? Math.round((category.totalMinutes / totalMinutes) * 100) : 0
+    }))
+    .sort((a, b) => b.totalMinutes - a.totalMinutes)
+}
+
+const getSortedTaskRecords = () => {
+  return taskRecords.value
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = parseTimeString(a.start_time) || 0
+      const timeB = parseTimeString(b.start_time) || 0
+      return timeA - timeB
+    })
+}
+
+const formatTime12Hour = (timeString: string): string => {
+  if (!timeString) return '12:00 AM'
+  
+  const parts = timeString.split(':')
+  if (parts.length < 2) return '12:00 AM'
+  
+  const hours = parseInt(parts[0], 10)
+  const minutes = parts[1]
+  
+  if (isNaN(hours)) return '12:00 AM'
+  
+  const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
+  const period = hours >= 12 ? 'PM' : 'AM'
+  
+  return `${hour12}:${minutes} ${period}`
 }
 </script>
 
@@ -2027,6 +2414,16 @@ body {
   vertical-align: middle;
 }
 
+/* Duration cell specific styles */
+.task-table td.duration-cell {
+  width: 5rem;
+  padding: 0.4rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 .time-input {
   width: 100%;
   max-width: 100%;
@@ -2118,5 +2515,405 @@ body {
 .delete-confirm-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Custom Dropdown Styles */
+.custom-dropdown {
+  position: relative;
+  display: block;
+}
+
+.dropdown-trigger {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Table-specific dropdown styling */
+.table-dropdown {
+  width: 100%;
+}
+
+.table-dropdown .dropdown-trigger {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.4rem;
+  margin: -0.4rem;
+  font-size: 0.9rem;
+  min-height: auto;
+  transition: all 0.2s ease;
+}
+
+.table-dropdown .dropdown-trigger:hover {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--primary);
+}
+
+.table-dropdown.open .dropdown-trigger {
+  background: var(--bg-secondary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.dropdown-trigger:hover {
+  border-color: var(--primary);
+}
+
+.custom-dropdown.open .dropdown-trigger {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.dropdown-value {
+  flex: 1;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.dropdown-arrow {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.custom-dropdown.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 8px var(--shadow-color);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.dropdown-item {
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.dropdown-item:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.dropdown-item.selected {
+  background: var(--primary);
+  color: white;
+}
+
+.dropdown-item.selected:hover {
+  background: var(--secondary);
+}
+
+/* Daily Report Styles */
+.report-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Category Summary Cards */
+.category-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.category-summary-card {
+  background: var(--bg-primary);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.category-summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+  border-color: var(--primary);
+}
+
+.category-summary-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+.category-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.category-summary-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-summary-percentage {
+  font-size: 0.8rem;
+  color: var(--accent);
+  font-weight: 600;
+  background: var(--bg-secondary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 12px;
+}
+
+.category-summary-time {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--secondary);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.category-summary-tasks {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.category-summary-bar {
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.category-summary-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.stat-card {
+  background: var(--bg-primary);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px var(--shadow-color);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.report-section {
+  margin-bottom: 1.5rem;
+}
+
+.report-section h3 {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.empty-report {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2rem 1rem;
+  font-style: italic;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.category-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.category-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.category-row:hover {
+  border-color: var(--primary);
+  transform: translateX(2px);
+}
+
+.category-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.category-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.category-tasks {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.category-time {
+  font-weight: 600;
+  color: var(--secondary);
+  font-size: 0.9rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.category-bar {
+  position: relative;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.category-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  min-width: 2px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.timeline-item:hover {
+  border-color: var(--primary);
+  transform: translateX(2px);
+}
+
+.timeline-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 4rem;
+  bottom: -0.5rem;
+  height: 0.5rem;
+  width: 2px;
+  background: var(--border-color);
+  z-index: 1;
+}
+
+.timeline-time {
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 0.85rem;
+  white-space: nowrap;
+  min-width: 4rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  text-align: center;
+  align-self: start;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.timeline-task {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.timeline-category {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  align-self: start;
+}
+
+.timeline-duration {
+  font-size: 0.8rem;
+  color: var(--secondary);
+  font-weight: 500;
 }
 </style>
