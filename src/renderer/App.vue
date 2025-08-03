@@ -310,25 +310,13 @@
     <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDeleteTask">
       <div class="modal delete-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
         <div class="modal-header delete-header">
-          <h3 id="delete-modal-title">Delete Task</h3>
+          <h3 id="delete-modal-title">🗑 Delete Task</h3>
           <button class="close-btn" @click="cancelDeleteTask" aria-label="Close delete modal">×</button>
         </div>
         
         <div class="modal-content">
           <div class="delete-message">
-            <div class="delete-icon">⚠️</div>
-            <p>Are you sure you want to delete this task?</p>
-            <div class="task-details">
-              <div class="task-detail">
-                <strong>Category:</strong> {{ taskToDelete?.category_name }}
-              </div>
-              <div class="task-detail">
-                <strong>Task:</strong> {{ taskToDelete?.task_name }}
-              </div>
-              <div class="task-detail">
-                <strong>Time:</strong> {{ taskToDelete ? formatTime(taskToDelete.start_time) : '' }}
-              </div>
-            </div>
+            <p>Delete <strong>{{ taskToDelete?.task_name }}</strong> from {{ taskToDelete?.category_name }}?</p>
             <p class="warning-text">This action cannot be undone.</p>
           </div>
         </div>
@@ -339,7 +327,7 @@
           </button>
           <button class="delete-confirm-btn" @click="confirmDeleteTaskFinal" :disabled="isDeletingTask">
             <span v-if="isDeletingTask">Deleting...</span>
-            <span v-else>Delete Task</span>
+            <span v-else>Delete</span>
           </button>
         </div>
       </div>
@@ -1017,10 +1005,7 @@ const confirmDeleteTaskFinal = async () => {
       return
     }
 
-    console.log('Available electronAPI methods:', Object.keys(window.electronAPI))
-    
     if (!window.electronAPI.deleteTaskRecord) {
-      console.error('deleteTaskRecord not found in electronAPI')
       showToastMessage('Delete function not available. Please restart the application.', 'error')
       return
     }
@@ -2083,75 +2068,51 @@ body {
 
 /* Delete Modal Styles */
 .delete-modal {
-  width: 450px;
+  width: 350px;
+  max-width: 90vw;
 }
 
 .delete-header {
-  background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+  background: linear-gradient(135deg, var(--mantis) 0%, var(--emerald) 100%);
 }
 
 .delete-message {
   text-align: center;
-  padding: 1rem 0;
-}
-
-.delete-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+  padding: 0.75rem 0;
 }
 
 .delete-message p {
   color: var(--text-primary);
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
   font-weight: 500;
 }
 
-.task-details {
-  background: var(--bg-secondary);
-  border-radius: 6px;
-  padding: 1rem;
-  margin: 1rem 0;
-  border: 1px solid var(--border-color);
-}
-
-.task-detail {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.25rem 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-
-.task-detail strong {
-  color: var(--text-primary);
-  font-weight: 500;
-  min-width: 80px;
+.delete-message p:first-child {
+  margin-bottom: 1rem;
 }
 
 .warning-text {
-  color: #ff4757;
-  font-size: 0.85rem;
+  color: var(--mantis);
+  font-size: 0.8rem;
   font-style: italic;
-  margin-top: 1rem;
   margin-bottom: 0;
 }
 
 .delete-confirm-btn {
-  padding: 0.5rem 1.5rem;
+  padding: 0.5rem 1.2rem;
   border: none;
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9rem;
-  background: #ff4757;
+  background: var(--mantis);
   color: white;
 }
 
 .delete-confirm-btn:hover:not(:disabled) {
-  background: #ff3838;
+  background: var(--emerald);
 }
 
 .delete-confirm-btn:disabled {

@@ -43,7 +43,8 @@ Main screen has:
 - Task switching records
 - Daily time calculations
 - Simple, clean UI
-- Compact design
+- **Compact design philosophy**: All UI components must be space-efficient and concise
+- **Consistent color palette**: Always use the defined app color palette (verdigris, mantis, asparagus, emerald, aero) - never introduce external colors like red (#ff4757)
 
 ## Project Structure
 
@@ -208,6 +209,14 @@ $gradient-radial: radial-gradient(#57bdafff, #59c964ff, #69966fff, #56b372ff, #1
   - **Referential Flexibility**: Tasks preserve original category names even after category deletion
   - **Data Consistency**: Categories table serves as current options, task records maintain history
 
+- ✅ **Task Deletion System**
+  - **Delete Button**: 🗑 icon on each task row for deletion
+  - **Confirmation Modal**: Compact, green-themed confirmation dialog
+  - **Design Consistency**: Uses app's green color palette (mantis/emerald) instead of traditional red
+  - **Compact Layout**: Streamlined modal with essential information only
+  - **Safe Deletion**: Full database integration with proper error handling and user feedback
+  - **Real-time Updates**: Task list refreshes immediately after successful deletion
+
 ### In Progress 🔄
 
 - Right panel for daily time reports and analytics
@@ -220,7 +229,7 @@ $gradient-radial: radial-gradient(#57bdafff, #59c964ff, #69966fff, #56b372ff, #1
    - Real-time updates as tasks are added/modified
 
 2. **Enhanced Task Management**
-   - Delete task records with confirmation (inline editing ✅ complete)
+   - ✅ Delete task records with confirmation modal (complete)
    - Task history and recent task suggestions
 
 3. **Advanced Features**
