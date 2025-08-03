@@ -12,5 +12,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDefaultCategory: () => ipcRenderer.invoke('db:get-default-category'),
   addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => ipcRenderer.invoke('db:add-task-record', record),
   getTaskRecordsByDate: (date: string) => ipcRenderer.invoke('db:get-task-records-by-date', date),
+  updateTaskRecord: (id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => ipcRenderer.invoke('db:update-task-record', id, record),
   debugAll: () => ipcRenderer.invoke('db:debug-all')
 })

@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:vite\" \"wait-on dist/renderer/index.html && npm run dev:electron\"",
     "dev:vite": "vite",
-    "dev:electron": "tsc src/main/*.ts --outDir dist/main && electron .",
-    "build": "vue-tsc --noEmit && vite build && tsc src/main/*.ts --outDir dist/main",
+    "dev:electron": "tsc --project tsconfig.main.json && electron .",
+    "build": "vue-tsc --noEmit && vite build && tsc --project tsconfig.main.json",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux"

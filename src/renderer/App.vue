@@ -84,13 +84,39 @@
                 </td>
               </tr>
               <tr v-else v-for="record in taskRecords" :key="record.id">
-                <td><span class="category-tag">{{ record.category_name }}</span></td>
-                <td>{{ record.task_name }}</td>
-                <td>{{ formatTime(record.start_time) }}</td>
                 <td>
-                  <button class="action-btn" title="Replay task" @click="replayTask(record)">🔄</button>
-                  <button class="action-btn" title="Edit task (coming soon)" disabled>✏️</button>
-                  <button class="action-btn" title="Delete task (coming soon)" disabled>🗑️</button>
+                  <select 
+                    :value="record.category_name" 
+                    @change="handleCategoryChange(record.id, $event)"
+                    class="editable-cell editable-select"
+                  >
+                    <option v-for="category in categories" :key="category.name" :value="category.name">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </td>
+                <td>
+                  <input 
+                    type="text" 
+                    :value="record.task_name"
+                    @blur="handleBlur(record.id, 'task_name', $event)"
+                    @keydown.enter="handleEnter(record.id, 'task_name', $event)"
+                    class="editable-cell editable-input"
+                    placeholder="Task name"
+                  />
+                </td>
+                <td class="time-cell">
+                  <input
+                    type="time" 
+                    step="1"
+                    :value="convertToTimeInput(record.start_time)"
+                    @blur="handleBlur(record.id, 'start_time', $event)"
+                    @keydown.enter="handleEnter(record.id, 'start_time', $event)"
+                    class="editable-cell editable-input time-input"
+                  />
+                </td>
+                <td>
+                  <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
                 </td>
               </tr>
             </tbody>
@@ -399,11 +425,15 @@ const saveSettings = () => {
 const loadCategories = async () => {
   isLoadingCategories.value = true
   try {
+    console.log('Loading categories from frontend...')
     if (!window.electronAPI) {
+      console.error('electronAPI not available')
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    categories.value = await window.electronAPI.getCategories()
+    const loadedCategories = await window.electronAPI.getCategories()
+    console.log('Categories loaded:', loadedCategories)
+    categories.value = loadedCategories
   } catch (error) {
     console.error('Failed to load categories:', error)
     showToastMessage('Failed to load categories. Please try again.', 'error')
@@ -663,6 +693,16 @@ const getDefaultCategoryId = (): number | null => {
   return defaultCategory?.id || null
 }
 
+const getCategoryIdByName = (categoryName: string): number | null => {
+  const category = categories.value.find(cat => cat.name === categoryName)
+  return category?.id || null
+}
+
+const getCategoryNameById = (categoryId: number): string | null => {
+  const category = categories.value.find(cat => cat.id === categoryId)
+  return category?.name || null
+}
+
 const initializeNewTask = () => {
   newTask.value.categoryId = getDefaultCategoryId()
 }
@@ -709,7 +749,7 @@ watch(selectedDate, () => {
   loadTaskRecords()
 }, { immediate: false })
 
-onMounted(() => {
+onMounted(async () => {
   const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
   if (savedTheme) {
     currentTheme.value = savedTheme
@@ -723,13 +763,18 @@ onMounted(() => {
     }
   })
   
-  // Load categories and initialize task form
-  loadCategories().then(() => {
-    initializeNewTask()
-  })
+  // Wait a moment for database initialization to complete, then load categories
+  console.log('App mounted, waiting for database initialization...')
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  
+  console.log('Loading categories and initializing task form...')
+  await loadCategories()
+  initializeNewTask()
   
   // Load task records for today
-  loadTaskRecords()
+  console.log('Loading task records...')
+  await loadTaskRecords()
+  console.log('App initialization complete')
 })
 
 // Toast notification functions
@@ -774,6 +819,133 @@ const replayTask = async (record: TaskRecord) => {
     console.error('Failed to replay task:', error)
     showToastMessage('Failed to replay task. Please try again.', 'error')
   }
+}
+
+// updateField function removed - unnecessary overhead since Vue handles input display
+// and actual updates happen on blur/enter events via handleBlur
+
+// Common task field update logic extracted from handleBlur and handleCategoryChange
+const updateTaskField = async (recordId: number | undefined, updates: Record<string, any>, successMessage: string = 'Task updated successfully!') => {
+  if (recordId === undefined) {
+    console.error('Record ID is undefined')
+    return
+  }
+  
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+    
+    if (!window.electronAPI.updateTaskRecord) {
+      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    // Ensure recordId is a number
+    const numericRecordId = Number(recordId)
+    if (isNaN(numericRecordId)) {
+      console.error('Invalid record ID:', recordId)
+      showToastMessage('Invalid record ID. Please refresh the page.', 'error')
+      await loadTaskRecords()
+      return
+    }
+    
+    // Get current record to compare values
+    const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
+    if (!currentRecord) {
+      console.error('Record not found:', numericRecordId)
+      await loadTaskRecords()
+      return
+    }
+    
+    // Check if any values have actually changed
+    let hasChanges = false
+    for (const [field, newValue] of Object.entries(updates)) {
+      const currentValue = currentRecord[field as keyof TaskRecord]
+      if (currentValue !== newValue) {
+        hasChanges = true
+        break
+      }
+    }
+    
+    // Skip update if no changes
+    if (!hasChanges) {
+      return
+    }
+    
+    await window.electronAPI.updateTaskRecord(numericRecordId, updates)
+    await loadTaskRecords()
+    showToastMessage(successMessage, 'success')
+  } catch (error) {
+    console.error('Failed to update task:', error)
+    showToastMessage(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+    await loadTaskRecords() // Restore previous values on error
+  }
+}
+
+const handleBlur = async (recordId: number | undefined, field: string, event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLInputElement)) {
+    console.error('Event target is not an HTMLInputElement')
+    return
+  }
+  
+  const value = target.value
+  if (!value.trim()) {
+    // If field is empty, reload to restore previous value
+    await loadTaskRecords()
+    return
+  }
+  
+  // Process the field value based on field type
+  let processedValue = value
+  if (field === 'start_time') {
+    // Convert time input (HH:MM:SS) to proper format
+    const [hours, minutes, seconds] = value.split(':')
+    processedValue = `${hours}:${minutes}:${seconds || '00'}`
+  }
+  
+  const updates: Record<string, any> = {}
+  updates[field] = processedValue
+  
+  await updateTaskField(recordId, updates)
+}
+
+const handleEnter = async (recordId: number | undefined, field: string, event: Event) => {
+  await handleBlur(recordId, field, event)
+}
+
+const handleCategoryChange = async (recordId: number | undefined, event: Event) => {
+  const target = event.target
+  if (!(target instanceof HTMLSelectElement)) {
+    console.error('Event target is not an HTMLSelectElement')
+    return
+  }
+  
+  const categoryName = target.value
+  if (!categoryName) {
+    console.error('Invalid category name:', target.value)
+    showToastMessage('Invalid category selected. Please refresh the page.', 'error')
+    await loadTaskRecords()
+    return
+  }
+  
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
+}
+
+const convertToTimeInput = (timeString: string): string => {
+  // Convert HH:MM:SS format to time input value
+  if (!timeString) return '00:00:00'
+  
+  const parts = timeString.split(':')
+  if (parts.length >= 3) {
+    return timeString
+  } else if (parts.length === 2) {
+    return `${timeString}:00`
+  }
+  return '00:00:00'
 }
 </script>
 
@@ -992,16 +1164,17 @@ body {
 .task-table th {
   background: var(--bg-secondary);
   color: var(--text-primary);
-  padding: 0.75rem 0.5rem;
+  padding: 0.5rem 0.4rem;
   text-align: left;
   border-bottom: 2px solid var(--border-color);
   font-weight: 500;
   position: sticky;
   top: 0;
+  font-size: 0.85rem;
 }
 
 .task-table td {
-  padding: 0.75rem 0.5rem;
+  padding: 0.4rem 0.4rem;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
@@ -1728,5 +1901,82 @@ body {
 
 .loading-cell .loading-indicator {
   padding: 0;
+}
+
+/* Editable cell styles */
+.editable-cell {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.editable-cell:focus {
+  outline: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.editable-input {
+  cursor: text;
+}
+
+.editable-input:hover {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.editable-select {
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.editable-select:hover {
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+/* Time cell specific styles */
+.task-table td.time-cell {
+  width: 6rem;
+  padding: 0.25rem;
+  vertical-align: middle;
+}
+
+.time-input {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.4rem 0.25rem;
+  font-size: 0.85rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Hide the native time picker icon */
+.time-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.time-input::-webkit-clear-button {
+  display: none;
+}
+
+/* Replay button green styling */
+.action-btn.replay-btn {
+  background: var(--success);
+  color: white;
+}
+
+.action-btn.replay-btn:hover:not(:disabled) {
+  background: var(--mantis);
 }
 </style>
