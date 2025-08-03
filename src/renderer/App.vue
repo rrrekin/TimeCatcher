@@ -2062,7 +2062,7 @@ body {
 }
 
 .action-btn.delete-btn:hover:not(:disabled) {
-  background: #ff4757;
+  background: var(--mantis);
   color: white;
 }
 
