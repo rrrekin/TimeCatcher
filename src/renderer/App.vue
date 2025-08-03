@@ -117,6 +117,7 @@
                 </td>
                 <td>
                   <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
+                  <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
                 </td>
               </tr>
             </tbody>
@@ -305,6 +306,45 @@
       </div>
     </div>
     
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDeleteTask">
+      <div class="modal delete-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+        <div class="modal-header delete-header">
+          <h3 id="delete-modal-title">Delete Task</h3>
+          <button class="close-btn" @click="cancelDeleteTask" aria-label="Close delete modal">×</button>
+        </div>
+        
+        <div class="modal-content">
+          <div class="delete-message">
+            <div class="delete-icon">⚠️</div>
+            <p>Are you sure you want to delete this task?</p>
+            <div class="task-details">
+              <div class="task-detail">
+                <strong>Category:</strong> {{ taskToDelete?.category_name }}
+              </div>
+              <div class="task-detail">
+                <strong>Task:</strong> {{ taskToDelete?.task_name }}
+              </div>
+              <div class="task-detail">
+                <strong>Time:</strong> {{ taskToDelete ? formatTime(taskToDelete.start_time) : '' }}
+              </div>
+            </div>
+            <p class="warning-text">This action cannot be undone.</p>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="cancelDeleteTask">
+            Cancel
+          </button>
+          <button class="delete-confirm-btn" @click="confirmDeleteTaskFinal" :disabled="isDeletingTask">
+            <span v-if="isDeletingTask">Deleting...</span>
+            <span v-else>Delete Task</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notification -->
     <div v-if="showToast" class="toast-overlay">
       <div class="toast" :class="`toast-${toastType}`">
@@ -358,6 +398,11 @@ const isLoadingCategories = ref(false)
 const isDeletingCategory = ref(false)
 const isUpdatingCategory = ref(false)
 const isSettingDefault = ref(false)
+
+// Delete task modal
+const showDeleteModal = ref(false)
+const taskToDelete = ref<TaskRecord | null>(null)
+const isDeletingTask = ref(false)
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
@@ -946,6 +991,51 @@ const convertToTimeInput = (timeString: string): string => {
     return `${timeString}:00`
   }
   return '00:00:00'
+}
+
+// Delete task functions
+const confirmDeleteTask = (record: TaskRecord) => {
+  taskToDelete.value = record
+  showDeleteModal.value = true
+}
+
+const cancelDeleteTask = () => {
+  taskToDelete.value = null
+  showDeleteModal.value = false
+  isDeletingTask.value = false
+}
+
+const confirmDeleteTaskFinal = async () => {
+  if (!taskToDelete.value?.id) {
+    console.error('No task to delete')
+    return
+  }
+
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    console.log('Available electronAPI methods:', Object.keys(window.electronAPI))
+    
+    if (!window.electronAPI.deleteTaskRecord) {
+      console.error('deleteTaskRecord not found in electronAPI')
+      showToastMessage('Delete function not available. Please restart the application.', 'error')
+      return
+    }
+
+    isDeletingTask.value = true
+    await window.electronAPI.deleteTaskRecord(taskToDelete.value.id)
+    await loadTaskRecords()
+    showToastMessage(`Task "${taskToDelete.value.task_name}" deleted successfully!`, 'success')
+    cancelDeleteTask()
+  } catch (error) {
+    console.error('Failed to delete task:', error)
+    showToastMessage('Failed to delete task. Please try again.', 'error')
+  } finally {
+    isDeletingTask.value = false
+  }
 }
 </script>
 
@@ -1978,5 +2068,94 @@ body {
 
 .action-btn.replay-btn:hover:not(:disabled) {
   background: var(--mantis);
+}
+
+/* Delete button styling */
+.action-btn.delete-btn {
+  background: none;
+  color: var(--text-muted);
+}
+
+.action-btn.delete-btn:hover:not(:disabled) {
+  background: #ff4757;
+  color: white;
+}
+
+/* Delete Modal Styles */
+.delete-modal {
+  width: 450px;
+}
+
+.delete-header {
+  background: linear-gradient(135deg, #ff4757 0%, #ff3838 100%);
+}
+
+.delete-message {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.delete-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.delete-message p {
+  color: var(--text-primary);
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.task-details {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 1rem;
+  margin: 1rem 0;
+  border: 1px solid var(--border-color);
+}
+
+.task-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.task-detail strong {
+  color: var(--text-primary);
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.warning-text {
+  color: #ff4757;
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+
+.delete-confirm-btn {
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  background: #ff4757;
+  color: white;
+}
+
+.delete-confirm-btn:hover:not(:disabled) {
+  background: #ff3838;
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { TaskRecord } from '../shared/types'
 
-contextBridge.exposeInMainWorld('electronAPI', {
+const electronAPI = {
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name: string) => ipcRenderer.invoke('db:add-category', name),
@@ -13,5 +13,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => ipcRenderer.invoke('db:add-task-record', record),
   getTaskRecordsByDate: (date: string) => ipcRenderer.invoke('db:get-task-records-by-date', date),
   updateTaskRecord: (id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => ipcRenderer.invoke('db:update-task-record', id, record),
+  deleteTaskRecord: (id: number) => ipcRenderer.invoke('db:delete-task-record', id),
   debugAll: () => ipcRenderer.invoke('db:debug-all')
-})
+}
+
+console.log('Preload: Exposing electronAPI with methods:', Object.keys(electronAPI))
+
+contextBridge.exposeInMainWorld('electronAPI', electronAPI)
