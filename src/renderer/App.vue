@@ -34,43 +34,6 @@
       <div class="task-table-pane">
         <div class="task-table-header">
           <h3>Tasks</h3>
-          <button class="add-task-btn" @click="showAddTaskForm = !showAddTaskForm">+ Add Task</button>
-        </div>
-        
-        <!-- Add Task Form -->
-        <div v-if="showAddTaskForm" class="add-task-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Category</label>
-              <div class="custom-dropdown" :class="{ open: showFormCategoryDropdown }">
-                <div class="dropdown-trigger" @click="toggleFormDropdown">
-                  <span class="dropdown-value">
-                    {{ getSelectedCategoryName() || 'Select category' }}
-                  </span>
-                  <span class="dropdown-arrow">▼</span>
-                </div>
-                <div v-if="showFormCategoryDropdown" class="dropdown-menu">
-                  <div 
-                    v-for="category in categories" 
-                    :key="category.id"
-                    class="dropdown-item"
-                    :class="{ selected: newTask.categoryId === category.id }"
-                    @click="selectFormCategory(category)"
-                  >
-                    {{ category.name }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Task</label>
-              <input v-model="newTask.name" class="form-input" placeholder="Enter task name" />
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="form-btn form-btn-primary" @click="addTask">Add Task</button>
-            <button class="form-btn form-btn-secondary" @click="cancelAddTask">Cancel</button>
-          </div>
         </div>
         
         <div class="task-table">
@@ -144,6 +107,55 @@
                 <td>
                   <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
                   <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
+                </td>
+              </tr>
+              
+              <!-- Inline Add Task Row -->
+              <tr v-if="!isLoadingTasks" class="add-task-row">
+                <td>
+                  <div class="custom-dropdown table-dropdown" :class="{ open: showFormCategoryDropdown }">
+                    <div class="dropdown-trigger" @click="toggleFormDropdown">
+                      <span class="dropdown-value">
+                        {{ getSelectedCategoryName() || 'Select category' }}
+                      </span>
+                      <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div v-if="showFormCategoryDropdown" class="dropdown-menu">
+                      <div 
+                        v-for="category in categories" 
+                        :key="category.id"
+                        class="dropdown-item"
+                        :class="{ selected: newTask.categoryId === category.id }"
+                        @click="selectFormCategory(category)"
+                      >
+                        {{ category.name }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <input 
+                    v-model="newTask.name" 
+                    class="editable-cell editable-input new-task-input" 
+                    placeholder="Enter task name..."
+                    @keydown.enter="addTask"
+                  />
+                </td>
+                <td class="time-cell">
+                  <span class="current-time">{{ getCurrentTime() }}</span>
+                </td>
+                <td class="duration-cell">
+                  -
+                </td>
+                <td>
+                  <button 
+                    class="action-btn add-btn" 
+                    title="Add task" 
+                    @click="addTask"
+                    :disabled="!newTask.name.trim() || !newTask.categoryId"
+                  >
+                    ✓
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -1409,6 +1421,15 @@ const formatTime12Hour = (timeString: string): string => {
   
   return `${hour12}:${minutes} ${period}`
 }
+
+const getCurrentTime = (): string => {
+  const now = new Date()
+  const hours = now.getHours().toString().padStart(2, '0')
+  const minutes = now.getMinutes().toString().padStart(2, '0')
+  const seconds = now.getSeconds().toString().padStart(2, '0')
+  
+  return `${hours}:${minutes}:${seconds}`
+}
 </script>
 
 <style>
@@ -2627,6 +2648,56 @@ body {
 
 .dropdown-item.selected:hover {
   background: var(--secondary);
+}
+
+/* Add Task Row Styles */
+.add-task-row {
+  background: var(--bg-secondary);
+  border-top: 2px solid var(--border-color);
+}
+
+.add-task-row td {
+  padding: 0.6rem 0.4rem;
+  border-bottom: none;
+}
+
+.add-task-row:hover {
+  background: var(--bg-secondary);
+}
+
+.new-task-input {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.new-task-input:focus {
+  color: var(--text-primary);
+  font-style: normal;
+}
+
+.current-time {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+  text-align: center;
+  display: block;
+  padding: 0.2rem 0;
+}
+
+.add-btn {
+  background: var(--success);
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.add-btn:hover:not(:disabled) {
+  background: var(--mantis);
+}
+
+.add-btn:disabled {
+  background: var(--text-muted);
+  opacity: 0.5;
 }
 
 /* Daily Report Styles */

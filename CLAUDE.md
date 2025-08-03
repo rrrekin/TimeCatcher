@@ -105,6 +105,8 @@ No external store used. State organized as:
 ### Key UI Patterns
 
 - **Inline Editing**: Double-click table cells to edit directly
+- **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
+- **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
 - **Modal Management**: Setup modal for categories and theme settings
