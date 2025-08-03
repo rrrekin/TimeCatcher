@@ -79,43 +79,74 @@ class DatabaseService {
       if (hasCategoryId && !hasCategoryName) {
         console.log('Migrating task_records from category_id to category_name...')
         
-        // Add category_name column
-        this.db.exec(`ALTER TABLE task_records ADD COLUMN category_name TEXT`)
+        // Use transaction for atomic migration
+        const migration = this.db.transaction(() => {
+          // Add category_name column
+          this.db.exec(`ALTER TABLE task_records ADD COLUMN category_name TEXT`)
+          
+          // Get the default category name to use for orphaned records
+          const defaultCategory = this.db.prepare('SELECT name FROM categories WHERE is_default = 1 LIMIT 1').get() as { name: string } | undefined
+          const fallbackCategoryName = defaultCategory?.name || 'Development'
+          
+          // Populate category_name from category_id for valid category references
+          const updateValidRecords = this.db.prepare(`
+            UPDATE task_records 
+            SET category_name = (
+              SELECT name FROM categories WHERE id = task_records.category_id
+            ) 
+            WHERE category_name IS NULL 
+            AND category_id IN (SELECT id FROM categories)
+          `)
+          updateValidRecords.run()
+          
+          // Handle orphaned records (category_id doesn't exist in categories table)
+          const updateOrphanedRecords = this.db.prepare(`
+            UPDATE task_records 
+            SET category_name = ?
+            WHERE category_name IS NULL
+          `)
+          const orphanedCount = updateOrphanedRecords.run(fallbackCategoryName).changes
+          
+          if (orphanedCount > 0) {
+            console.log(`Fixed ${orphanedCount} orphaned records with invalid category_id, assigned to: ${fallbackCategoryName}`)
+          }
+          
+          // Create new table with correct schema
+          this.db.exec(`
+            CREATE TABLE task_records_new (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              category_name TEXT NOT NULL,
+              task_name TEXT NOT NULL,
+              start_time DATETIME NOT NULL,
+              date TEXT NOT NULL,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+          `)
+          
+          // Copy all data to new table (all records should now have category_name)
+          const copyResult = this.db.exec(`
+            INSERT INTO task_records_new (id, category_name, task_name, start_time, date, created_at)
+            SELECT id, category_name, task_name, start_time, date, created_at FROM task_records
+            WHERE category_name IS NOT NULL
+          `)
+          
+          // Verify no data was lost during migration
+          const originalCount = this.db.prepare('SELECT COUNT(*) as count FROM task_records').get() as { count: number }
+          const newCount = this.db.prepare('SELECT COUNT(*) as count FROM task_records_new').get() as { count: number }
+          
+          if (originalCount.count !== newCount.count) {
+            throw new Error(`Migration data loss detected: original=${originalCount.count}, migrated=${newCount.count}`)
+          }
+          
+          // Drop old table and rename new one
+          this.db.exec(`DROP TABLE task_records`)
+          this.db.exec(`ALTER TABLE task_records_new RENAME TO task_records`)
+        })
         
-        // Populate category_name from category_id
-        const updateRecords = this.db.prepare(`
-          UPDATE task_records 
-          SET category_name = (
-            SELECT name FROM categories WHERE id = task_records.category_id
-          ) 
-          WHERE category_name IS NULL
-        `)
-        updateRecords.run()
+        // Execute the migration transaction
+        migration()
         
-        // Create new table with correct schema
-        this.db.exec(`
-          CREATE TABLE task_records_new (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category_name TEXT NOT NULL,
-            task_name TEXT NOT NULL,
-            start_time DATETIME NOT NULL,
-            date TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-          )
-        `)
-        
-        // Copy data to new table
-        this.db.exec(`
-          INSERT INTO task_records_new (id, category_name, task_name, start_time, date, created_at)
-          SELECT id, category_name, task_name, start_time, date, created_at FROM task_records
-          WHERE category_name IS NOT NULL
-        `)
-        
-        // Drop old table and rename new one
-        this.db.exec(`DROP TABLE task_records`)
-        this.db.exec(`ALTER TABLE task_records_new RENAME TO task_records`)
-        
-        console.log('Migration from category_id to category_name completed successfully')
+        console.log('Migration from category_id to category_name completed successfully with transaction safety')
       }
     } catch (error: any) {
       console.error('Migration error:', error)
