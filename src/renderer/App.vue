@@ -2406,7 +2406,7 @@ body {
 /* Editable cell styles */
 .editable-cell {
   width: 100%;
-  border: none;
+  border: 1px solid transparent;
   background: transparent;
   padding: 0.5rem;
   margin: -0.5rem;
@@ -2583,7 +2583,7 @@ body {
 
 .table-dropdown .dropdown-trigger {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 0;
   padding: 0.4rem;
   margin: -0.4rem;
