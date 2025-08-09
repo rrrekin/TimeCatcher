@@ -1,0 +1,17 @@
+# Claude Code local settings
+.claude/
+
+# Development files
+src/
+.vscode/
+.idea/
+*.log
+.env*
+
+# Build artifacts
+dist/
+node_modules/
+
+# Git
+.git/
+.gitignore
