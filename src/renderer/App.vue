@@ -1384,7 +1384,7 @@ const formatTime12Hour = (timeString: string): string => {
   if (parts.length < 2) return '12:00 AM'
 
   const hours = parseInt(parts[0], 10)
-  const minutes = parts[1]
+  const minutes = parts[1].padStart(2, '0')
 
   if (isNaN(hours)) return '12:00 AM'
 
