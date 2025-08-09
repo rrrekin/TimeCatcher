@@ -1187,6 +1187,9 @@ const parseTimeString = (timeString: string): number | null => {
   const minutes = parts[1] || 0
   const seconds = parts[2] || 0
 
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+    return null
+  }
   return hours * 60 + minutes + seconds / 60
 }
 
