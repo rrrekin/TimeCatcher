@@ -480,7 +480,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import type { Category, TaskRecord } from '../shared/types'
 
 interface NewTaskForm {
@@ -951,6 +951,14 @@ onMounted(async () => {
   console.log('Loading task records...')
   await loadTaskRecords()
   console.log('App initialization complete')
+
+  // Add click outside listener for custom dropdown
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  // Clean up click outside event listener
+  document.removeEventListener('click', handleClickOutside)
 })
 
 // Toast notification functions
@@ -1326,14 +1334,7 @@ onMounted(async () => {
   await loadTaskRecords()
   console.log('App initialization complete')
 
-  // Add click outside listener for custom dropdown
-  document.addEventListener('click', handleClickOutside)
 })
-
-// Clean up event listener
-const cleanup = () => {
-  document.removeEventListener('click', handleClickOutside)
-}
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {
