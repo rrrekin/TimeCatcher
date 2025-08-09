@@ -18,6 +18,7 @@ The `.claude/` directory contains local configuration files for Claude Code:
 **⚠️ IMPORTANT:** The `.claude/` directory is **local-only** and should **never** be committed to version control or included in published packages.
 
 This directory is automatically excluded via:
+
 - `.gitignore` - Prevents git commits
 - `.npmignore` - Prevents npm publishing (if applicable)
 
@@ -40,6 +41,7 @@ This directory is automatically excluded via:
 ### Database Changes
 
 When making database schema changes:
+
 1. Update the schema in `src/main/database.ts`
 2. Update TypeScript interfaces in `src/shared/types.ts`
 3. Test with fresh database initialization
@@ -47,6 +49,7 @@ When making database schema changes:
 ### Testing
 
 Currently no automated tests are configured. Manual testing should cover:
+
 - Task creation and editing
 - Category management
 - Date navigation
@@ -55,6 +58,7 @@ Currently no automated tests are configured. Manual testing should cover:
 ## Pull Requests
 
 When submitting pull requests:
+
 1. Ensure the build passes: `npm run build`
 2. Test all functionality manually
 3. Follow the existing code style

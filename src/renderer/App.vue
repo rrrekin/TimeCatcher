@@ -71,7 +71,7 @@
                     <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
                       <div
                         v-for="category in categories"
-                        :key="category.name"
+                        :key="category.id"
                         class="dropdown-item"
                         :class="{ selected: record.category_name === category.name }"
                         @click="selectInlineCategory(record.id, category.name)"
@@ -644,7 +644,7 @@ const addCategory = async () => {
 }
 
 const deleteCategory = async (category: Category) => {
-  if (!category.id) return
+  if (category.id == null) return
 
   if (confirm(`Are you sure you want to delete the category "${category.name}"?`)) {
     try {
@@ -689,13 +689,13 @@ const cancelAddingCategory = () => {
 
 // Category editing functions
 const startEditCategory = (category: Category) => {
-  if (!category.id) return
+  if (category.id == null) return
   editingCategoryId.value = category.id
   editingCategoryName.value = category.name
 }
 
 const saveEditCategory = async (category: Category) => {
-  if (!category.id || !editingCategoryName.value.trim()) {
+  if (category.id == null || !editingCategoryName.value.trim()) {
     cancelEditCategory()
     return
   }
@@ -743,7 +743,7 @@ const cancelEditCategory = () => {
 
 // Default category functions
 const setDefaultCategory = async (category: Category) => {
-  if (!category.id) return
+  if (category.id == null) return
 
   try {
     if (!window.electronAPI) {
@@ -864,7 +864,7 @@ const cancelAddTask = () => {
 
 const getDefaultCategoryId = (): number | null => {
   const defaultCategory = categories.value.find(cat => cat.is_default)
-  return defaultCategory?.id || null
+  return defaultCategory?.id ?? null
 }
 
 const getCategoryIdByName = (categoryName: string): number | null => {
@@ -1216,7 +1216,7 @@ const cancelDeleteTask = () => {
 }
 
 const confirmDeleteTaskFinal = async () => {
-  if (!taskToDelete.value?.id) {
+  if (taskToDelete.value?.id == null) {
     console.error('No task to delete')
     return
   }
