@@ -912,8 +912,11 @@ onMounted(async () => {
       applyTheme('auto')
     }
   }
-  try { mediaQueryList.addEventListener('change', mediaQueryHandler) }
-  catch { mediaQueryList.addListener?.(mediaQueryHandler as any) }
+  try {
+    mediaQueryList.addEventListener('change', mediaQueryHandler)
+  } catch {
+    mediaQueryList.addListener?.(mediaQueryHandler as any)
+  }
 
   // Wait a moment for database initialization to complete, then load categories
   console.log('App mounted, waiting for database initialization...')
@@ -938,8 +941,11 @@ onUnmounted(() => {
 
   // Clean up media query listener with fallback for older browsers
   if (mediaQueryList && mediaQueryHandler) {
-    try { mediaQueryList.removeEventListener('change', mediaQueryHandler) }
-    catch { mediaQueryList.removeListener?.(mediaQueryHandler as any) }
+    try {
+      mediaQueryList.removeEventListener('change', mediaQueryHandler)
+    } catch {
+      mediaQueryList.removeListener?.(mediaQueryHandler as any)
+    }
   }
 })
 
@@ -1132,10 +1138,9 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
   const sortedRecords = allRecords
       .filter(record => record.start_time && record.start_time.trim() !== '')
       .sort((a, b) => {
-        const timeA = a.start_time.split(':').map(Number)
-        const timeB = b.start_time.split(':').map(Number)
-        return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) -
-            (timeB[0] * 3600 + timeB[1] * 60 + (timeB[2] || 0))
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
       })
 
   // Find the current record index
