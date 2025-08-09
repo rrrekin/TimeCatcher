@@ -912,7 +912,8 @@ onMounted(async () => {
       applyTheme('auto')
     }
   }
-  mediaQueryList.addEventListener('change', mediaQueryHandler)
+  try { mediaQueryList.addEventListener('change', mediaQueryHandler) }
+  catch { mediaQueryList.addListener?.(mediaQueryHandler as any) }
 
   // Wait a moment for database initialization to complete, then load categories
   console.log('App mounted, waiting for database initialization...')
@@ -935,9 +936,10 @@ onUnmounted(() => {
   // Clean up click outside event listener
   document.removeEventListener('click', handleClickOutside)
 
-  // Clean up media query listener
+  // Clean up media query listener with fallback for older browsers
   if (mediaQueryList && mediaQueryHandler) {
-    mediaQueryList.removeEventListener('change', mediaQueryHandler)
+    try { mediaQueryList.removeEventListener('change', mediaQueryHandler) }
+    catch { mediaQueryList.removeListener?.(mediaQueryHandler as any) }
   }
 })
 
@@ -1065,7 +1067,10 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
 
   // Process the field value based on field type
   let processedValue = value
-  if (field === 'start_time') {
+  if (field === 'task_name') {
+    // Trim whitespace from task name to avoid leading/trailing spaces
+    processedValue = value.trim()
+  } else if (field === 'start_time') {
     try {
       // Use parseTimeInput for consistent validation and formatting
       processedValue = parseTimeInput(value)
