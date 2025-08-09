@@ -11,6 +11,7 @@ export interface TaskRecord {
   task_name: string
   start_time: string
   date: string
+  task_type?: 'normal' | 'pause' | 'end'
   created_at?: string
 }
 

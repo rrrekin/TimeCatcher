@@ -15,6 +15,7 @@ export interface TaskRecord {
   task_name: string
   start_time: string
   date: string
+  task_type?: 'normal' | 'pause' | 'end'
   created_at?: string
 }
 
@@ -47,9 +48,17 @@ class DatabaseService {
         task_name TEXT NOT NULL,
         start_time DATETIME NOT NULL,
         date TEXT NOT NULL,
+        task_type TEXT DEFAULT 'normal',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // Add task_type column if it doesn't exist (for existing databases)
+    try {
+      this.db.exec(`ALTER TABLE task_records ADD COLUMN task_type TEXT DEFAULT 'normal'`)
+    } catch (error) {
+      // Column already exists, ignore the error
+    }
   }
 
   private initializeDefaultCategories() {
@@ -138,10 +147,10 @@ class DatabaseService {
   // Task record operations
   addTaskRecord(record: Omit<TaskRecord, 'id' | 'created_at'>): TaskRecord {
     const insert = this.db.prepare(`
-      INSERT INTO task_records (category_name, task_name, start_time, date) 
-      VALUES (?, ?, ?, ?)
+      INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
+      VALUES (?, ?, ?, ?, ?)
     `)
-    const result = insert.run(record.category_name, record.task_name, record.start_time, record.date)
+    const result = insert.run(record.category_name, record.task_name, record.start_time, record.date, record.task_type || 'normal')
     return this.db.prepare('SELECT * FROM task_records WHERE id = ?').get(result.lastInsertRowid) as TaskRecord
   }
 
