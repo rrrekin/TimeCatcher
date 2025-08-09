@@ -143,11 +143,10 @@
                 </td>
                 <td class="time-cell">
                   <input
-                    type="time"
-                    step="1"
+                    type="text"
                     v-model="newTask.time"
                     class="editable-cell editable-input time-input"
-                    placeholder="HH:MM or leave empty"
+                    placeholder="HH:MM or HH:MM:SS, leave empty for current time"
                     @keydown.enter="addTask"
                   />
                 </td>
@@ -159,7 +158,7 @@
                     class="action-btn add-btn"
                     title="Add task"
                     @click="addTask"
-                    :disabled="!newTask.name.trim() || !newTask.categoryId"
+                    :disabled="!newTask.name.trim() || newTask.categoryId === null"
                   >
                     ✓
                   </button>
@@ -811,7 +810,7 @@ const loadTaskRecords = async () => {
 
 // Task management functions
 const addTask = async () => {
-  if (!newTask.value.name.trim() || !newTask.value.categoryId) {
+  if (!newTask.value.name.trim() || newTask.value.categoryId === null) {
     showToastMessage('Please fill in all fields', 'error')
     return
   }
@@ -850,11 +849,7 @@ const addTask = async () => {
     showToastMessage('Task added successfully!', 'success')
 
     // Reset form
-    newTask.value = {
-      categoryId: getDefaultCategoryId(),
-      name: '',
-      time: ''
-    }
+    initializeNewTask()
     showAddTaskForm.value = false
   } catch (error) {
     console.error('Failed to add task:', error)
@@ -863,11 +858,7 @@ const addTask = async () => {
 }
 
 const cancelAddTask = () => {
-  newTask.value = {
-    categoryId: getDefaultCategoryId(),
-    name: '',
-    time: ''
-  }
+  initializeNewTask()
   showAddTaskForm.value = false
 }
 
@@ -1087,9 +1078,14 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
   // Process the field value based on field type
   let processedValue = value
   if (field === 'start_time') {
-    // Convert time input (HH:MM:SS) to proper format
-    const [hours, minutes, seconds] = value.split(':')
-    processedValue = `${hours}:${minutes}:${seconds || '00'}`
+    try {
+      // Use parseTimeInput for consistent validation and formatting
+      processedValue = parseTimeInput(value)
+    } catch (timeError) {
+      showToastMessage((timeError as Error).message, 'error')
+      await loadTaskRecords() // Restore previous value on invalid time
+      return
+    }
   }
 
   const updates: Record<string, any> = {}
@@ -1255,7 +1251,7 @@ const toggleFormDropdown = () => {
 }
 
 const selectFormCategory = (category: Category) => {
-  newTask.value.categoryId = category.id || null
+  newTask.value.categoryId = category.id ?? null
   showFormCategoryDropdown.value = false
 }
 
