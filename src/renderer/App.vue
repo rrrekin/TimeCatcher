@@ -1440,7 +1440,7 @@ const parseTimeInput = (timeInput: string): string => {
   }
 
   const trimmed = timeInput.trim()
-  const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+  const timeRegex = /^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/
 
   if (!timeRegex.test(trimmed)) {
     throw new Error('Invalid time format. Use HH:MM or HH:MM:SS')
