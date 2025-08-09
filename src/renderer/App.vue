@@ -495,6 +495,10 @@ const isSetupModalOpen = ref(false)
 const currentTheme = ref<'light' | 'dark' | 'auto'>('auto')
 const tempTheme = ref<'light' | 'dark' | 'auto'>('auto')
 
+// Media query references for cleanup
+let mediaQueryList: MediaQueryList | null = null
+let mediaQueryHandler: ((event: MediaQueryListEvent) => void) | null = null
+
 // Category management
 const categories = ref<Category[]>([])
 const newCategoryName = ref('')
@@ -933,11 +937,13 @@ onMounted(async () => {
   applyTheme(currentTheme.value)
 
   // Listen for system theme changes when in auto mode
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)')
+  mediaQueryHandler = () => {
     if (currentTheme.value === 'auto') {
       applyTheme('auto')
     }
-  })
+  }
+  mediaQueryList.addEventListener('change', mediaQueryHandler)
 
   // Wait a moment for database initialization to complete, then load categories
   console.log('App mounted, waiting for database initialization...')
@@ -959,6 +965,11 @@ onMounted(async () => {
 onUnmounted(() => {
   // Clean up click outside event listener
   document.removeEventListener('click', handleClickOutside)
+  
+  // Clean up media query listener
+  if (mediaQueryList && mediaQueryHandler) {
+    mediaQueryList.removeEventListener('change', mediaQueryHandler)
+  }
 })
 
 // Toast notification functions
@@ -1306,35 +1317,6 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Add click outside listener function
-onMounted(async () => {
-  const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
-  if (savedTheme) {
-    currentTheme.value = savedTheme
-  }
-  applyTheme(currentTheme.value)
-
-  // Listen for system theme changes when in auto mode
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-    if (currentTheme.value === 'auto') {
-      applyTheme('auto')
-    }
-  })
-
-  // Wait a moment for database initialization to complete, then load categories
-  console.log('App mounted, waiting for database initialization...')
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
-  console.log('Loading categories and initializing task form...')
-  await loadCategories()
-  initializeNewTask()
-
-  // Load task records for today
-  console.log('Loading task records...')
-  await loadTaskRecords()
-  console.log('App initialization complete')
-
-})
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {
@@ -1474,7 +1456,7 @@ const parseTimeInput = (timeInput: string): string => {
   const seconds = match[3] ? parseInt(match[3], 10) : 0
 
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-    throw new Error('Invalid time values')
+    throw new Error('Invalid time values: hours must be 0-23, minutes and seconds must be 0-59')
   }
 
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
