@@ -63,12 +63,12 @@
               </tr>
               <tr v-else v-for="record in taskRecords" :key="record.id">
                 <td>
-                  <div class="custom-dropdown table-dropdown" :class="{ open: showInlineDropdown[record.id] }">
-                    <div class="dropdown-trigger" @click="toggleInlineDropdown(record.id)">
+                  <div class="custom-dropdown table-dropdown" :class="{ open: record.id && showInlineDropdown[record.id] }">
+                    <div class="dropdown-trigger" @click="record.id && toggleInlineDropdown(record.id)">
                       <span class="dropdown-value">{{ record.category_name }}</span>
                       <span class="dropdown-arrow">▼</span>
                     </div>
-                    <div v-if="showInlineDropdown[record.id]" class="dropdown-menu">
+                    <div v-if="record.id && showInlineDropdown[record.id]" class="dropdown-menu">
                       <div 
                         v-for="category in categories" 
                         :key="category.name"
@@ -142,7 +142,12 @@
                   />
                 </td>
                 <td class="time-cell">
-                  <span class="current-time">{{ getCurrentTime() }}</span>
+                  <input 
+                    v-model="newTask.time" 
+                    class="editable-cell editable-input time-input" 
+                    placeholder="HH:MM or leave empty"
+                    @keydown.enter="addTask"
+                  />
                 </td>
                 <td class="duration-cell">
                   -
@@ -499,7 +504,8 @@ const showToast = ref(false)
 const showAddTaskForm = ref(false)
 const newTask = ref({
   categoryId: null as number | null,
-  name: ''
+  name: '',
+  time: ''
 })
 const taskRecords = ref<TaskRecord[]>([])
 const isLoadingTasks = ref(false)
@@ -815,8 +821,14 @@ const addTask = async () => {
     }
 
     const dateString = selectedDate.value.toISOString().split('T')[0]
-    const now = new Date()
-    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+    let timeString: string
+
+    try {
+      timeString = parseTimeInput(newTask.value.time)
+    } catch (timeError) {
+      showToastMessage((timeError as Error).message, 'error')
+      return
+    }
 
     const taskRecord = {
       category_name: category.name,
@@ -832,7 +844,8 @@ const addTask = async () => {
     // Reset form
     newTask.value = {
       categoryId: getDefaultCategoryId(),
-      name: ''
+      name: '',
+      time: ''
     }
     showAddTaskForm.value = false
   } catch (error) {
@@ -844,7 +857,8 @@ const addTask = async () => {
 const cancelAddTask = () => {
   newTask.value = {
     categoryId: getDefaultCategoryId(),
-    name: ''
+    name: '',
+    time: ''
   }
   showAddTaskForm.value = false
 }
@@ -866,6 +880,8 @@ const getCategoryNameById = (categoryId: number): string | null => {
 
 const initializeNewTask = () => {
   newTask.value.categoryId = getDefaultCategoryId()
+  newTask.value.name = ''
+  newTask.value.time = ''
 }
 
 const formatTime = (timeString: string): string => {
@@ -1231,7 +1247,7 @@ const toggleFormDropdown = () => {
 }
 
 const selectFormCategory = (category: Category) => {
-  newTask.value.categoryId = category.id
+  newTask.value.categoryId = category.id || null
   showFormCategoryDropdown.value = false
 }
 
@@ -1429,6 +1445,34 @@ const getCurrentTime = (): string => {
   const seconds = now.getSeconds().toString().padStart(2, '0')
   
   return `${hours}:${minutes}:${seconds}`
+}
+
+const parseTimeInput = (timeInput: string): string => {
+  if (!timeInput || !timeInput.trim()) {
+    return getCurrentTime()
+  }
+
+  const trimmed = timeInput.trim()
+  const timeRegex = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+
+  if (!timeRegex.test(trimmed)) {
+    throw new Error('Invalid time format. Use HH:MM or HH:MM:SS')
+  }
+
+  const match = trimmed.match(timeRegex)
+  if (!match) {
+    throw new Error('Invalid time format')
+  }
+
+  const hours = parseInt(match[1], 10)
+  const minutes = parseInt(match[2], 10)
+  const seconds = match[3] ? parseInt(match[3], 10) : 0
+
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+    throw new Error('Invalid time values')
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
 }
 </script>
 
