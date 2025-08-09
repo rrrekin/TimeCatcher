@@ -5,37 +5,37 @@
         <button class="nav-btn" @click="goToPreviousDay" title="Previous Day">
           <span class="nav-arrow">‹</span>
         </button>
-        
+
         <button class="today-btn" @click="goToToday">
           Today
         </button>
-        
+
         <button class="nav-btn" @click="goToNextDay" title="Next Day">
           <span class="nav-arrow">›</span>
         </button>
-        
+
         <div class="date-display">
           <label class="date-label">{{ formattedDate }}</label>
-          <input 
-            type="date" 
-            v-model="dateInputValue" 
+          <input
+            type="date"
+            v-model="dateInputValue"
             class="date-picker"
           />
         </div>
       </div>
-      
+
       <button class="setup-btn" @click="openSetup" title="Open Settings">
         <span class="setup-icon">⚙️</span>
         Setup
       </button>
     </nav>
-    
+
     <div class="layout">
       <div class="task-table-pane">
         <div class="task-table-header">
           <h3>Tasks</h3>
         </div>
-        
+
         <div class="task-table">
           <table>
             <thead>
@@ -63,14 +63,14 @@
               </tr>
               <tr v-else v-for="record in taskRecords" :key="record.id">
                 <td>
-                  <div class="custom-dropdown table-dropdown" :class="{ open: record.id && showInlineDropdown[record.id] }">
-                    <div class="dropdown-trigger" @click="record.id && toggleInlineDropdown(record.id)">
+                  <div class="custom-dropdown table-dropdown" :class="{ open: record.id != null && showInlineDropdown[record.id] }">
+                    <div class="dropdown-trigger" @click="record.id != null && toggleInlineDropdown(record.id)">
                       <span class="dropdown-value">{{ record.category_name }}</span>
                       <span class="dropdown-arrow">▼</span>
                     </div>
-                    <div v-if="record.id && showInlineDropdown[record.id]" class="dropdown-menu">
-                      <div 
-                        v-for="category in categories" 
+                    <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
+                      <div
+                        v-for="category in categories"
                         :key="category.name"
                         class="dropdown-item"
                         :class="{ selected: record.category_name === category.name }"
@@ -82,8 +82,8 @@
                   </div>
                 </td>
                 <td>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     :value="record.task_name"
                     @blur="handleBlur(record.id, 'task_name', $event)"
                     @keydown.enter="handleEnter(record.id, 'task_name', $event)"
@@ -93,7 +93,7 @@
                 </td>
                 <td class="time-cell">
                   <input
-                    type="time" 
+                    type="time"
                     step="1"
                     :value="convertToTimeInput(record.start_time)"
                     @blur="handleBlur(record.id, 'start_time', $event)"
@@ -109,7 +109,7 @@
                   <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
                 </td>
               </tr>
-              
+
               <!-- Inline Add Task Row -->
               <tr v-if="!isLoadingTasks" class="add-task-row">
                 <td>
@@ -121,8 +121,8 @@
                       <span class="dropdown-arrow">▼</span>
                     </div>
                     <div v-if="showFormCategoryDropdown" class="dropdown-menu">
-                      <div 
-                        v-for="category in categories" 
+                      <div
+                        v-for="category in categories"
                         :key="category.id"
                         class="dropdown-item"
                         :class="{ selected: newTask.categoryId === category.id }"
@@ -134,17 +134,19 @@
                   </div>
                 </td>
                 <td>
-                  <input 
-                    v-model="newTask.name" 
-                    class="editable-cell editable-input new-task-input" 
+                  <input
+                    v-model="newTask.name"
+                    class="editable-cell editable-input new-task-input"
                     placeholder="Enter task name..."
                     @keydown.enter="addTask"
                   />
                 </td>
                 <td class="time-cell">
-                  <input 
-                    v-model="newTask.time" 
-                    class="editable-cell editable-input time-input" 
+                  <input
+                    type="time"
+                    step="1"
+                    v-model="newTask.time"
+                    class="editable-cell editable-input time-input"
                     placeholder="HH:MM or leave empty"
                     @keydown.enter="addTask"
                   />
@@ -153,9 +155,9 @@
                   -
                 </td>
                 <td>
-                  <button 
-                    class="action-btn add-btn" 
-                    title="Add task" 
+                  <button
+                    class="action-btn add-btn"
+                    title="Add task"
                     @click="addTask"
                     :disabled="!newTask.name.trim() || !newTask.categoryId"
                   >
@@ -167,12 +169,12 @@
           </table>
         </div>
       </div>
-      
+
       <main class="main-content">
         <div v-if="activeSection === 'dashboard'" class="section">
           <h2>Daily Report</h2>
           <p>{{ formattedDate.split(',')[0] }} - Overview of your time and productivity</p>
-          
+
           <!-- Time Summary Stats -->
           <div class="report-stats">
             <div class="stat-card">
@@ -193,8 +195,8 @@
           <div v-if="taskRecords.length > 0" class="report-section">
             <h3>Category Summary</h3>
             <div class="category-summary-grid">
-              <div 
-                v-for="categoryData in getCategoryBreakdown().slice(0, 4)" 
+              <div
+                v-for="categoryData in getCategoryBreakdown().slice(0, 4)"
                 :key="categoryData.name"
                 class="category-summary-card"
               >
@@ -205,8 +207,8 @@
                 <div class="category-summary-time">{{ categoryData.totalTime }}</div>
                 <div class="category-summary-tasks">{{ categoryData.taskCount }} task{{ categoryData.taskCount !== 1 ? 's' : '' }}</div>
                 <div class="category-summary-bar">
-                  <div 
-                    class="category-summary-progress" 
+                  <div
+                    class="category-summary-progress"
                     :style="{ width: categoryData.percentage + '%' }"
                   ></div>
                 </div>
@@ -221,8 +223,8 @@
               No tasks recorded for this day
             </div>
             <div v-else class="category-breakdown">
-              <div 
-                v-for="categoryData in getCategoryBreakdown()" 
+              <div
+                v-for="categoryData in getCategoryBreakdown()"
                 :key="categoryData.name"
                 class="category-row"
               >
@@ -232,8 +234,8 @@
                 </div>
                 <div class="category-time">{{ categoryData.totalTime }}</div>
                 <div class="category-bar">
-                  <div 
-                    class="category-progress" 
+                  <div
+                    class="category-progress"
                     :style="{ width: categoryData.percentage + '%' }"
                   ></div>
                 </div>
@@ -248,8 +250,8 @@
               No tasks recorded for this day
             </div>
             <div v-else class="timeline">
-              <div 
-                v-for="record in getSortedTaskRecords()" 
+              <div
+                v-for="record in getSortedTaskRecords()"
                 :key="record.id"
                 class="timeline-item"
               >
@@ -263,7 +265,7 @@
             </div>
           </div>
         </div>
-        
+
         <div v-if="activeSection === 'tracking'" class="section">
           <h2>Time Tracking</h2>
           <p>Start and stop time tracking for your tasks.</p>
@@ -273,7 +275,7 @@
             <div class="card">Today's Sessions</div>
           </div>
         </div>
-        
+
         <div v-if="activeSection === 'projects'" class="section">
           <h2>Projects</h2>
           <p>Manage your projects and associated tasks.</p>
@@ -283,7 +285,7 @@
             <div class="card">Create New Project</div>
           </div>
         </div>
-        
+
         <div v-if="activeSection === 'reports'" class="section">
           <h2>Reports</h2>
           <p>View detailed reports and analytics of your time usage.</p>
@@ -293,7 +295,7 @@
             <div class="card">Export Data</div>
           </div>
         </div>
-        
+
         <div v-if="activeSection === 'settings'" class="section">
           <h2>Settings</h2>
           <p>Configure your TimeCatcher preferences.</p>
@@ -313,27 +315,27 @@
           <h3 id="modal-title">Settings</h3>
           <button class="close-btn" @click="closeSetupModal" :disabled="isAddingCategory" aria-label="Close settings modal">×</button>
         </div>
-        
+
         <div class="modal-content">
           <div class="setting-group">
             <h4>Theme</h4>
             <div class="theme-buttons">
-              <button 
-                class="theme-btn" 
+              <button
+                class="theme-btn"
                 :class="{ active: tempTheme === 'light' }"
                 @click="tempTheme = 'light'"
               >
                 Light
               </button>
-              <button 
-                class="theme-btn" 
+              <button
+                class="theme-btn"
                 :class="{ active: tempTheme === 'dark' }"
                 @click="tempTheme = 'dark'"
               >
                 Dark
               </button>
-              <button 
-                class="theme-btn" 
+              <button
+                class="theme-btn"
                 :class="{ active: tempTheme === 'auto' }"
                 @click="tempTheme = 'auto'"
               >
@@ -350,15 +352,15 @@
                 Loading categories...
               </div>
               <div class="categories-list" v-else ref="categoriesListRef">
-                <div 
-                  v-for="category in categories" 
+                <div
+                  v-for="category in categories"
                   :key="category.id"
                   class="category-item"
                   @dblclick="startEditCategory(category)"
                   title="Double-click to edit"
                   :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
                 >
-                  <input 
+                  <input
                     v-if="editingCategoryId === category.id"
                     v-model="editingCategoryName"
                     @keyup.enter="saveEditCategory(category)"
@@ -367,15 +369,15 @@
                     class="category-input"
                     autofocus
                   />
-                  <span 
+                  <span
                     v-else
                     class="category-name"
                   >
                     {{ category.name }}
                   </span>
                   <div class="category-actions">
-                    <button 
-                      class="default-category-btn" 
+                    <button
+                      class="default-category-btn"
                       @click="setDefaultCategory(category)"
                       @dblclick.stop
                       :class="{ active: category.is_default }"
@@ -384,8 +386,8 @@
                     >
                       ✓
                     </button>
-                    <button 
-                      class="delete-category-btn" 
+                    <button
+                      class="delete-category-btn"
                       @click="deleteCategory(category)"
                       @dblclick.stop
                       title="Delete category"
@@ -395,9 +397,9 @@
                     </button>
                   </div>
                 </div>
-                
+
                 <div v-if="isAddingCategory" class="add-category-form">
-                  <input 
+                  <input
                     v-model="newCategoryName"
                     @keyup.enter="addCategory"
                     @keyup.escape="cancelAddingCategory"
@@ -411,10 +413,10 @@
                   </div>
                 </div>
               </div>
-              
-              <button 
+
+              <button
                 v-if="!isAddingCategory"
-                class="add-category-btn" 
+                class="add-category-btn"
                 @click="startAddingCategory"
               >
                 + Add Category
@@ -422,7 +424,7 @@
             </div>
           </div>
         </div>
-        
+
         <div class="modal-footer">
           <button class="cancel-btn" @click="closeSetupModal" :disabled="isAddingCategory">
             Cancel
@@ -433,7 +435,7 @@
         </div>
       </div>
     </div>
-    
+
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="cancelDeleteTask">
       <div class="modal delete-modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
@@ -441,14 +443,14 @@
           <h3 id="delete-modal-title">🗑 Delete Task</h3>
           <button class="close-btn" @click="cancelDeleteTask" aria-label="Close delete modal">×</button>
         </div>
-        
+
         <div class="modal-content">
           <div class="delete-message">
             <p>Delete <strong>{{ taskToDelete?.task_name }}</strong> from {{ taskToDelete?.category_name }}?</p>
             <p class="warning-text">This action cannot be undone.</p>
           </div>
         </div>
-        
+
         <div class="modal-footer">
           <button class="cancel-btn" @click="cancelDeleteTask">
             Cancel
@@ -482,6 +484,12 @@
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import type { Category, TaskRecord } from '../shared/types'
 
+interface NewTaskForm {
+  categoryId: number | null
+  name: string
+  time: string
+}
+
 const activeSection = ref('dashboard')
 const selectedDate = ref(new Date())
 const isSetupModalOpen = ref(false)
@@ -502,8 +510,8 @@ const showToast = ref(false)
 
 // Task management
 const showAddTaskForm = ref(false)
-const newTask = ref({
-  categoryId: null as number | null,
+const newTask = ref<NewTaskForm>({
+  categoryId: null,
   name: '',
   time: ''
 })
@@ -618,7 +626,7 @@ const addCategory = async () => {
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    
+
     const exists = await window.electronAPI.categoryExists(name)
     if (exists) {
       showToastMessage(`Category "${name}" already exists!`, 'error')
@@ -638,14 +646,14 @@ const addCategory = async () => {
 
 const deleteCategory = async (category: Category) => {
   if (!category.id) return
-  
+
   if (confirm(`Are you sure you want to delete the category "${category.name}"?`)) {
     try {
       if (!window.electronAPI) {
         showToastMessage('API not available. Please restart the application.', 'error')
         return
       }
-      
+
       isDeletingCategory.value = true
       await window.electronAPI.deleteCategory(category.id)
       await loadCategories()
@@ -694,7 +702,7 @@ const saveEditCategory = async (category: Category) => {
   }
 
   const newName = editingCategoryName.value.trim()
-  
+
   // If name hasn't changed, just cancel editing
   if (newName === category.name) {
     cancelEditCategory()
@@ -706,7 +714,7 @@ const saveEditCategory = async (category: Category) => {
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    
+
     isUpdatingCategory.value = true
     // Check if new name already exists
     const exists = await window.electronAPI.categoryExists(newName)
@@ -737,13 +745,13 @@ const cancelEditCategory = () => {
 // Default category functions
 const setDefaultCategory = async (category: Category) => {
   if (!category.id) return
-  
+
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    
+
     isSettingDefault.value = true
     await window.electronAPI.setDefaultCategory(category.id)
     await loadCategories()
@@ -758,12 +766,12 @@ const setDefaultCategory = async (category: Category) => {
 
 const applyTheme = (theme: 'light' | 'dark' | 'auto') => {
   const root = document.documentElement
-  
+
   if (theme === 'auto') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     theme = prefersDark ? 'dark' : 'light'
   }
-  
+
   if (theme === 'dark') {
     root.style.setProperty('--bg-primary', '#1a1f2e')
     root.style.setProperty('--bg-secondary', '#232937')
@@ -889,35 +897,35 @@ const formatTime = (timeString: string): string => {
   if (!timeString) {
     return '12:00:00 AM'
   }
-  
+
   // Check if timeString has exactly two colons
   const colonCount = (timeString.match(/:/g) || []).length
   if (colonCount !== 2) {
     return '12:00:00 AM'
   }
-  
+
   const [hours, minutes, seconds] = timeString.split(':')
-  
+
   // Validate hours, minutes, and seconds are numbers within valid ranges
   const hour24 = parseInt(hours, 10)
   const minuteNum = parseInt(minutes, 10)
   const secondNum = parseInt(seconds, 10)
-  
+
   if (isNaN(hour24) || isNaN(minuteNum) || isNaN(secondNum) ||
       hour24 < 0 || hour24 > 23 ||
       minuteNum < 0 || minuteNum > 59 ||
       secondNum < 0 || secondNum > 59) {
     return '12:00:00 AM'
   }
-  
+
   // Format to 12-hour time
   const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
   const period = hour24 >= 12 ? 'PM' : 'AM'
-  
+
   // Ensure two-digit formatting for minutes and seconds
   const formattedMinutes = minutes.padStart(2, '0')
   const formattedSeconds = seconds.padStart(2, '0')
-  
+
   return `${hour12}:${formattedMinutes}:${formattedSeconds} ${period}`
 }
 
@@ -932,22 +940,22 @@ onMounted(async () => {
     currentTheme.value = savedTheme
   }
   applyTheme(currentTheme.value)
-  
+
   // Listen for system theme changes when in auto mode
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (currentTheme.value === 'auto') {
       applyTheme('auto')
     }
   })
-  
+
   // Wait a moment for database initialization to complete, then load categories
   console.log('App mounted, waiting for database initialization...')
   await new Promise(resolve => setTimeout(resolve, 1000))
-  
+
   console.log('Loading categories and initializing task form...')
   await loadCategories()
   initializeNewTask()
-  
+
   // Load task records for today
   console.log('Loading task records...')
   await loadTaskRecords()
@@ -959,7 +967,7 @@ const showToastMessage = (message: string, type: 'success' | 'error' | 'info' = 
   toastMessage.value = message
   toastType.value = type
   showToast.value = true
-  
+
   // Auto-hide after 5 seconds
   setTimeout(() => {
     showToast.value = false
@@ -1007,19 +1015,19 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
     console.error('Record ID is undefined')
     return
   }
-  
+
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    
+
     if (!window.electronAPI.updateTaskRecord) {
       showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
       await loadTaskRecords()
       return
     }
-    
+
     // Ensure recordId is a number
     const numericRecordId = Number(recordId)
     if (isNaN(numericRecordId)) {
@@ -1028,7 +1036,7 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
       await loadTaskRecords()
       return
     }
-    
+
     // Get current record to compare values
     const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
     if (!currentRecord) {
@@ -1036,7 +1044,7 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
       await loadTaskRecords()
       return
     }
-    
+
     // Check if any values have actually changed
     let hasChanges = false
     for (const [field, newValue] of Object.entries(updates)) {
@@ -1046,12 +1054,12 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
         break
       }
     }
-    
+
     // Skip update if no changes
     if (!hasChanges) {
       return
     }
-    
+
     await window.electronAPI.updateTaskRecord(numericRecordId, updates)
     await loadTaskRecords()
     showToastMessage(successMessage, 'success')
@@ -1068,14 +1076,14 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
     console.error('Event target is not an HTMLInputElement')
     return
   }
-  
+
   const value = target.value
   if (!value.trim()) {
     // If field is empty, reload to restore previous value
     await loadTaskRecords()
     return
   }
-  
+
   // Process the field value based on field type
   let processedValue = value
   if (field === 'start_time') {
@@ -1083,10 +1091,10 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
     const [hours, minutes, seconds] = value.split(':')
     processedValue = `${hours}:${minutes}:${seconds || '00'}`
   }
-  
+
   const updates: Record<string, any> = {}
   updates[field] = processedValue
-  
+
   await updateTaskField(recordId, updates)
 }
 
@@ -1100,7 +1108,7 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     console.error('Event target is not an HTMLSelectElement')
     return
   }
-  
+
   const categoryName = target.value
   if (!categoryName) {
     console.error('Invalid category name:', target.value)
@@ -1108,14 +1116,14 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     await loadTaskRecords()
     return
   }
-  
+
   await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 const convertToTimeInput = (timeString: string): string => {
   // Convert HH:MM:SS format to time input value
   if (!timeString) return '00:00:00'
-  
+
   const parts = timeString.split(':')
   if (parts.length >= 3) {
     return timeString
@@ -1137,7 +1145,7 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
     .sort((a, b) => {
       const timeA = a.start_time.split(':').map(Number)
       const timeB = b.start_time.split(':').map(Number)
-      return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) - 
+      return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) -
              (timeB[0] * 3600 + timeB[1] * 60 + (timeB[2] || 0))
     })
 
@@ -1167,7 +1175,7 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
   }
 
   const durationMinutes = nextTime - currentTime
-  
+
   if (durationMinutes <= 0) {
     return '-'
   }
@@ -1177,21 +1185,21 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
 
 const parseTimeString = (timeString: string): number | null => {
   if (!timeString) return null
-  
+
   const parts = timeString.split(':').map(Number)
   if (parts.length < 2 || parts.some(isNaN)) return null
-  
+
   const hours = parts[0] || 0
   const minutes = parts[1] || 0
   const seconds = parts[2] || 0
-  
+
   return hours * 60 + minutes + seconds / 60
 }
 
 const formatDurationMinutes = (totalMinutes: number): string => {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = Math.floor(totalMinutes % 60)
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`
   } else {
@@ -1259,7 +1267,7 @@ const getSelectedCategoryName = (): string => {
 // Inline dropdown functions for task table
 const toggleInlineDropdown = (recordId: number | undefined) => {
   if (recordId === undefined) return
-  
+
   // Close all other dropdowns first
   Object.keys(showInlineDropdown.value).forEach(key => {
     const id = Number(key)
@@ -1267,17 +1275,17 @@ const toggleInlineDropdown = (recordId: number | undefined) => {
       showInlineDropdown.value[id] = false
     }
   })
-  
+
   // Toggle the current dropdown
   showInlineDropdown.value[recordId] = !showInlineDropdown.value[recordId]
 }
 
 const selectInlineCategory = async (recordId: number | undefined, categoryName: string) => {
   if (recordId === undefined) return
-  
+
   // Close the dropdown
   showInlineDropdown.value[recordId] = false
-  
+
   // Update the category
   await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
@@ -1301,27 +1309,27 @@ onMounted(async () => {
     currentTheme.value = savedTheme
   }
   applyTheme(currentTheme.value)
-  
+
   // Listen for system theme changes when in auto mode
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     if (currentTheme.value === 'auto') {
       applyTheme('auto')
     }
   })
-  
+
   // Wait a moment for database initialization to complete, then load categories
   console.log('App mounted, waiting for database initialization...')
   await new Promise(resolve => setTimeout(resolve, 1000))
-  
+
   console.log('Loading categories and initializing task form...')
   await loadCategories()
   initializeNewTask()
-  
+
   // Load task records for today
   console.log('Loading task records...')
   await loadTaskRecords()
   console.log('App initialization complete')
-  
+
   // Add click outside listener for custom dropdown
   document.addEventListener('click', handleClickOutside)
 })
@@ -1334,7 +1342,7 @@ const cleanup = () => {
 // Daily report functions
 const getTotalTimeTracked = (): string => {
   if (taskRecords.value.length === 0) return '0h 0m'
-  
+
   const sortedRecords = taskRecords.value
     .filter(record => record.start_time && record.start_time.trim() !== '')
     .sort((a, b) => {
@@ -1390,7 +1398,7 @@ const getCategoryBreakdown = () => {
     const nextRecord = sortedRecords[i + 1]
     const currentTime = parseTimeString(currentRecord.start_time)
     const nextTime = parseTimeString(nextRecord.start_time)
-    
+
     if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
       const duration = nextTime - currentTime
       categoryMap.get(currentRecord.category_name).totalMinutes += duration
@@ -1423,18 +1431,18 @@ const getSortedTaskRecords = () => {
 
 const formatTime12Hour = (timeString: string): string => {
   if (!timeString) return '12:00 AM'
-  
+
   const parts = timeString.split(':')
   if (parts.length < 2) return '12:00 AM'
-  
+
   const hours = parseInt(parts[0], 10)
   const minutes = parts[1]
-  
+
   if (isNaN(hours)) return '12:00 AM'
-  
+
   const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours
   const period = hours >= 12 ? 'PM' : 'AM'
-  
+
   return `${hour12}:${minutes} ${period}`
 }
 
@@ -1443,7 +1451,7 @@ const getCurrentTime = (): string => {
   const hours = now.getHours().toString().padStart(2, '0')
   const minutes = now.getMinutes().toString().padStart(2, '0')
   const seconds = now.getSeconds().toString().padStart(2, '0')
-  
+
   return `${hours}:${minutes}:${seconds}`
 }
 
@@ -1483,13 +1491,13 @@ const parseTimeInput = (timeInput: string): string => {
   --asparagus: #69966f;
   --emerald: #56b372;
   --aero: #1fbff0;
-  
+
   --primary: var(--verdigris);
   --secondary: var(--emerald);
   --accent: var(--aero);
   --success: var(--mantis);
   --neutral: var(--asparagus);
-  
+
   --bg-primary: #ffffff;
   --bg-secondary: #f8fffe;
   --text-primary: #2d4a3d;
