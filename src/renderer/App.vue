@@ -17,9 +17,9 @@
         <div class="date-display">
           <label class="date-label">{{ formattedDate }}</label>
           <input
-            type="date"
-            v-model="dateInputValue"
-            class="date-picker"
+              type="date"
+              v-model="dateInputValue"
+              class="date-picker"
           />
         </div>
       </div>
@@ -39,131 +39,132 @@
         <div class="task-table">
           <table>
             <thead>
-              <tr>
-                <th>Category</th>
-                <th>Task</th>
-                <th>Start time</th>
-                <th>Duration</th>
-                <th>Actions</th>
-              </tr>
+            <tr>
+              <th>Category</th>
+              <th>Task</th>
+              <th>Start time</th>
+              <th>Duration</th>
+              <th>Actions</th>
+            </tr>
             </thead>
             <tbody>
-              <tr v-if="isLoadingTasks">
-                <td colspan="5" class="loading-cell">
-                  <div class="loading-indicator">
-                    <span class="loading-spinner"></span>
-                    Loading tasks...
+            <tr v-if="isLoadingTasks">
+              <td colspan="5" class="loading-cell">
+                <div class="loading-indicator">
+                  <span class="loading-spinner"></span>
+                  Loading tasks...
+                </div>
+              </td>
+            </tr>
+            <tr v-else-if="taskRecords.length === 0">
+              <td colspan="5" class="empty-cell">
+                No tasks recorded for {{ formattedDate.split(',')[0] }}
+              </td>
+            </tr>
+            <tr v-else v-for="record in taskRecords" :key="record.id">
+              <td>
+                <div class="custom-dropdown table-dropdown"
+                     :class="{ open: record.id != null && showInlineDropdown[record.id] }">
+                  <div class="dropdown-trigger" @click="record.id != null && toggleInlineDropdown(record.id)">
+                    <span class="dropdown-value">{{ record.category_name }}</span>
+                    <span class="dropdown-arrow">▼</span>
                   </div>
-                </td>
-              </tr>
-              <tr v-else-if="taskRecords.length === 0">
-                <td colspan="5" class="empty-cell">
-                  No tasks recorded for {{ formattedDate.split(',')[0] }}
-                </td>
-              </tr>
-              <tr v-else v-for="record in taskRecords" :key="record.id">
-                <td>
-                  <div class="custom-dropdown table-dropdown" :class="{ open: record.id != null && showInlineDropdown[record.id] }">
-                    <div class="dropdown-trigger" @click="record.id != null && toggleInlineDropdown(record.id)">
-                      <span class="dropdown-value">{{ record.category_name }}</span>
-                      <span class="dropdown-arrow">▼</span>
-                    </div>
-                    <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
-                      <div
+                  <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
+                    <div
                         v-for="category in categories"
                         :key="category.id"
                         class="dropdown-item"
                         :class="{ selected: record.category_name === category.name }"
                         @click="selectInlineCategory(record.id, category.name)"
-                      >
-                        {{ category.name }}
-                      </div>
+                    >
+                      {{ category.name }}
                     </div>
                   </div>
-                </td>
-                <td>
-                  <input
+                </div>
+              </td>
+              <td>
+                <input
                     type="text"
                     :value="record.task_name"
                     @blur="handleBlur(record.id, 'task_name', $event)"
                     @keydown.enter="handleEnter(record.id, 'task_name', $event)"
                     class="editable-cell editable-input"
                     placeholder="Task name"
-                  />
-                </td>
-                <td class="time-cell">
-                  <input
+                />
+              </td>
+              <td class="time-cell">
+                <input
                     type="time"
                     step="1"
                     :value="convertToTimeInput(record.start_time)"
                     @blur="handleBlur(record.id, 'start_time', $event)"
                     @keydown.enter="handleEnter(record.id, 'start_time', $event)"
                     class="editable-cell editable-input time-input"
-                  />
-                </td>
-                <td class="duration-cell">
-                  {{ calculateDuration(record, taskRecords) }}
-                </td>
-                <td>
-                  <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
-                  <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
-                </td>
-              </tr>
+                />
+              </td>
+              <td class="duration-cell">
+                {{ calculateDuration(record, taskRecords) }}
+              </td>
+              <td>
+                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
+                <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
+              </td>
+            </tr>
 
-              <!-- Inline Add Task Row -->
-              <tr v-if="!isLoadingTasks" class="add-task-row">
-                <td>
-                  <div class="custom-dropdown table-dropdown" :class="{ open: showFormCategoryDropdown }">
-                    <div class="dropdown-trigger" @click="toggleFormDropdown">
+            <!-- Inline Add Task Row -->
+            <tr v-if="!isLoadingTasks" class="add-task-row">
+              <td>
+                <div class="custom-dropdown table-dropdown" :class="{ open: showFormCategoryDropdown }">
+                  <div class="dropdown-trigger" @click="toggleFormDropdown">
                       <span class="dropdown-value">
                         {{ getSelectedCategoryName() || 'Select category' }}
                       </span>
-                      <span class="dropdown-arrow">▼</span>
-                    </div>
-                    <div v-if="showFormCategoryDropdown" class="dropdown-menu">
-                      <div
+                    <span class="dropdown-arrow">▼</span>
+                  </div>
+                  <div v-if="showFormCategoryDropdown" class="dropdown-menu">
+                    <div
                         v-for="category in categories"
                         :key="category.id"
                         class="dropdown-item"
                         :class="{ selected: newTask.categoryId === category.id }"
                         @click="selectFormCategory(category)"
-                      >
-                        {{ category.name }}
-                      </div>
+                    >
+                      {{ category.name }}
                     </div>
                   </div>
-                </td>
-                <td>
-                  <input
+                </div>
+              </td>
+              <td>
+                <input
                     v-model="newTask.name"
                     class="editable-cell editable-input new-task-input"
                     placeholder="Enter task name..."
                     @keydown.enter="addTask"
-                  />
-                </td>
-                <td class="time-cell">
-                  <input
+                />
+              </td>
+              <td class="time-cell">
+                <input
                     type="text"
                     v-model="newTask.time"
                     class="editable-cell editable-input time-input"
                     placeholder="HH:MM or HH:MM:SS, leave empty for current time"
                     @keydown.enter="addTask"
-                  />
-                </td>
-                <td class="duration-cell">
-                  -
-                </td>
-                <td>
-                  <button
+                />
+              </td>
+              <td class="duration-cell">
+                -
+              </td>
+              <td>
+                <button
                     class="action-btn add-btn"
                     title="Add task"
                     @click="addTask"
                     :disabled="!newTask.name.trim() || newTask.categoryId === null"
-                  >
-                    ✓
-                  </button>
-                </td>
-              </tr>
+                >
+                  ✓
+                </button>
+              </td>
+            </tr>
             </tbody>
           </table>
         </div>
@@ -195,20 +196,22 @@
             <h3>Category Summary</h3>
             <div class="category-summary-grid">
               <div
-                v-for="categoryData in getCategoryBreakdown().slice(0, 4)"
-                :key="categoryData.name"
-                class="category-summary-card"
+                  v-for="categoryData in getCategoryBreakdown().slice(0, 4)"
+                  :key="categoryData.name"
+                  class="category-summary-card"
               >
                 <div class="category-summary-header">
                   <span class="category-summary-name">{{ categoryData.name }}</span>
                   <span class="category-summary-percentage">{{ categoryData.percentage }}%</span>
                 </div>
                 <div class="category-summary-time">{{ categoryData.totalTime }}</div>
-                <div class="category-summary-tasks">{{ categoryData.taskCount }} task{{ categoryData.taskCount !== 1 ? 's' : '' }}</div>
+                <div class="category-summary-tasks">{{ categoryData.taskCount }}
+                  task{{ categoryData.taskCount !== 1 ? 's' : '' }}
+                </div>
                 <div class="category-summary-bar">
                   <div
-                    class="category-summary-progress"
-                    :style="{ width: categoryData.percentage + '%' }"
+                      class="category-summary-progress"
+                      :style="{ width: categoryData.percentage + '%' }"
                   ></div>
                 </div>
               </div>
@@ -223,9 +226,9 @@
             </div>
             <div v-else class="category-breakdown">
               <div
-                v-for="categoryData in getCategoryBreakdown()"
-                :key="categoryData.name"
-                class="category-row"
+                  v-for="categoryData in getCategoryBreakdown()"
+                  :key="categoryData.name"
+                  class="category-row"
               >
                 <div class="category-info">
                   <span class="category-name">{{ categoryData.name }}</span>
@@ -234,8 +237,8 @@
                 <div class="category-time">{{ categoryData.totalTime }}</div>
                 <div class="category-bar">
                   <div
-                    class="category-progress"
-                    :style="{ width: categoryData.percentage + '%' }"
+                      class="category-progress"
+                      :style="{ width: categoryData.percentage + '%' }"
                   ></div>
                 </div>
               </div>
@@ -250,9 +253,9 @@
             </div>
             <div v-else class="timeline">
               <div
-                v-for="record in getSortedTaskRecords()"
-                :key="record.id"
-                class="timeline-item"
+                  v-for="record in getSortedTaskRecords()"
+                  :key="record.id"
+                  class="timeline-item"
               >
                 <div class="timeline-time">{{ formatTime12Hour(record.start_time) }}</div>
                 <div class="timeline-content">
@@ -312,7 +315,9 @@
       <div class="modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="modal-header">
           <h3 id="modal-title">Settings</h3>
-          <button class="close-btn" @click="closeSetupModal" :disabled="isAddingCategory" aria-label="Close settings modal">×</button>
+          <button class="close-btn" @click="closeSetupModal" :disabled="isAddingCategory"
+                  aria-label="Close settings modal">×
+          </button>
         </div>
 
         <div class="modal-content">
@@ -320,23 +325,23 @@
             <h4>Theme</h4>
             <div class="theme-buttons">
               <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'light' }"
-                @click="tempTheme = 'light'"
+                  class="theme-btn"
+                  :class="{ active: tempTheme === 'light' }"
+                  @click="tempTheme = 'light'"
               >
                 Light
               </button>
               <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'dark' }"
-                @click="tempTheme = 'dark'"
+                  class="theme-btn"
+                  :class="{ active: tempTheme === 'dark' }"
+                  @click="tempTheme = 'dark'"
               >
                 Dark
               </button>
               <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'auto' }"
-                @click="tempTheme = 'auto'"
+                  class="theme-btn"
+                  :class="{ active: tempTheme === 'auto' }"
+                  @click="tempTheme = 'auto'"
               >
                 Auto
               </button>
@@ -352,45 +357,45 @@
               </div>
               <div class="categories-list" v-else ref="categoriesListRef">
                 <div
-                  v-for="category in categories"
-                  :key="category.id"
-                  class="category-item"
-                  @dblclick="startEditCategory(category)"
-                  title="Double-click to edit"
-                  :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
+                    v-for="category in categories"
+                    :key="category.id"
+                    class="category-item"
+                    @dblclick="startEditCategory(category)"
+                    title="Double-click to edit"
+                    :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
                 >
                   <input
-                    v-if="editingCategoryId === category.id"
-                    v-model="editingCategoryName"
-                    @keyup.enter="saveEditCategory(category)"
-                    @keyup.escape="cancelEditCategory"
-                    @blur="saveEditCategory(category)"
-                    class="category-input"
-                    autofocus
+                      v-if="editingCategoryId === category.id"
+                      v-model="editingCategoryName"
+                      @keyup.enter="saveEditCategory(category)"
+                      @keyup.escape="cancelEditCategory"
+                      @blur="saveEditCategory(category)"
+                      class="category-input"
+                      autofocus
                   />
                   <span
-                    v-else
-                    class="category-name"
+                      v-else
+                      class="category-name"
                   >
                     {{ category.name }}
                   </span>
                   <div class="category-actions">
                     <button
-                      class="default-category-btn"
-                      @click="setDefaultCategory(category)"
-                      @dblclick.stop
-                      :class="{ active: category.is_default }"
-                      title="Set as default category"
-                      :disabled="isAddingCategory || editingCategoryId === category.id || isSettingDefault"
+                        class="default-category-btn"
+                        @click="setDefaultCategory(category)"
+                        @dblclick.stop
+                        :class="{ active: category.is_default }"
+                        title="Set as default category"
+                        :disabled="isAddingCategory || editingCategoryId === category.id || isSettingDefault"
                     >
                       ✓
                     </button>
                     <button
-                      class="delete-category-btn"
-                      @click="deleteCategory(category)"
-                      @dblclick.stop
-                      title="Delete category"
-                      :disabled="isAddingCategory || editingCategoryId === category.id || isDeletingCategory"
+                        class="delete-category-btn"
+                        @click="deleteCategory(category)"
+                        @dblclick.stop
+                        title="Delete category"
+                        :disabled="isAddingCategory || editingCategoryId === category.id || isDeletingCategory"
                     >
                       ×
                     </button>
@@ -399,12 +404,12 @@
 
                 <div v-if="isAddingCategory" class="add-category-form">
                   <input
-                    v-model="newCategoryName"
-                    @keyup.enter="addCategory"
-                    @keyup.escape="cancelAddingCategory"
-                    placeholder="Category name"
-                    class="category-input"
-                    autofocus
+                      v-model="newCategoryName"
+                      @keyup.enter="addCategory"
+                      @keyup.escape="cancelAddingCategory"
+                      placeholder="Category name"
+                      class="category-input"
+                      autofocus
                   />
                   <div class="add-category-actions">
                     <button class="add-confirm-btn" @click="addCategory">Add</button>
@@ -414,9 +419,9 @@
               </div>
 
               <button
-                v-if="!isAddingCategory"
-                class="add-category-btn"
-                @click="startAddingCategory"
+                  v-if="!isAddingCategory"
+                  class="add-category-btn"
+                  @click="startAddingCategory"
               >
                 + Add Category
               </button>
@@ -480,8 +485,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import type { Category, TaskRecord } from '../shared/types'
+import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
+import type {Category, TaskRecord} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -887,47 +892,11 @@ const initializeNewTask = () => {
   newTask.value.time = ''
 }
 
-const formatTime = (timeString: string): string => {
-  // Input validation
-  if (!timeString) {
-    return '12:00:00 AM'
-  }
-
-  // Check if timeString has exactly two colons
-  const colonCount = (timeString.match(/:/g) || []).length
-  if (colonCount !== 2) {
-    return '12:00:00 AM'
-  }
-
-  const [hours, minutes, seconds] = timeString.split(':')
-
-  // Validate hours, minutes, and seconds are numbers within valid ranges
-  const hour24 = parseInt(hours, 10)
-  const minuteNum = parseInt(minutes, 10)
-  const secondNum = parseInt(seconds, 10)
-
-  if (isNaN(hour24) || isNaN(minuteNum) || isNaN(secondNum) ||
-      hour24 < 0 || hour24 > 23 ||
-      minuteNum < 0 || minuteNum > 59 ||
-      secondNum < 0 || secondNum > 59) {
-    return '12:00:00 AM'
-  }
-
-  // Format to 12-hour time
-  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24
-  const period = hour24 >= 12 ? 'PM' : 'AM'
-
-  // Ensure two-digit formatting for minutes and seconds
-  const formattedMinutes = minutes.padStart(2, '0')
-  const formattedSeconds = seconds.padStart(2, '0')
-
-  return `${hour12}:${formattedMinutes}:${formattedSeconds} ${period}`
-}
 
 // Watch for date changes to reload task records
 watch(selectedDate, () => {
   loadTaskRecords()
-}, { immediate: false })
+}, {immediate: false})
 
 onMounted(async () => {
   const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'auto' | null
@@ -965,7 +934,7 @@ onMounted(async () => {
 onUnmounted(() => {
   // Clean up click outside event listener
   document.removeEventListener('click', handleClickOutside)
-  
+
   // Clean up media query listener
   if (mediaQueryList && mediaQueryHandler) {
     mediaQueryList.removeEventListener('change', mediaQueryHandler)
@@ -1132,7 +1101,7 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     return
   }
 
-  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
+  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
 }
 
 const convertToTimeInput = (timeString: string): string => {
@@ -1156,13 +1125,13 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
 
   // Sort records by start time to find the next task
   const sortedRecords = allRecords
-    .filter(record => record.start_time && record.start_time.trim() !== '')
-    .sort((a, b) => {
-      const timeA = a.start_time.split(':').map(Number)
-      const timeB = b.start_time.split(':').map(Number)
-      return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) -
-             (timeB[0] * 3600 + timeB[1] * 60 + (timeB[2] || 0))
-    })
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = a.start_time.split(':').map(Number)
+        const timeB = b.start_time.split(':').map(Number)
+        return timeA[0] * 3600 + timeA[1] * 60 + (timeA[2] || 0) -
+            (timeB[0] * 3600 + timeB[1] * 60 + (timeB[2] || 0))
+      })
 
   // Find the current record index
   const currentIndex = sortedRecords.findIndex(record => record.id === currentRecord.id)
@@ -1302,7 +1271,7 @@ const selectInlineCategory = async (recordId: number | undefined, categoryName: 
   showInlineDropdown.value[recordId] = false
 
   // Update the category
-  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
+  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
 }
 
 // Close dropdown when clicking outside
@@ -1323,12 +1292,12 @@ const getTotalTimeTracked = (): string => {
   if (taskRecords.value.length === 0) return '0h 0m'
 
   const sortedRecords = taskRecords.value
-    .filter(record => record.start_time && record.start_time.trim() !== '')
-    .sort((a, b) => {
-      const timeA = parseTimeString(a.start_time) || 0
-      const timeB = parseTimeString(b.start_time) || 0
-      return timeA - timeB
-    })
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
+      })
 
   let totalMinutes = 0
   for (let i = 0; i < sortedRecords.length - 1; i++) {
@@ -1352,12 +1321,12 @@ const getCategoryBreakdown = () => {
 
   const categoryMap = new Map()
   const sortedRecords = taskRecords.value
-    .filter(record => record.start_time && record.start_time.trim() !== '')
-    .sort((a, b) => {
-      const timeA = parseTimeString(a.start_time) || 0
-      const timeB = parseTimeString(b.start_time) || 0
-      return timeA - timeB
-    })
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
+      })
 
   // Initialize category tracking
   for (const record of taskRecords.value) {
@@ -1386,26 +1355,26 @@ const getCategoryBreakdown = () => {
 
   // Calculate total time for percentage calculation
   const totalMinutes = Array.from(categoryMap.values())
-    .reduce((sum, cat) => sum + cat.totalMinutes, 0)
+      .reduce((sum, cat) => sum + cat.totalMinutes, 0)
 
   // Convert to array and add percentage
   return Array.from(categoryMap.values())
-    .map(category => ({
-      ...category,
-      totalTime: formatDurationMinutes(category.totalMinutes),
-      percentage: totalMinutes > 0 ? Math.round((category.totalMinutes / totalMinutes) * 100) : 0
-    }))
-    .sort((a, b) => b.totalMinutes - a.totalMinutes)
+      .map(category => ({
+        ...category,
+        totalTime: formatDurationMinutes(category.totalMinutes),
+        percentage: totalMinutes > 0 ? Math.round((category.totalMinutes / totalMinutes) * 100) : 0
+      }))
+      .sort((a, b) => b.totalMinutes - a.totalMinutes)
 }
 
 const getSortedTaskRecords = () => {
   return taskRecords.value
-    .filter(record => record.start_time && record.start_time.trim() !== '')
-    .sort((a, b) => {
-      const timeA = parseTimeString(a.start_time) || 0
-      const timeB = parseTimeString(b.start_time) || 0
-      return timeA - timeB
-    })
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
+      })
 }
 
 const formatTime12Hour = (timeString: string): string => {
@@ -2286,8 +2255,12 @@ body {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .category-updating {

@@ -12,3 +12,4 @@ Work In Progress
 ![GitHub issues](https://img.shields.io/github/issues/rrrekin/TimeCatcher)
 ![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
 ![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
+![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)
