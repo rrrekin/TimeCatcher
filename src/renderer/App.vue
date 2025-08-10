@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import type {Category, TaskRecord, TaskType} from '../shared/types'
+import {type Category, SPECIAL_TASK_CATEGORY, type TaskRecord, type TaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -928,7 +928,7 @@ const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: s
     const currentTime = new Date().toTimeString().slice(0, 8)
 
     const taskRecord = {
-      category_name: '', // Empty category for special tasks
+      category_name: SPECIAL_TASK_CATEGORY,
       task_name: taskName,
       start_time: currentTime,
       date: dateString,
