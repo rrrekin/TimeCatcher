@@ -124,7 +124,7 @@
               </td>
               <!-- Actions column -->
               <td>
-                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)" :disabled="record.task_type === 'end'">▶︎</button>
+                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)" :disabled="record.task_type !== 'normal' || record.category_name === '__special__'">▶︎</button>
                 <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
               </td>
             </tr>
@@ -194,7 +194,7 @@
               @click="addPauseTask" 
               :disabled="isLoadingTasks"
               :title="isLoadingTasks ? 'Loading...' : 'Add pause task'"
-              :aria-label="isLoadingTasks ? 'Loading pause task' : 'Add pause task to current day'">
+              :aria-label="isLoadingTasks ? 'Loading pause task' : 'Add pause task to selected date'">
               ⏸ Pause
             </button>
             <button 
@@ -203,7 +203,7 @@
               @click="addEndTask" 
               :disabled="isLoadingTasks || hasEndTaskForSelectedDate"
               :title="isLoadingTasks ? 'Loading...' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task'"
-              :aria-label="isLoadingTasks ? 'Loading end task' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task to current day'">
+              :aria-label="isLoadingTasks ? 'Loading end task' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task to selected date'">
               ⏹ End
             </button>
           </div>
@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {type Category, SPECIAL_TASK_CATEGORY, type TaskRecord, type TaskType} from '../shared/types'
+import {SPECIAL_TASK_CATEGORY, type Category, type TaskRecord, type TaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -940,6 +940,16 @@ const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: s
     showToastMessage(successMessage, 'success')
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
+    
+    // Check if error is due to duplicate end task constraint
+    if (taskType === 'end' && error && typeof error === 'object' && 'message' in error) {
+      const errorMessage = (error as Error).message
+      if (errorMessage.includes('UNIQUE constraint failed') || errorMessage.includes('idx_end_per_day')) {
+        showToastMessage('An end task already exists for this day. Only one end task is allowed per day.', 'error')
+        return
+      }
+    }
+    
     showToastMessage(`Failed to add ${taskType} task. Please try again.`, 'error')
   }
 }
@@ -949,6 +959,10 @@ const addPauseTask = async () => {
 }
 
 const addEndTask = async () => {
+  if (hasEndTaskForSelectedDate.value) {
+    showToastMessage('End task already exists for this day.', 'error')
+    return
+  }
   await addSpecialTask('end', '⏹ End', 'End task added!')
 }
 
@@ -1056,6 +1070,12 @@ const replayTask = async (record: TaskRecord) => {
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    // Prevent replaying special tasks
+    if (record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY) {
+      showToastMessage('Special tasks cannot be replayed.', 'error')
       return
     }
 
