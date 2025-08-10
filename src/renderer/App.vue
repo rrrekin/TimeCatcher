@@ -124,7 +124,7 @@
               </td>
               <!-- Actions column -->
               <td>
-                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)" :disabled="record.task_type !== 'normal' || record.category_name === '__special__'">▶︎</button>
+                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)" :disabled="record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY">▶︎</button>
                 <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
               </td>
             </tr>
@@ -925,7 +925,7 @@ const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: s
     }
 
     const dateString = selectedDate.value.toISOString().split('T')[0]
-    const currentTime = new Date().toTimeString().slice(0, 8)
+    const currentTime = getCurrentTime()
 
     const taskRecord = {
       category_name: SPECIAL_TASK_CATEGORY,
@@ -942,12 +942,9 @@ const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: s
     console.error(`Failed to add ${taskType} task:`, error)
     
     // Check if error is due to duplicate end task constraint
-    if (taskType === 'end' && error && typeof error === 'object' && 'message' in error) {
-      const errorMessage = (error as Error).message
-      if (errorMessage.includes('UNIQUE constraint failed') || errorMessage.includes('idx_end_per_day')) {
-        showToastMessage('An end task already exists for this day. Only one end task is allowed per day.', 'error')
-        return
-      }
+    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') {
+      showToastMessage('An end task already exists for this day. Only one end task is allowed per day.', 'error')
+      return
     }
     
     showToastMessage(`Failed to add ${taskType} task. Please try again.`, 'error')
@@ -1092,8 +1089,19 @@ const replayTask = async (record: TaskRecord) => {
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
-    await loadTaskRecords()
-    showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+    
+    // Check if the user is viewing today's date
+    const todayString = now.toISOString().split('T')[0]
+    const selectedDateString = selectedDate.value.toISOString().split('T')[0]
+    
+    if (selectedDateString !== todayString) {
+      // Automatically switch to today to show the replayed task
+      selectedDate.value = now
+      showToastMessage(`Task "${record.task_name}" replayed for today. Switched to today's view.`, 'success')
+    } else {
+      await loadTaskRecords()
+      showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+    }
   } catch (error) {
     console.error('Failed to replay task:', error)
     showToastMessage('Failed to replay task. Please try again.', 'error')

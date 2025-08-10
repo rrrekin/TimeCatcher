@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
-import type { TaskRecord } from '../shared/types'
+import type { TaskRecord, DatabaseError } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -108,6 +108,16 @@ ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | '
     return dbService.addTaskRecord(record)
   } catch (error) {
     console.error('Failed to add task record:', error)
+    
+    // Check if this is a duplicate end task constraint violation
+    if (error instanceof Error && 
+        (error.message.includes('UNIQUE constraint failed') || error.message.includes('idx_end_per_day')) &&
+        record.task_type === 'end') {
+      const dbError: DatabaseError = new Error(`Failed to add task record: ${error.message}`)
+      dbError.code = 'END_DUPLICATE'
+      throw dbError
+    }
+    
     throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 })
