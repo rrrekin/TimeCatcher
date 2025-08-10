@@ -6,6 +6,7 @@ export const SPECIAL_TASK_CATEGORY = '__special__'
 
 export interface DatabaseError extends Error {
   code?: 'END_DUPLICATE' | 'SQLITE_CONSTRAINT' | 'SQLITE_CONSTRAINT_UNIQUE' | string
+  cause?: Error
 }
 
 export interface Category {

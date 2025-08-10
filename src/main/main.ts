@@ -121,11 +121,14 @@ ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | '
       if (isEndTaskDuplicateError) {
         const dbError: DatabaseError = new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
         dbError.code = 'END_DUPLICATE'
+        ;(dbError as any).cause = error instanceof Error ? error : new Error(String(error))
         throw dbError
       }
     }
     
-    throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const genericError = new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    ;(genericError as any).cause = error instanceof Error ? error : new Error(String(error))
+    throw genericError
   }
 })
 
