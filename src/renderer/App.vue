@@ -63,12 +63,12 @@
             </tr>
             <tr v-else v-for="record in taskRecords" :key="record.id" 
                 :class="{ 
-                  'special-task-row': record.task_type === 'pause' || record.task_type === 'end',
+                  'special-task-row': isSpecial(record.task_type),
                   'pause-task-row': record.task_type === 'pause',
                   'end-task-row': record.task_type === 'end'
                 }">
               <!-- Special task layout: merged category + task columns -->
-              <td v-if="record.task_type === 'pause' || record.task_type === 'end'" colspan="2" class="special-task-cell">
+              <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
                 {{ record.task_name }}
               </td>
               <!-- Normal task layout: separate category and task columns -->
@@ -189,17 +189,21 @@
           <!-- Special Task Buttons -->
           <div class="special-task-buttons">
             <button 
+              type="button"
               class="special-task-btn pause-btn" 
               @click="addPauseTask" 
               :disabled="isLoadingTasks"
-              :title="isLoadingTasks ? 'Loading...' : 'Add pause task'">
+              :title="isLoadingTasks ? 'Loading...' : 'Add pause task'"
+              :aria-label="isLoadingTasks ? 'Loading pause task' : 'Add pause task to current day'">
               ⏸ Pause
             </button>
             <button 
+              type="button"
               class="special-task-btn end-btn" 
               @click="addEndTask" 
               :disabled="isLoadingTasks || hasEndTaskForSelectedDate"
-              :title="isLoadingTasks ? 'Loading...' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task'">
+              :title="isLoadingTasks ? 'Loading...' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task'"
+              :aria-label="isLoadingTasks ? 'Loading end task' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task to current day'">
               ⏹ End
             </button>
           </div>
@@ -581,6 +585,11 @@ const selectedCategoryForForm = ref('')
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
 
+// Helper functions
+const isSpecial = (taskType: TaskType | undefined): boolean => {
+  return taskType === 'pause' || taskType === 'end'
+}
+
 const formattedDate = computed(() => {
   return selectedDate.value.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -890,7 +899,8 @@ const addTask = async () => {
       category_name: category.name,
       task_name: newTask.value.name,
       start_time: timeString,
-      date: dateString
+      date: dateString,
+      task_type: 'normal' as TaskType
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
@@ -1057,7 +1067,8 @@ const replayTask = async (record: TaskRecord) => {
       category_name: record.category_name,
       task_name: record.task_name,
       start_time: timeString,
-      date: dateString
+      date: dateString,
+      task_type: 'normal' as TaskType
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
@@ -3137,6 +3148,7 @@ body {
   color: var(--text-primary);
   text-align: center;
   padding: 0.75rem;
+  cursor: default;
 }
 
 .pause-task-row .special-task-cell {

@@ -170,7 +170,7 @@ No test configuration currently exists in the project.
 1. `src/renderer/App.vue` - Main UI component (1000+ lines, contains all frontend logic)
 2. `src/main/database.ts` - Database service layer with all CRUD operations
 3. `src/main/main.ts` - Electron main process with IPC handlers
-4. `src/shared/types.ts` - Type definitions including TaskType enum and special task constants
+4. `src/shared/types.ts` - Type definitions including TaskType union and special task constants
 5. `package.json` - Build scripts and dependency management
 
 ## Common Development Tasks

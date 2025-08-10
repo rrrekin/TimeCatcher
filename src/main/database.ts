@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
-import { Category, TaskRecord, TaskType, SPECIAL_TASK_CATEGORY } from '../shared/types'
+import type { Category, TaskRecord, TaskType } from '../shared/types'
+import { SPECIAL_TASK_CATEGORY } from '../shared/types'
 
 class DatabaseService {
   public db: Database.Database
@@ -133,15 +134,19 @@ class DatabaseService {
     // Use sentinel value for special tasks (when category_name is empty)
     const categoryName = record.category_name === '' ? SPECIAL_TASK_CATEGORY : record.category_name
     const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type || 'normal')
-    return this.db.prepare('SELECT * FROM task_records WHERE id = ?').get(result.lastInsertRowid) as TaskRecord
+    return this.db.prepare(`
+      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, COALESCE(task_type, 'normal') as task_type, created_at 
+      FROM task_records WHERE id = ?
+    `).get(SPECIAL_TASK_CATEGORY, result.lastInsertRowid) as TaskRecord
   }
 
   getTaskRecordsByDate(date: string): TaskRecord[] {
     return this.db.prepare(`
-      SELECT * FROM task_records 
+      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, COALESCE(task_type, 'normal') as task_type, created_at 
+      FROM task_records 
       WHERE date = ? 
       ORDER BY start_time
-    `).all(date) as TaskRecord[]
+    `).all(SPECIAL_TASK_CATEGORY, date) as TaskRecord[]
   }
 
   updateTaskRecord(id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>): void {

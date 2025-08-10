@@ -15,7 +15,7 @@ export interface TaskRecord {
   task_name: string
   start_time: string
   date: string
-  task_type?: TaskType
+  task_type: TaskType
   created_at?: string
 }
 
