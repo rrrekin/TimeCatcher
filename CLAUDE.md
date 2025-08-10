@@ -48,6 +48,8 @@ Uses SQLite with clean table initialization. Key patterns:
 - **Historical Data Preservation**: Tasks store `category_name` directly (not foreign key)
 - **Simple Schema**: Clean table creation without migrations (pre-release version)
 - **Default Category Protection**: Cannot delete category marked as default
+- **Special Task Support**: Tasks can be marked as 'normal', 'pause', or 'end' types
+- **Daily End Task Constraint**: Only one 'end' task allowed per day (enforced by unique index)
 
 Database schema:
 
@@ -55,8 +57,15 @@ Database schema:
 -- Categories for current category management
 CREATE TABLE categories (id, name UNIQUE, is_default BOOLEAN, created_at)
 
--- Task records preserve historical category names
-CREATE TABLE task_records (id, category_name, task_name, start_time, date, created_at)
+-- Task records preserve historical category names and support task types
+CREATE TABLE task_records (
+  id, category_name, task_name, start_time, date, 
+  task_type DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
+  created_at
+)
+
+-- Unique index to enforce one end task per day
+CREATE UNIQUE INDEX idx_end_per_day ON task_records(date) WHERE task_type = 'end'
 ```
 
 ### IPC Communication Pattern
@@ -107,6 +116,7 @@ No external store used. State organized as:
 - **Inline Editing**: Double-click table cells to edit directly
 - **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
+- **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
 - **Modal Management**: Setup modal for categories and theme settings
@@ -160,7 +170,7 @@ No test configuration currently exists in the project.
 1. `src/renderer/App.vue` - Main UI component (1000+ lines, contains all frontend logic)
 2. `src/main/database.ts` - Database service layer with all CRUD operations
 3. `src/main/main.ts` - Electron main process with IPC handlers
-4. `src/shared/types.ts` - Type definitions used across processes
+4. `src/shared/types.ts` - Type definitions including TaskType enum and special task constants
 5. `package.json` - Build scripts and dependency management
 
 ## Common Development Tasks
