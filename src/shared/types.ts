@@ -3,7 +3,7 @@ export type TaskType = 'normal' | 'pause' | 'end'
 export const SPECIAL_TASK_CATEGORY = '__special__'
 
 export interface DatabaseError extends Error {
-  code?: string
+  code?: 'END_DUPLICATE' | 'SQLITE_CONSTRAINT' | 'SQLITE_CONSTRAINT_UNIQUE' | string
 }
 
 export interface Category {

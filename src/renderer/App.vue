@@ -586,7 +586,7 @@ const selectedCategoryForForm = ref('')
 const categoriesListRef = ref<HTMLElement | null>(null)
 
 // Helper functions
-const isSpecial = (taskType: TaskType | undefined): boolean => {
+const isSpecial = (taskType: TaskType | undefined): taskType is 'pause' | 'end' => {
   return taskType === 'pause' || taskType === 'end'
 }
 
@@ -1078,7 +1078,7 @@ const replayTask = async (record: TaskRecord) => {
 
     const now = new Date()
     const dateString = now.toISOString().split('T')[0] // Use current date
-    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+    const timeString = getCurrentTime()
 
     const taskRecord = {
       category_name: record.category_name,

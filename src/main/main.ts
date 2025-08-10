@@ -110,12 +110,20 @@ ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | '
     console.error('Failed to add task record:', error)
     
     // Check if this is a duplicate end task constraint violation
-    if (error instanceof Error && 
-        (error.message.includes('UNIQUE constraint failed') || error.message.includes('idx_end_per_day')) &&
-        record.task_type === 'end') {
-      const dbError: DatabaseError = new Error(`Failed to add task record: ${error.message}`)
-      dbError.code = 'END_DUPLICATE'
-      throw dbError
+    // SQLite UNIQUE constraint violation has error code SQLITE_CONSTRAINT_UNIQUE (2067)
+    // or errno 19 (SQLITE_CONSTRAINT) with code 'SQLITE_CONSTRAINT_UNIQUE'
+    if (record.task_type === 'end' && error && typeof error === 'object') {
+      const sqliteError = error as any
+      const isUniqueConstraintError = 
+        sqliteError.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        sqliteError.errno === 19 ||
+        (sqliteError.code === 'SQLITE_CONSTRAINT' && sqliteError.message && sqliteError.message.includes('idx_end_per_day'))
+      
+      if (isUniqueConstraintError) {
+        const dbError: DatabaseError = new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        dbError.code = 'END_DUPLICATE'
+        throw dbError
+      }
     }
     
     throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
