@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
+import { TaskType } from '../shared/types'
 
 export interface Category {
   id?: number
@@ -15,7 +16,7 @@ export interface TaskRecord {
   task_name: string
   start_time: string
   date: string
-  task_type?: 'normal' | 'pause' | 'end'
+  task_type?: TaskType
   created_at?: string
 }
 
@@ -54,11 +55,15 @@ class DatabaseService {
     `)
 
     // Add task_type column if it doesn't exist (for existing databases)
-    try {
+    const tableInfo = this.db.prepare(`PRAGMA table_info(task_records)`).all() as Array<{name: string}>
+    const hasTaskTypeColumn = tableInfo.some(column => column.name === 'task_type')
+    
+    if (!hasTaskTypeColumn) {
       this.db.exec(`ALTER TABLE task_records ADD COLUMN task_type TEXT DEFAULT 'normal'`)
-    } catch (error) {
-      // Column already exists, ignore the error
     }
+
+    // Create unique index to enforce one end task per day
+    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
   }
 
   private initializeDefaultCategories() {
@@ -150,7 +155,9 @@ class DatabaseService {
       INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
       VALUES (?, ?, ?, ?, ?)
     `)
-    const result = insert.run(record.category_name, record.task_name, record.start_time, record.date, record.task_type || 'normal')
+    // Use sentinel value for special tasks (when category_name is empty)
+    const categoryName = record.category_name === '' ? '__special__' : record.category_name
+    const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type || 'normal')
     return this.db.prepare('SELECT * FROM task_records WHERE id = ?').get(result.lastInsertRowid) as TaskRecord
   }
 

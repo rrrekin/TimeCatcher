@@ -1,3 +1,5 @@
+export type TaskType = 'normal' | 'pause' | 'end'
+
 export interface Category {
   id?: number
   name: string
@@ -11,7 +13,7 @@ export interface TaskRecord {
   task_name: string
   start_time: string
   date: string
-  task_type?: 'normal' | 'pause' | 'end'
+  task_type?: TaskType
   created_at?: string
 }
 

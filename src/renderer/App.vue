@@ -191,7 +191,7 @@
             <button class="special-task-btn pause-btn" @click="addPauseTask" :disabled="isLoadingTasks">
               ⏸ Pause
             </button>
-            <button class="special-task-btn end-btn" @click="addEndTask" :disabled="isLoadingTasks || hasEndTaskForCurrentDate">
+            <button class="special-task-btn end-btn" @click="addEndTask" :disabled="isLoadingTasks || hasEndTaskForSelectedDate">
               ⏹ End
             </button>
           </div>
@@ -514,7 +514,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import type {Category, TaskRecord} from '../shared/types'
+import type {Category, TaskRecord, TaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -591,7 +591,7 @@ const dateInputValue = computed({
   }
 })
 
-const hasEndTaskForCurrentDate = computed(() => {
+const hasEndTaskForSelectedDate = computed(() => {
   return taskRecords.value.some(record => record.task_type === 'end')
 })
 
@@ -899,7 +899,7 @@ const addTask = async () => {
 }
 
 // Special task functions
-const addPauseTask = async () => {
+const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: string, successMessage: string) => {
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
@@ -911,46 +911,27 @@ const addPauseTask = async () => {
 
     const taskRecord = {
       category_name: '', // Empty category for special tasks
-      task_name: '⏸ Pause',
+      task_name: taskName,
       start_time: currentTime,
       date: dateString,
-      task_type: 'pause' as const
+      task_type: taskType
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
     await loadTaskRecords()
-    showToastMessage('Pause task added!', 'success')
+    showToastMessage(successMessage, 'success')
   } catch (error) {
-    console.error('Failed to add pause task:', error)
-    showToastMessage('Failed to add pause task. Please try again.', 'error')
+    console.error(`Failed to add ${taskType} task:`, error)
+    showToastMessage(`Failed to add ${taskType} task. Please try again.`, 'error')
   }
 }
 
+const addPauseTask = async () => {
+  await addSpecialTask('pause', '⏸ Pause', 'Pause task added!')
+}
+
 const addEndTask = async () => {
-  try {
-    if (!window.electronAPI) {
-      showToastMessage('API not available. Please restart the application.', 'error')
-      return
-    }
-
-    const dateString = selectedDate.value.toISOString().split('T')[0]
-    const currentTime = new Date().toTimeString().slice(0, 8)
-
-    const taskRecord = {
-      category_name: '', // Empty category for special tasks
-      task_name: '⏹ End',
-      start_time: currentTime,
-      date: dateString,
-      task_type: 'end' as const
-    }
-
-    await window.electronAPI.addTaskRecord(taskRecord)
-    await loadTaskRecords()
-    showToastMessage('End task added!', 'success')
-  } catch (error) {
-    console.error('Failed to add end task:', error)
-    showToastMessage('Failed to add end task. Please try again.', 'error')
-  }
+  await addSpecialTask('end', '⏹ End', 'End task added!')
 }
 
 const cancelAddTask = () => {
