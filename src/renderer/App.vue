@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {SPECIAL_TASK_CATEGORY, type Category, type TaskRecord, type TaskType} from '../shared/types'
+import {SPECIAL_TASK_CATEGORY, type Category, type TaskRecord, type TaskType, type SpecialTaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -586,7 +586,7 @@ const selectedCategoryForForm = ref('')
 const categoriesListRef = ref<HTMLElement | null>(null)
 
 // Helper functions
-const isSpecial = (taskType: TaskType | undefined): taskType is 'pause' | 'end' => {
+const isSpecial = (taskType: TaskType | undefined): taskType is SpecialTaskType => {
   return taskType === 'pause' || taskType === 'end'
 }
 
@@ -917,7 +917,7 @@ const addTask = async () => {
 }
 
 // Special task functions
-const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: string, successMessage: string) => {
+const addSpecialTask = async (taskType: SpecialTaskType, taskName: string, successMessage: string) => {
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
@@ -942,7 +942,14 @@ const addSpecialTask = async (taskType: Exclude<TaskType, 'normal'>, taskName: s
     console.error(`Failed to add ${taskType} task:`, error)
     
     // Check if error is due to duplicate end task constraint
-    if (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') {
+    const isDuplicateEndTask = 
+      // Primary check: custom error code
+      (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
+      // Fallback check: regex pattern matching error message for duplicate end task
+      (error && typeof error === 'object' && 'message' in error && 
+       /(?:unique.*constraint.*failed|constraint.*violation).*(?:task_records.*idx_end_per_day|idx_end_per_day.*task_records)/i.test((error as any).message))
+    
+    if (isDuplicateEndTask) {
       showToastMessage('An end task already exists for this day. Only one end task is allowed per day.', 'error')
       return
     }

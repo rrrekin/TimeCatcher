@@ -1,5 +1,7 @@
 export type TaskType = 'normal' | 'pause' | 'end'
 
+export type SpecialTaskType = 'pause' | 'end'
+
 export const SPECIAL_TASK_CATEGORY = '__special__'
 
 export interface DatabaseError extends Error {
