@@ -1,5 +1,7 @@
 export type TaskType = 'normal' | 'pause' | 'end'
 
+export const SPECIAL_TASK_CATEGORY = '__special__'
+
 export interface Category {
   id?: number
   name: string

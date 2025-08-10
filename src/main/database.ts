@@ -1,24 +1,7 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
-import { TaskType } from '../shared/types'
-
-export interface Category {
-  id?: number
-  name: string
-  is_default?: boolean
-  created_at?: string
-}
-
-export interface TaskRecord {
-  id?: number
-  category_name: string
-  task_name: string
-  start_time: string
-  date: string
-  task_type?: TaskType
-  created_at?: string
-}
+import { Category, TaskRecord, TaskType, SPECIAL_TASK_CATEGORY } from '../shared/types'
 
 class DatabaseService {
   public db: Database.Database
@@ -49,7 +32,7 @@ class DatabaseService {
         task_name TEXT NOT NULL,
         start_time DATETIME NOT NULL,
         date TEXT NOT NULL,
-        task_type TEXT DEFAULT 'normal',
+        task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
@@ -59,7 +42,7 @@ class DatabaseService {
     const hasTaskTypeColumn = tableInfo.some(column => column.name === 'task_type')
     
     if (!hasTaskTypeColumn) {
-      this.db.exec(`ALTER TABLE task_records ADD COLUMN task_type TEXT DEFAULT 'normal'`)
+      this.db.exec(`ALTER TABLE task_records ADD COLUMN task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end'))`)
     }
 
     // Create unique index to enforce one end task per day
@@ -156,7 +139,7 @@ class DatabaseService {
       VALUES (?, ?, ?, ?, ?)
     `)
     // Use sentinel value for special tasks (when category_name is empty)
-    const categoryName = record.category_name === '' ? '__special__' : record.category_name
+    const categoryName = record.category_name === '' ? SPECIAL_TASK_CATEGORY : record.category_name
     const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type || 'normal')
     return this.db.prepare('SELECT * FROM task_records WHERE id = ?').get(result.lastInsertRowid) as TaskRecord
   }

@@ -188,10 +188,18 @@
           
           <!-- Special Task Buttons -->
           <div class="special-task-buttons">
-            <button class="special-task-btn pause-btn" @click="addPauseTask" :disabled="isLoadingTasks">
+            <button 
+              class="special-task-btn pause-btn" 
+              @click="addPauseTask" 
+              :disabled="isLoadingTasks"
+              :title="isLoadingTasks ? 'Loading...' : 'Add pause task'">
               ⏸ Pause
             </button>
-            <button class="special-task-btn end-btn" @click="addEndTask" :disabled="isLoadingTasks || hasEndTaskForSelectedDate">
+            <button 
+              class="special-task-btn end-btn" 
+              @click="addEndTask" 
+              :disabled="isLoadingTasks || hasEndTaskForSelectedDate"
+              :title="isLoadingTasks ? 'Loading...' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task'">
               ⏹ End
             </button>
           </div>
