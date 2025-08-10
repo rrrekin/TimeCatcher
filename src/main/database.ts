@@ -14,7 +14,7 @@ class DatabaseService {
   }
 
   private initializeTables() {
-    // Create categories table with final schema
+    // Create categories table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +24,7 @@ class DatabaseService {
       )
     `)
 
-    // Create task_records table with final schema
+    // Create task_records table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS task_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,14 +36,6 @@ class DatabaseService {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
-
-    // Add task_type column if it doesn't exist (for existing databases)
-    const tableInfo = this.db.prepare(`PRAGMA table_info(task_records)`).all() as Array<{name: string}>
-    const hasTaskTypeColumn = tableInfo.some(column => column.name === 'task_type')
-    
-    if (!hasTaskTypeColumn) {
-      this.db.exec(`ALTER TABLE task_records ADD COLUMN task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end'))`)
-    }
 
     // Create unique index to enforce one end task per day
     this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
