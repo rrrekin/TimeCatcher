@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
-import type { TaskRecord, DatabaseError } from '../shared/types'
+import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
@@ -103,7 +103,7 @@ ipcMain.handle('db:get-default-category', async () => {
   }
 })
 
-ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | 'created_at'>) => {
+ipcMain.handle('db:add-task-record', async (_, record: TaskRecordInsert) => {
   try {
     return dbService.addTaskRecord(record)
   } catch (error) {
@@ -141,7 +141,7 @@ ipcMain.handle('db:get-task-records-by-date', async (_, date: string) => {
   }
 })
 
-ipcMain.handle('db:update-task-record', async (_, id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => {
+ipcMain.handle('db:update-task-record', async (_, id: number, record: TaskRecordUpdate) => {
   try {
     return dbService.updateTaskRecord(id, record)
   } catch (error) {

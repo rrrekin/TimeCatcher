@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Shared** (`src/shared/`):
 
-- `types.ts` - TypeScript interfaces shared between processes
+- `types.ts` - TypeScript interfaces, runtime constants, and type-safe API definitions
 
 ### Database Architecture
 
@@ -50,6 +50,7 @@ Uses SQLite with clean table initialization. Key patterns:
 - **Default Category Protection**: Cannot delete category marked as default
 - **Special Task Support**: Tasks can be marked as 'normal', 'pause', or 'end' types
 - **Daily End Task Constraint**: Only one 'end' task allowed per day (enforced by unique index)
+- **Immutable Task Types**: Task type cannot be changed after creation (enforced by TypeScript)
 
 Database schema:
 
@@ -78,6 +79,25 @@ All database operations follow the pattern:
 4. Database service performs operation
 
 API methods: getCategories, addCategory, deleteCategory, updateCategory, setDefaultCategory, getDefaultCategory, addTaskRecord, getTaskRecordsByDate, updateTaskRecord, deleteTaskRecord
+
+### Type System & Runtime Constants
+
+**Task Type Management**:
+- `TASK_TYPES` - Runtime constant array `['normal', 'pause', 'end']` for validation and UI generation
+- `TaskType` - Derived type alias using `typeof TASK_TYPES[number]` to eliminate duplication
+- `SpecialTaskType` - Derived as `Exclude<TaskType, 'normal'>` to stay synchronized
+- `SPECIAL_TASK_TYPES` - Runtime array `['pause', 'end']` for special task handling
+
+**Duration Display Configuration**:
+- `DURATION_VISIBLE_BY_TASK_TYPE` - Centralized mapping controlling which task types show duration:
+  - `normal: true` - Regular tasks show calculated duration
+  - `pause: true` - Pause tasks show calculated duration  
+  - `end: false` - End tasks hide duration (no meaningful duration)
+
+**Immutable Task Types**:
+- `TaskRecordInsert` - Allows setting task_type during creation
+- `TaskRecordUpdate` - Excludes task_type to prevent modification after creation
+- Type safety enforced throughout IPC chain (preload → main → database)
 
 ### TypeScript Configuration
 
@@ -170,7 +190,7 @@ No test configuration currently exists in the project.
 1. `src/renderer/App.vue` - Main UI component (1000+ lines, contains all frontend logic)
 2. `src/main/database.ts` - Database service layer with all CRUD operations
 3. `src/main/main.ts` - Electron main process with IPC handlers
-4. `src/shared/types.ts` - Type definitions including TaskType union and special task constants
+4. `src/shared/types.ts` - Type definitions with runtime constants, immutable constraints, and centralized UI configuration
 5. `package.json` - Build scripts and dependency management
 
 ## Common Development Tasks
@@ -182,6 +202,14 @@ When adding new database operations:
 3. Expose method in preload script (`src/main/preload.ts`)
 4. Add TypeScript type to ElectronAPI interface (`src/shared/types.ts`)
 5. Use method in Vue component via `window.electronAPI`
+
+When working with task types:
+
+- Use `TASK_TYPES` constant for runtime validation, loops, or UI generation
+- Use `SPECIAL_TASK_TYPES` constant for special task logic and guards
+- Use `DURATION_VISIBLE_BY_TASK_TYPE[taskType]` for duration display decisions  
+- Use `TaskRecordInsert` for creation operations (includes task_type)
+- Use `TaskRecordUpdate` for modification operations (excludes immutable task_type)
 
 When adding new UI features:
 

@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
-import type { Category, TaskRecord, TaskType } from '../shared/types'
+import type { Category, TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType } from '../shared/types'
 import { SPECIAL_TASK_CATEGORY } from '../shared/types'
 
 class DatabaseService {
@@ -126,7 +126,7 @@ class DatabaseService {
   }
 
   // Task record operations
-  addTaskRecord(record: Omit<TaskRecord, 'id' | 'created_at'>): TaskRecord {
+  addTaskRecord(record: TaskRecordInsert): TaskRecord {
     const insert = this.db.prepare(`
       INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
       VALUES (?, ?, ?, ?, ?)
@@ -149,7 +149,7 @@ class DatabaseService {
     `).all(SPECIAL_TASK_CATEGORY, date) as TaskRecord[]
   }
 
-  updateTaskRecord(id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>): void {
+  updateTaskRecord(id: number, record: TaskRecordUpdate): void {
     const fields: string[] = []
     const values: any[] = []
     
