@@ -15,7 +15,7 @@ function isDuplicateEndConstraint(error: unknown): boolean {
   const message = String(sqliteError.message || '')
   
   const isConstraintError = code === 'SQLITE_CONSTRAINT' || code === 'SQLITE_CONSTRAINT_UNIQUE'
-  const isEndIndexError = /(task_records.*idx_end_per_day|idx_end_per_day.*task_records)/i.test(message)
+  const isEndIndexError = /(idx_end_per_day|task_records\.date)/i.test(message)
   
   return isConstraintError && isEndIndexError
 }
