@@ -32,9 +32,6 @@
 
     <div class="layout">
       <div class="task-table-pane">
-        <div class="task-table-header">
-          <h3>Tasks</h3>
-        </div>
 
         <div class="task-table">
           <table>
@@ -212,100 +209,53 @@
 
       <main class="main-content">
         <div v-if="activeSection === 'dashboard'" class="section">
-          <h2>Daily Report</h2>
-          <p>{{ formattedDate.split(',')[0] }} - Overview of your time and productivity</p>
+          <h2>Daily Report - Standard Tasks: {{ getTotalTimeTracked() }} <span v-if="!hasEndTaskForSelectedDate" class="status-emoji">⚠️</span><span v-if="getTotalMinutesTracked() >= (targetWorkHours * 60)" class="status-emoji">😊</span></h2>
+          <p>{{ formattedDate.split(',')[0] }} - Overview of your time and productivity{{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}</p>
 
-          <!-- Time Summary Stats -->
-          <div class="report-stats">
-            <div class="stat-card">
-              <div class="stat-label">Total Time Tracked</div>
-              <div class="stat-value">{{ getTotalTimeTracked() }}</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Tasks Completed</div>
-              <div class="stat-value">{{ taskRecords.length }}</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Categories Used</div>
-              <div class="stat-value">{{ getUniqueCategoriesCount() }}</div>
-            </div>
-          </div>
 
-          <!-- Category Summary Cards -->
-          <div v-if="taskRecords.length > 0" class="report-section">
-            <h3>Category Summary</h3>
-            <div class="category-summary-grid">
-              <div
-                  v-for="categoryData in getCategoryBreakdown().slice(0, 4)"
-                  :key="categoryData.name"
-                  class="category-summary-card"
-              >
-                <div class="category-summary-header">
-                  <span class="category-summary-name">{{ categoryData.name }}</span>
-                  <span class="category-summary-percentage">{{ categoryData.percentage }}%</span>
-                </div>
-                <div class="category-summary-time">{{ categoryData.totalTime }}</div>
-                <div class="category-summary-tasks">{{ categoryData.taskCount }}
-                  task{{ categoryData.taskCount !== 1 ? 's' : '' }}
-                </div>
-                <div class="category-summary-bar">
-                  <div
-                      class="category-summary-progress"
-                      :style="{ width: categoryData.percentage + '%' }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Category Breakdown -->
           <div class="report-section">
             <h3>Detailed Time by Category</h3>
-            <div v-if="taskRecords.length === 0" class="empty-report">
-              No tasks recorded for this day
+            <div v-if="taskRecords.filter(r => r.task_type === 'normal').length === 0" class="empty-report">
+              No standard tasks recorded for this day
             </div>
             <div v-else class="category-breakdown">
               <div
                   v-for="categoryData in getCategoryBreakdown()"
                   :key="categoryData.name"
-                  class="category-row"
+                  class="category-section"
               >
-                <div class="category-info">
-                  <span class="category-name">{{ categoryData.name }}</span>
-                  <span class="category-tasks">{{ categoryData.taskCount }} tasks</span>
+                <div class="category-header">
+                  <div class="category-info">
+                    <span class="category-name">{{ categoryData.name }}</span>
+                    <span class="category-tasks">{{ categoryData.taskCount }} tasks</span>
+                  </div>
+                  <div class="category-time">{{ categoryData.totalTime }}</div>
+                  <div class="category-bar">
+                    <div
+                        class="category-progress"
+                        :style="{ width: categoryData.percentage + '%' }"
+                    ></div>
+                  </div>
                 </div>
-                <div class="category-time">{{ categoryData.totalTime }}</div>
-                <div class="category-bar">
+                
+                <!-- Task summaries within category -->
+                <div class="task-summaries">
                   <div
-                      class="category-progress"
-                      :style="{ width: categoryData.percentage + '%' }"
-                  ></div>
+                      v-for="task in categoryData.taskSummaries"
+                      :key="task.name"
+                      class="task-summary"
+                  >
+                    <span class="task-name">{{ task.name }}</span>
+                    <span class="task-count">{{ task.count }}x</span>
+                    <span class="task-time">{{ task.totalTime }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Recent Tasks -->
-          <div class="report-section">
-            <h3>Today's Timeline</h3>
-            <div v-if="taskRecords.length === 0" class="empty-report">
-              No tasks recorded for this day
-            </div>
-            <div v-else class="timeline">
-              <div
-                  v-for="record in getSortedTaskRecords()"
-                  :key="record.id"
-                  class="timeline-item"
-              >
-                <div class="timeline-time">{{ formatTime12Hour(record.start_time) }}</div>
-                <div class="timeline-content">
-                  <div class="timeline-task">{{ record.task_name }}</div>
-                  <div class="timeline-category">{{ record.category_name }}</div>
-                  <div class="timeline-duration">{{ calculateDuration(record, taskRecords) }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div v-if="activeSection === 'tracking'" class="section">
@@ -385,6 +335,23 @@
               >
                 Auto
               </button>
+            </div>
+          </div>
+
+          <div class="setting-group">
+            <h4>Daily Work Target</h4>
+            <div class="target-hours-setting">
+              <label for="target-hours">Target work hours per day:</label>
+              <input
+                type="number"
+                id="target-hours"
+                v-model="tempTargetWorkHours"
+                min="1"
+                max="24"
+                step="0.5"
+                class="target-hours-input"
+              />
+              <span class="hours-label">hours</span>
             </div>
           </div>
 
@@ -539,6 +506,8 @@ const selectedDate = ref(new Date())
 const isSetupModalOpen = ref(false)
 const currentTheme = ref<'light' | 'dark' | 'auto'>('auto')
 const tempTheme = ref<'light' | 'dark' | 'auto'>('auto')
+const targetWorkHours = ref(8)
+const tempTargetWorkHours = ref(8)
 
 // Media query references for cleanup
 let mediaQueryList: MediaQueryList | null = null
@@ -630,6 +599,7 @@ const goToToday = () => {
 
 const openSetup = async () => {
   tempTheme.value = currentTheme.value
+  tempTargetWorkHours.value = targetWorkHours.value
   await loadCategories()
   isSetupModalOpen.value = true
 }
@@ -644,8 +614,10 @@ const closeSetupModal = () => {
 
 const saveSettings = () => {
   currentTheme.value = tempTheme.value
+  targetWorkHours.value = tempTargetWorkHours.value
   applyTheme(currentTheme.value)
   localStorage.setItem('theme', currentTheme.value)
+  localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
   isSetupModalOpen.value = false
   newCategoryName.value = ''
   isAddingCategory.value = false
@@ -1007,6 +979,15 @@ onMounted(async () => {
   if (savedTheme) {
     currentTheme.value = savedTheme
   }
+  
+  const savedTargetHours = localStorage.getItem('targetWorkHours')
+  if (savedTargetHours) {
+    const hours = parseFloat(savedTargetHours)
+    if (!isNaN(hours) && hours > 0 && hours <= 24) {
+      targetWorkHours.value = hours
+    }
+  }
+  
   applyTheme(currentTheme.value)
 
   // Listen for system theme changes when in auto mode
@@ -1424,9 +1405,11 @@ const handleClickOutside = (event: Event) => {
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {
-  if (taskRecords.value.length === 0) return '0h 0m'
+  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  if (standardRecords.length === 0) return '0h 0m'
 
-  const sortedRecords = taskRecords.value
+  // Sort ALL records (including special tasks) for accurate duration calculation
+  const allSortedRecords = taskRecords.value
       .filter(record => record.start_time && record.start_time.trim() !== '')
       .sort((a, b) => {
         const timeA = parseTimeString(a.start_time) || 0
@@ -1435,27 +1418,31 @@ const getTotalTimeTracked = (): string => {
       })
 
   let totalMinutes = 0
-  for (let i = 0; i < sortedRecords.length - 1; i++) {
-    const currentTime = parseTimeString(sortedRecords[i].start_time)
-    const nextTime = parseTimeString(sortedRecords[i + 1].start_time)
-    if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
-      totalMinutes += nextTime - currentTime
+  
+  // Calculate duration for each standard task using ALL records as boundaries
+  for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
+    const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+    
+    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
+      const nextRecord = allSortedRecords[currentIndex + 1]
+      const currentTime = parseTimeString(standardRecord.start_time)
+      const nextTime = parseTimeString(nextRecord.start_time)
+      
+      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+        totalMinutes += nextTime - currentTime
+      }
     }
   }
 
   return formatDurationMinutes(totalMinutes)
 }
 
-const getUniqueCategoriesCount = (): number => {
-  const uniqueCategories = new Set(taskRecords.value.map(record => record.category_name))
-  return uniqueCategories.size
-}
+const getTotalMinutesTracked = (): number => {
+  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  if (standardRecords.length === 0) return 0
 
-const getCategoryBreakdown = () => {
-  if (taskRecords.value.length === 0) return []
-
-  const categoryMap = new Map()
-  const sortedRecords = taskRecords.value
+  // Sort ALL records (including special tasks) for accurate duration calculation
+  const allSortedRecords = taskRecords.value
       .filter(record => record.start_time && record.start_time.trim() !== '')
       .sort((a, b) => {
         const timeA = parseTimeString(a.start_time) || 0
@@ -1463,28 +1450,93 @@ const getCategoryBreakdown = () => {
         return timeA - timeB
       })
 
-  // Initialize category tracking
-  for (const record of taskRecords.value) {
+  let totalMinutes = 0
+  
+  // Calculate duration for each standard task using ALL records as boundaries
+  for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
+    const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+    
+    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
+      const nextRecord = allSortedRecords[currentIndex + 1]
+      const currentTime = parseTimeString(standardRecord.start_time)
+      const nextTime = parseTimeString(nextRecord.start_time)
+      
+      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+        totalMinutes += nextTime - currentTime
+      }
+    }
+  }
+
+  return totalMinutes
+}
+
+const getUniqueCategoriesCount = (): number => {
+  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  const uniqueCategories = new Set(standardRecords.map(record => record.category_name))
+  return uniqueCategories.size
+}
+
+const getCategoryBreakdown = () => {
+  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  if (standardRecords.length === 0) return []
+
+  const categoryMap = new Map()
+  
+  // Sort ALL records (including special tasks) for accurate duration calculation
+  const allSortedRecords = taskRecords.value
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
+      })
+
+  // Initialize category tracking with task summaries (only for standard tasks)
+  for (const record of standardRecords) {
     if (!categoryMap.has(record.category_name)) {
       categoryMap.set(record.category_name, {
         name: record.category_name,
         totalMinutes: 0,
-        taskCount: 0
+        taskCount: 0,
+        tasks: new Map() // Track individual tasks within category
       })
     }
-    categoryMap.get(record.category_name).taskCount++
+    
+    const category = categoryMap.get(record.category_name)
+    category.taskCount++
+    
+    // Track individual task occurrences
+    if (!category.tasks.has(record.task_name)) {
+      category.tasks.set(record.task_name, {
+        name: record.task_name,
+        count: 0,
+        totalMinutes: 0,
+        firstOccurrence: parseTimeString(record.start_time) || 0
+      })
+    }
+    category.tasks.get(record.task_name).count++
   }
 
-  // Calculate time for each category
-  for (let i = 0; i < sortedRecords.length - 1; i++) {
-    const currentRecord = sortedRecords[i]
-    const nextRecord = sortedRecords[i + 1]
-    const currentTime = parseTimeString(currentRecord.start_time)
-    const nextTime = parseTimeString(nextRecord.start_time)
+  // Calculate time for each standard task using ALL records as boundaries
+  for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
+    // Find current record in the sorted list (including special tasks)
+    const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+    
+    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
+      const nextRecord = allSortedRecords[currentIndex + 1]
+      const currentTime = parseTimeString(standardRecord.start_time)
+      const nextTime = parseTimeString(nextRecord.start_time)
 
-    if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
-      const duration = nextTime - currentTime
-      categoryMap.get(currentRecord.category_name).totalMinutes += duration
+      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+        const duration = nextTime - currentTime
+        const category = categoryMap.get(standardRecord.category_name)
+        category.totalMinutes += duration
+        
+        // Add duration to specific task
+        if (category.tasks.has(standardRecord.task_name)) {
+          category.tasks.get(standardRecord.task_name).totalMinutes += duration
+        }
+      }
     }
   }
 
@@ -1492,12 +1544,18 @@ const getCategoryBreakdown = () => {
   const totalMinutes = Array.from(categoryMap.values())
       .reduce((sum, cat) => sum + cat.totalMinutes, 0)
 
-  // Convert to array and add percentage
+  // Convert to array and add percentage, sort tasks by first occurrence
   return Array.from(categoryMap.values())
       .map(category => ({
         ...category,
         totalTime: formatDurationMinutes(category.totalMinutes),
-        percentage: totalMinutes > 0 ? Math.round((category.totalMinutes / totalMinutes) * 100) : 0
+        percentage: totalMinutes > 0 ? Math.round((category.totalMinutes / totalMinutes) * 100) : 0,
+        taskSummaries: Array.from(category.tasks.values())
+            .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
+            .map((task: any) => ({
+              ...task,
+              totalTime: formatDurationMinutes(task.totalMinutes)
+            }))
       }))
       .sort((a, b) => b.totalMinutes - a.totalMinutes)
 }
@@ -1953,6 +2011,14 @@ body {
   background-clip: text;
 }
 
+.status-emoji {
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+  background-clip: initial !important;
+  color: inherit !important;
+}
+
 .section p {
   color: var(--text-muted);
   margin-bottom: 1rem;
@@ -2115,6 +2181,39 @@ body {
 
 .theme-btn.active:hover {
   background: var(--secondary);
+}
+
+.target-hours-setting {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.target-hours-setting label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.target-hours-input {
+  width: 4rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.target-hours-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+.hours-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 .radio-option input[type="radio"]:checked + .radio-custom {
@@ -2992,24 +3091,66 @@ body {
 .category-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-.category-row {
+.category-section {
+  background: var(--bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.category-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 1rem;
   padding: 0.75rem;
-  background: var(--bg-primary);
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  transition: all 0.2s ease;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.category-row:hover {
-  border-color: var(--primary);
-  transform: translateX(2px);
+.task-summaries {
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.task-summary {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.task-summary:hover {
+  background: var(--bg-secondary);
+}
+
+.task-name {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.task-count {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  min-width: 2rem;
+  text-align: right;
+}
+
+.task-time {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  min-width: 4rem;
+  text-align: right;
 }
 
 .category-info {
