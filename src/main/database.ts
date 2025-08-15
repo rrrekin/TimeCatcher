@@ -38,6 +38,9 @@ class DatabaseService {
       )
     `)
 
+    // Create covering index for date filtering and start_time ordering
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time)`)
+    
     // Create unique index to enforce one end task per day
     this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
   }
@@ -135,9 +138,9 @@ class DatabaseService {
     const categoryName = record.category_name === '' ? SPECIAL_TASK_CATEGORY : record.category_name
     const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type)
     return this.db.prepare(`
-      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at 
+      SELECT id, category_name, task_name, start_time, date, task_type, created_at 
       FROM task_records WHERE id = ?
-    `).get(SPECIAL_TASK_CATEGORY, result.lastInsertRowid) as TaskRecord
+    `).get(result.lastInsertRowid) as TaskRecord
   }
 
   getTaskRecordsByDate(date: string): TaskRecord[] {

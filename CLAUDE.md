@@ -56,17 +56,26 @@ Database schema:
 
 ```sql
 -- Categories for current category management
-CREATE TABLE categories (id, name UNIQUE, is_default BOOLEAN, created_at)
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
 
 -- Task records preserve historical category names and support task types
-CREATE TABLE task_records (
-  id, category_name, task_name, start_time, date, 
-  task_type DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
-  created_at
+CREATE TABLE IF NOT EXISTS task_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_name TEXT NOT NULL,
+  task_name TEXT NOT NULL,
+  start_time DATETIME NOT NULL,
+  date TEXT NOT NULL,
+  task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 
 -- Unique index to enforce one end task per day
-CREATE UNIQUE INDEX idx_end_per_day ON task_records(date) WHERE task_type = 'end'
+CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'
 ```
 
 ### IPC Communication Pattern
