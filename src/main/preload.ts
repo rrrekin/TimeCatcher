@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { TaskRecord } from '../shared/types'
+import type { TaskRecordInsert, TaskRecordUpdate } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Database operations
@@ -10,9 +10,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   categoryExists: (name: string) => ipcRenderer.invoke('db:category-exists', name),
   setDefaultCategory: (id: number) => ipcRenderer.invoke('db:set-default-category', id),
   getDefaultCategory: () => ipcRenderer.invoke('db:get-default-category'),
-  addTaskRecord: (record: Omit<TaskRecord, 'id' | 'created_at'>) => ipcRenderer.invoke('db:add-task-record', record),
+  addTaskRecord: (record: TaskRecordInsert) => ipcRenderer.invoke('db:add-task-record', record),
   getTaskRecordsByDate: (date: string) => ipcRenderer.invoke('db:get-task-records-by-date', date),
-  updateTaskRecord: (id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => ipcRenderer.invoke('db:update-task-record', id, record),
+  updateTaskRecord: (id: number, record: TaskRecordUpdate) => ipcRenderer.invoke('db:update-task-record', id, record),
   deleteTaskRecord: (id: number) => ipcRenderer.invoke('db:delete-task-record', id),
   debugAll: () => ipcRenderer.invoke('db:debug-all')
 })

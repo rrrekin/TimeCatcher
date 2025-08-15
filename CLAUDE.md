@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Shared** (`src/shared/`):
 
-- `types.ts` - TypeScript interfaces shared between processes
+- `types.ts` - TypeScript interfaces, runtime constants, and type-safe API definitions
 
 ### Database Architecture
 
@@ -48,15 +48,34 @@ Uses SQLite with clean table initialization. Key patterns:
 - **Historical Data Preservation**: Tasks store `category_name` directly (not foreign key)
 - **Simple Schema**: Clean table creation without migrations (pre-release version)
 - **Default Category Protection**: Cannot delete category marked as default
+- **Special Task Support**: Tasks can be marked as 'normal', 'pause', or 'end' types
+- **Daily End Task Constraint**: Only one 'end' task allowed per day (enforced by unique index)
+- **Immutable Task Types**: Task type cannot be changed after creation (enforced by TypeScript)
 
 Database schema:
 
 ```sql
 -- Categories for current category management
-CREATE TABLE categories (id, name UNIQUE, is_default BOOLEAN, created_at)
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL,
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
 
--- Task records preserve historical category names
-CREATE TABLE task_records (id, category_name, task_name, start_time, date, created_at)
+-- Task records preserve historical category names and support task types
+CREATE TABLE IF NOT EXISTS task_records (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_name TEXT NOT NULL,
+  task_name TEXT NOT NULL,
+  start_time DATETIME NOT NULL,
+  date TEXT NOT NULL,
+  task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+
+-- Unique index to enforce one end task per day
+CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'
 ```
 
 ### IPC Communication Pattern
@@ -69,6 +88,28 @@ All database operations follow the pattern:
 4. Database service performs operation
 
 API methods: getCategories, addCategory, deleteCategory, updateCategory, setDefaultCategory, getDefaultCategory, addTaskRecord, getTaskRecordsByDate, updateTaskRecord, deleteTaskRecord
+
+### Type System & Runtime Constants
+
+**Task Type Management**:
+
+- `TASK_TYPES` - Runtime constant array `['normal', 'pause', 'end']` for validation and UI generation
+- `TaskType` - Derived type alias using `typeof TASK_TYPES[number]` to eliminate duplication
+- `SpecialTaskType` - Derived as `Exclude<TaskType, 'normal'>` to stay synchronized
+- `SPECIAL_TASK_TYPES` - Runtime array `['pause', 'end']` for special task handling
+
+**Duration Display Configuration**:
+
+- `DURATION_VISIBLE_BY_TASK_TYPE` - Centralized mapping controlling which task types show duration:
+  - `normal: true` - Regular tasks show calculated duration
+  - `pause: true` - Pause tasks show calculated duration  
+  - `end: false` - End tasks hide duration (no meaningful duration)
+
+**Immutable Task Types**:
+
+- `TaskRecordInsert` - Allows setting task_type during creation
+- `TaskRecordUpdate` - Excludes task_type to prevent modification after creation
+- Type safety enforced throughout IPC chain (preload → main → database)
 
 ### TypeScript Configuration
 
@@ -107,6 +148,7 @@ No external store used. State organized as:
 - **Inline Editing**: Double-click table cells to edit directly
 - **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
+- **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
 - **Modal Management**: Setup modal for categories and theme settings
@@ -160,7 +202,7 @@ No test configuration currently exists in the project.
 1. `src/renderer/App.vue` - Main UI component (1000+ lines, contains all frontend logic)
 2. `src/main/database.ts` - Database service layer with all CRUD operations
 3. `src/main/main.ts` - Electron main process with IPC handlers
-4. `src/shared/types.ts` - Type definitions used across processes
+4. `src/shared/types.ts` - Type definitions with runtime constants, immutable constraints, and centralized UI configuration
 5. `package.json` - Build scripts and dependency management
 
 ## Common Development Tasks
@@ -173,6 +215,14 @@ When adding new database operations:
 4. Add TypeScript type to ElectronAPI interface (`src/shared/types.ts`)
 5. Use method in Vue component via `window.electronAPI`
 
+When working with task types:
+
+- Use `TASK_TYPES` constant for runtime validation, loops, or UI generation
+- Use `SPECIAL_TASK_TYPES` constant for special task logic and guards
+- Use `DURATION_VISIBLE_BY_TASK_TYPE[taskType]` for duration display decisions  
+- Use `TaskRecordInsert` for creation operations (includes task_type)
+- Use `TaskRecordUpdate` for modification operations (excludes immutable task_type)
+
 When adding new UI features:
 
 - Follow existing reactive patterns in App.vue
@@ -180,3 +230,11 @@ When adding new UI features:
 - Add loading states for async operations
 - Include error handling with toast notifications
 - Maintain compact design philosophy
+
+## Markdown Formatting Notes
+
+When editing markdown files, always ensure proper markdown formatting:
+
+- **List Spacing**: Always include blank lines before and after list blocks to avoid MD032 violations
+- **Consistent Indentation**: Use consistent spacing for nested list items
+- **Line Endings**: File must end with a single newline character

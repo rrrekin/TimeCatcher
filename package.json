@@ -4,8 +4,8 @@
   "description": "Task &amp; time tracking desktop app",
   "main": "dist/main/main.js",
   "scripts": {
-    "dev": "concurrently \"npm run dev:vite\" \"wait-on dist/renderer/index.html && npm run dev:electron\"",
-    "dev:vite": "vite",
+    "dev": "concurrently -k -s first -n \"vite,electron\" \"npm:dev:vite\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
+    "dev:vite": "vite --strictPort --port 5173",
     "dev:electron": "tsc --project tsconfig.main.json && electron .",
     "build": "vue-tsc --noEmit && vite build && tsc --project tsconfig.main.json",
     "build:win": "npm run build && electron-builder --win",

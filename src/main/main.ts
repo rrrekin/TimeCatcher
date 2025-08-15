@@ -1,9 +1,24 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
-import type { TaskRecord } from '../shared/types'
+import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
+
+function isDuplicateEndConstraint(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+  
+  const sqliteError = error as any
+  const code = String(sqliteError.code || '')
+  const message = String(sqliteError.message || '')
+  
+  const isConstraintError = code === 'SQLITE_CONSTRAINT' || code === 'SQLITE_CONSTRAINT_UNIQUE'
+  const isEndIndexError = /(idx_end_per_day|task_records\.date)/i.test(message)
+  
+  return isConstraintError && isEndIndexError
+}
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -103,12 +118,24 @@ ipcMain.handle('db:get-default-category', async () => {
   }
 })
 
-ipcMain.handle('db:add-task-record', async (_, record: Omit<TaskRecord, 'id' | 'created_at'>) => {
+ipcMain.handle('db:add-task-record', async (_, record: TaskRecordInsert) => {
   try {
     return dbService.addTaskRecord(record)
   } catch (error) {
     console.error('Failed to add task record:', error)
-    throw new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    
+    // Check if this is a duplicate end task constraint violation
+    // Only detect specific UNIQUE constraint violations on the idx_end_per_day index
+    if (record.task_type === 'end' && isDuplicateEndConstraint(error)) {
+      const dbError: DatabaseError = new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      dbError.code = 'END_DUPLICATE'
+      ;(dbError as any).cause = error instanceof Error ? error : new Error(String(error))
+      throw dbError
+    }
+    
+    const genericError = new Error(`Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    ;(genericError as any).cause = error instanceof Error ? error : new Error(String(error))
+    throw genericError
   }
 })
 
@@ -121,12 +148,24 @@ ipcMain.handle('db:get-task-records-by-date', async (_, date: string) => {
   }
 })
 
-ipcMain.handle('db:update-task-record', async (_, id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>) => {
+ipcMain.handle('db:update-task-record', async (_, id: number, record: TaskRecordUpdate) => {
   try {
     return dbService.updateTaskRecord(id, record)
   } catch (error) {
     console.error('Failed to update task record:', error)
-    throw new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    
+    // Check if this is a duplicate end task constraint violation
+    // This can happen when updating the date of an 'end' task to a date that already has an 'end' task
+    if (isDuplicateEndConstraint(error)) {
+      const dbError: DatabaseError = new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      dbError.code = 'END_DUPLICATE'
+      ;(dbError as any).cause = error instanceof Error ? error : new Error(String(error))
+      throw dbError
+    }
+    
+    const genericError = new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    ;(genericError as any).cause = error instanceof Error ? error : new Error(String(error))
+    throw genericError
   }
 })
 

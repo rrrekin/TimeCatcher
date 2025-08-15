@@ -61,37 +61,50 @@
                 No tasks recorded for {{ formattedDate.split(',')[0] }}
               </td>
             </tr>
-            <tr v-else v-for="record in taskRecords" :key="record.id">
-              <td>
-                <div class="custom-dropdown table-dropdown"
-                     :class="{ open: record.id != null && showInlineDropdown[record.id] }">
-                  <div class="dropdown-trigger" @click="record.id != null && toggleInlineDropdown(record.id)">
-                    <span class="dropdown-value">{{ record.category_name }}</span>
-                    <span class="dropdown-arrow">▼</span>
-                  </div>
-                  <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
-                    <div
-                        v-for="category in categories"
-                        :key="category.id"
-                        class="dropdown-item"
-                        :class="{ selected: record.category_name === category.name }"
-                        @click="selectInlineCategory(record.id, category.name)"
-                    >
-                      {{ category.name }}
+            <tr v-else v-for="record in taskRecords" :key="record.id" 
+                :class="{ 
+                  'special-task-row': isSpecial(record.task_type),
+                  'pause-task-row': record.task_type === 'pause',
+                  'end-task-row': record.task_type === 'end'
+                }">
+              <!-- Special task layout: merged category + task columns -->
+              <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
+                {{ record.task_name }}
+              </td>
+              <!-- Normal task layout: separate category and task columns -->
+              <template v-else>
+                <td>
+                  <div class="custom-dropdown table-dropdown"
+                       :class="{ open: record.id != null && showInlineDropdown[record.id] }">
+                    <div class="dropdown-trigger" @click="record.id != null && toggleInlineDropdown(record.id)">
+                      <span class="dropdown-value">{{ record.category_name }}</span>
+                      <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
+                      <div
+                          v-for="category in categories"
+                          :key="category.id"
+                          class="dropdown-item"
+                          :class="{ selected: record.category_name === category.name }"
+                          @click="selectInlineCategory(record.id, category.name)"
+                      >
+                        {{ category.name }}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </td>
-              <td>
-                <input
-                    type="text"
-                    :value="record.task_name"
-                    @blur="handleBlur(record.id, 'task_name', $event)"
-                    @keydown.enter="handleEnter(record.id, 'task_name', $event)"
-                    class="editable-cell editable-input"
-                    placeholder="Task name"
-                />
-              </td>
+                </td>
+                <td>
+                  <input
+                      type="text"
+                      :value="record.task_name"
+                      @blur="handleBlur(record.id, 'task_name', $event)"
+                      @keydown.enter="handleEnter(record.id, 'task_name', $event)"
+                      class="editable-cell editable-input"
+                      placeholder="Task name"
+                  />
+                </td>
+              </template>
+              <!-- Time column -->
               <td class="time-cell">
                 <input
                     type="time"
@@ -102,11 +115,16 @@
                     class="editable-cell editable-input time-input"
                 />
               </td>
-              <td class="duration-cell">
+              <!-- Duration column (visibility based on task type) -->
+              <td class="duration-cell" v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]">
                 {{ calculateDuration(record, taskRecords) }}
               </td>
+              <td class="duration-cell" v-else>
+                <!-- Empty cell for tasks where duration is not visible -->
+              </td>
+              <!-- Actions column -->
               <td>
-                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)">▶︎</button>
+                <button class="action-btn replay-btn" title="Replay task" @click="replayTask(record)" :disabled="record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY">▶︎</button>
                 <button class="action-btn delete-btn" title="Delete task" @click="confirmDeleteTask(record)">🗑</button>
               </td>
             </tr>
@@ -167,6 +185,28 @@
             </tr>
             </tbody>
           </table>
+          
+          <!-- Special Task Buttons -->
+          <div class="special-task-buttons">
+            <button 
+              type="button"
+              class="special-task-btn pause-btn" 
+              @click="addPauseTask" 
+              :disabled="isLoadingTasks"
+              :title="isLoadingTasks ? 'Loading...' : 'Add pause task'"
+              :aria-label="isLoadingTasks ? 'Loading pause task' : 'Add pause task to selected date'">
+              ⏸ Pause
+            </button>
+            <button 
+              type="button"
+              class="special-task-btn end-btn" 
+              @click="addEndTask" 
+              :disabled="isLoadingTasks || hasEndTaskForSelectedDate"
+              :title="isLoadingTasks ? 'Loading...' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task'"
+              :aria-label="isLoadingTasks ? 'Loading end task' : hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task to selected date'">
+              ⏹ End
+            </button>
+          </div>
         </div>
       </div>
 
@@ -486,7 +526,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import type {Category, TaskRecord} from '../shared/types'
+import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -545,6 +585,11 @@ const selectedCategoryForForm = ref('')
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
 
+// Helper functions
+const isSpecial = (taskType: TaskType | undefined): taskType is SpecialTaskType => {
+  return SPECIAL_TASK_TYPES.includes(taskType as SpecialTaskType)
+}
+
 const formattedDate = computed(() => {
   return selectedDate.value.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -561,6 +606,10 @@ const dateInputValue = computed({
     const [year, month, day] = value.split('-').map(Number)
     selectedDate.value = new Date(year, month - 1, day)
   }
+})
+
+const hasEndTaskForSelectedDate = computed(() => {
+  return taskRecords.value.some(record => record.task_type === 'end')
 })
 
 const goToPreviousDay = () => {
@@ -850,7 +899,8 @@ const addTask = async () => {
       category_name: category.name,
       task_name: newTask.value.name,
       start_time: timeString,
-      date: dateString
+      date: dateString,
+      task_type: 'normal' as TaskType
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
@@ -864,6 +914,60 @@ const addTask = async () => {
     console.error('Failed to add task:', error)
     showToastMessage('Failed to add task. Please try again.', 'error')
   }
+}
+
+// Special task functions
+const addSpecialTask = async (taskType: SpecialTaskType, taskName: string, successMessage: string) => {
+  try {
+    if (!window.electronAPI) {
+      showToastMessage('API not available. Please restart the application.', 'error')
+      return
+    }
+
+    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const currentTime = getCurrentTime()
+
+    const taskRecord = {
+      category_name: SPECIAL_TASK_CATEGORY,
+      task_name: taskName,
+      start_time: currentTime,
+      date: dateString,
+      task_type: taskType
+    }
+
+    await window.electronAPI.addTaskRecord(taskRecord)
+    await loadTaskRecords()
+    showToastMessage(successMessage, 'success')
+  } catch (error) {
+    console.error(`Failed to add ${taskType} task:`, error)
+    
+    // Check if error is due to duplicate end task constraint
+    const isDuplicateEndTask = 
+      // Primary check: custom error code
+      (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
+      // Fallback check: regex pattern matching error message for duplicate end task
+      (error && typeof error === 'object' && 'message' in error && 
+       /(?:unique.*constraint.*failed|constraint.*violation).*(?:task_records.*idx_end_per_day|idx_end_per_day.*task_records)/i.test((error as any).message))
+    
+    if (isDuplicateEndTask) {
+      showToastMessage('An end task already exists for this day. Only one end task is allowed per day.', 'error')
+      return
+    }
+    
+    showToastMessage(`Failed to add ${taskType} task. Please try again.`, 'error')
+  }
+}
+
+const addPauseTask = async () => {
+  await addSpecialTask('pause', '⏸ Pause', 'Pause task added!')
+}
+
+const addEndTask = async () => {
+  if (hasEndTaskForSelectedDate.value) {
+    showToastMessage('End task already exists for this day.', 'error')
+    return
+  }
+  await addSpecialTask('end', '⏹ End', 'End task added!')
 }
 
 const cancelAddTask = () => {
@@ -973,20 +1077,38 @@ const replayTask = async (record: TaskRecord) => {
       return
     }
 
-    const dateString = selectedDate.value.toISOString().split('T')[0]
+    // Prevent replaying special tasks
+    if (record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY) {
+      showToastMessage('Special tasks cannot be replayed.', 'error')
+      return
+    }
+
     const now = new Date()
-    const timeString = now.toTimeString().split(' ')[0] // HH:MM:SS format
+    const dateString = now.toISOString().split('T')[0] // Use current date
+    const timeString = getCurrentTime()
 
     const taskRecord = {
       category_name: record.category_name,
       task_name: record.task_name,
       start_time: timeString,
-      date: dateString
+      date: dateString,
+      task_type: 'normal' as TaskType
     }
 
     await window.electronAPI.addTaskRecord(taskRecord)
-    await loadTaskRecords()
-    showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+    
+    // Check if the user is viewing today's date
+    const todayString = now.toISOString().split('T')[0]
+    const selectedDateString = selectedDate.value.toISOString().split('T')[0]
+    
+    if (selectedDateString !== todayString) {
+      // Automatically switch to today to show the replayed task
+      selectedDate.value = now
+      showToastMessage(`Task "${record.task_name}" replayed for today. Switched to today's view.`, 'success')
+    } else {
+      await loadTaskRecords()
+      showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+    }
   } catch (error) {
     console.error('Failed to replay task:', error)
     showToastMessage('Failed to replay task. Please try again.', 'error')
@@ -3003,5 +3125,83 @@ body {
   font-size: 0.8rem;
   color: var(--secondary);
   font-weight: 500;
+}
+
+/* Special Task Buttons */
+.special-task-buttons {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.special-task-btn {
+  background: var(--success);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.special-task-btn:hover:not(:disabled) {
+  background: var(--mantis);
+}
+
+.special-task-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Special Task Row Styling */
+.special-task-row {
+  font-weight: 500;
+}
+
+.pause-task-row,
+.pause-task-row:hover {
+  background: rgba(89, 201, 100, 0.15) !important; /* Light mantis background */
+}
+
+.end-task-row,
+.end-task-row:hover {
+  background: rgba(86, 179, 114, 0.25) !important; /* Stronger emerald background */
+}
+
+.special-task-cell {
+  font-weight: 600;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 0.75rem;
+  cursor: default;
+}
+
+.pause-task-row .special-task-cell {
+  color: var(--mantis);
+}
+
+.end-task-row .special-task-cell {
+  color: var(--emerald);
+}
+
+/* Special task time inputs use transparent background */
+.pause-task-row .time-input,
+.end-task-row .time-input {
+  background: transparent;
+}
+
+.pause-task-row .time-input:focus,
+.end-task-row .time-input:focus {
+  background: var(--bg-secondary);
 }
 </style>

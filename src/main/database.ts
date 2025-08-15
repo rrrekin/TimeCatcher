@@ -1,22 +1,8 @@
 import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
-
-export interface Category {
-  id?: number
-  name: string
-  is_default?: boolean
-  created_at?: string
-}
-
-export interface TaskRecord {
-  id?: number
-  category_name: string
-  task_name: string
-  start_time: string
-  date: string
-  created_at?: string
-}
+import type { Category, TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType } from '../shared/types'
+import { SPECIAL_TASK_CATEGORY } from '../shared/types'
 
 class DatabaseService {
   public db: Database.Database
@@ -29,7 +15,7 @@ class DatabaseService {
   }
 
   private initializeTables() {
-    // Create categories table with final schema
+    // Create categories table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,7 +25,7 @@ class DatabaseService {
       )
     `)
 
-    // Create task_records table with final schema
+    // Create task_records table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS task_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,9 +33,16 @@ class DatabaseService {
         task_name TEXT NOT NULL,
         start_time DATETIME NOT NULL,
         date TEXT NOT NULL,
+        task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `)
+
+    // Create covering index for date filtering and start_time ordering
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time)`)
+    
+    // Create unique index to enforce one end task per day
+    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
   }
 
   private initializeDefaultCategories() {
@@ -136,24 +129,31 @@ class DatabaseService {
   }
 
   // Task record operations
-  addTaskRecord(record: Omit<TaskRecord, 'id' | 'created_at'>): TaskRecord {
+  addTaskRecord(record: TaskRecordInsert): TaskRecord {
     const insert = this.db.prepare(`
-      INSERT INTO task_records (category_name, task_name, start_time, date) 
-      VALUES (?, ?, ?, ?)
+      INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
+      VALUES (?, ?, ?, ?, ?)
     `)
-    const result = insert.run(record.category_name, record.task_name, record.start_time, record.date)
-    return this.db.prepare('SELECT * FROM task_records WHERE id = ?').get(result.lastInsertRowid) as TaskRecord
+    // Use sentinel value for special tasks (when category_name is empty or whitespace-only)
+    const trimmedCategory = (record.category_name || '').trim()
+    const categoryName = trimmedCategory === '' ? SPECIAL_TASK_CATEGORY : trimmedCategory
+    const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type)
+    return this.db.prepare(`
+      SELECT id, category_name, task_name, start_time, date, task_type, created_at 
+      FROM task_records WHERE id = ?
+    `).get(result.lastInsertRowid) as TaskRecord
   }
 
   getTaskRecordsByDate(date: string): TaskRecord[] {
     return this.db.prepare(`
-      SELECT * FROM task_records 
+      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at 
+      FROM task_records 
       WHERE date = ? 
       ORDER BY start_time
-    `).all(date) as TaskRecord[]
+    `).all(SPECIAL_TASK_CATEGORY, date) as TaskRecord[]
   }
 
-  updateTaskRecord(id: number, record: Partial<Omit<TaskRecord, 'id' | 'created_at'>>): void {
+  updateTaskRecord(id: number, record: TaskRecordUpdate): void {
     const fields: string[] = []
     const values: any[] = []
     
