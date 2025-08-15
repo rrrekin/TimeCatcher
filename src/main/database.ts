@@ -62,7 +62,7 @@ class DatabaseService {
           insert.run(category, isDefault)
         } catch (error) {
           // Category might already exist
-          console.log(`Category ${category} already exists:`, error)
+          console.log('Category already exists:', { category, error })
         }
       })
       console.log('Default categories creation completed')
