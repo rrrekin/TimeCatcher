@@ -146,7 +146,27 @@ ipcMain.handle('db:update-task-record', async (_, id: number, record: TaskRecord
     return dbService.updateTaskRecord(id, record)
   } catch (error) {
     console.error('Failed to update task record:', error)
-    throw new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    
+    // Check if this is a duplicate end task constraint violation
+    // This can happen when updating the date of an 'end' task to a date that already has an 'end' task
+    if (error && typeof error === 'object') {
+      const sqliteError = error as any
+      const isEndTaskDuplicateError = 
+        (sqliteError.code === 'SQLITE_CONSTRAINT_UNIQUE' || sqliteError.code === 'SQLITE_CONSTRAINT') &&
+        sqliteError.message && 
+        /task_records.*idx_end_per_day|idx_end_per_day.*task_records/i.test(sqliteError.message)
+      
+      if (isEndTaskDuplicateError) {
+        const dbError: DatabaseError = new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        dbError.code = 'END_DUPLICATE'
+        ;(dbError as any).cause = error instanceof Error ? error : new Error(String(error))
+        throw dbError
+      }
+    }
+    
+    const genericError = new Error(`Failed to update task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    ;(genericError as any).cause = error instanceof Error ? error : new Error(String(error))
+    throw genericError
   }
 })
 

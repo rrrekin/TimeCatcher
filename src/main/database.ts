@@ -134,8 +134,9 @@ class DatabaseService {
       INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
       VALUES (?, ?, ?, ?, ?)
     `)
-    // Use sentinel value for special tasks (when category_name is empty)
-    const categoryName = record.category_name === '' ? SPECIAL_TASK_CATEGORY : record.category_name
+    // Use sentinel value for special tasks (when category_name is empty or whitespace-only)
+    const trimmedCategory = (record.category_name || '').trim()
+    const categoryName = trimmedCategory === '' ? SPECIAL_TASK_CATEGORY : trimmedCategory
     const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type)
     return this.db.prepare(`
       SELECT id, category_name, task_name, start_time, date, task_type, created_at 
