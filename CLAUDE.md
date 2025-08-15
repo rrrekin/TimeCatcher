@@ -74,8 +74,11 @@ CREATE TABLE IF NOT EXISTS task_records (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 
+-- Covering index for date filtering and start_time ordering
+CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time);
+
 -- Unique index to enforce one end task per day
-CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'
+CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end';
 ```
 
 ### IPC Communication Pattern
@@ -142,6 +145,7 @@ No external store used. State organized as:
 - **Task Records**: Daily task list with inline editing
 - **UI State**: Loading states, modals, form visibility
 - **Date Navigation**: Selected date with computed formatting
+- **Settings**: Theme preferences and target work hours (persisted in localStorage)
 
 ### Key UI Patterns
 
@@ -151,8 +155,52 @@ No external store used. State organized as:
 - **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
-- **Modal Management**: Setup modal for categories and theme settings
+- **Modal Management**: Setup modal for categories, theme, and target work hours settings
 - **Date Navigation**: Previous/next day buttons, today button, date picker
+- **Report Visualization**: Daily summaries with category breakdowns and task summarization
+
+## Report Component
+
+### Daily Report Features
+
+The Daily Report provides comprehensive analysis of standard tasks only:
+
+- **Smart Duration Calculation**: Uses ALL records (including special tasks) as time boundaries for accurate standard task durations
+- **Task Summarization**: Groups tasks with identical names, showing occurrence count (e.g., "3x") and combined duration
+- **Task Ordering**: Tasks within each category are ordered by first occurrence time
+- **Category Breakdown**: Shows time distribution across categories with progress bars and percentages
+- **Status Indicators**: Visual feedback with emojis:
+  - **⚠️** Warning emoji when day lacks an "End" task (not finalized)
+  - **😊** Happy face emoji when reaching configured target work hours
+- **Configurable Target**: Target work hours setting in Setup (default: 8 hours, range: 1-24 hours)
+
+### Report Calculation Logic
+
+Duration calculation correctly handles mixed task types:
+
+```typescript
+// Uses ALL records for boundaries, aggregates only standard tasks
+const allSortedRecords = taskRecords.filter(record => record.start_time)
+    .sort((a, b) => parseTimeString(a.start_time) - parseTimeString(b.start_time))
+
+// For each standard task, find next task (any type) as endpoint
+for (const standardRecord of standardRecords) {
+  const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+  if (currentIndex < allSortedRecords.length - 1) {
+    const nextRecord = allSortedRecords[currentIndex + 1]
+    // Calculate duration using any next task as boundary
+  }
+}
+```
+
+This ensures report totals match the sum of individual task durations in the left panel.
+
+### Report Styling
+
+- **Gradient Text Effects**: Section headers use CSS gradient backgrounds with text clipping
+- **Emoji Styling**: Status emojis have dedicated `.status-emoji` class to override gradient effects
+- **Responsive Layout**: Category sections with collapsible task summaries
+- **Progress Indicators**: Visual progress bars for category time distribution
 
 ## Design System
 
@@ -169,6 +217,46 @@ No external store used. State organized as:
 - **Compact Design**: All components must be space-efficient
 - **Consistent Color Palette**: Always use defined app colors, never external colors
 - **Green Theme**: Delete operations use green instead of traditional red
+- **Minimal Window Size**: 1050x750 pixels minimum to ensure UI usability
+
+## Settings & Configuration
+
+### Setup Modal
+
+The setup modal (⚙️ gear icon) provides centralized configuration:
+
+- **Theme Settings**: Light, Dark, or Auto (follows system preference)
+- **Target Work Hours**: Configurable daily target (1-24 hours, 0.5 increments, default: 8)
+- **Category Management**: Add, edit, delete, and set default categories
+
+### Persistent Settings
+
+Settings are stored in localStorage with automatic restoration:
+
+```typescript
+// Theme preference
+localStorage.setItem('theme', currentTheme.value)
+
+// Target work hours
+localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+
+// Loaded on app startup with validation
+const savedTargetHours = localStorage.getItem('targetWorkHours')
+if (savedTargetHours) {
+  const hours = parseFloat(savedTargetHours)
+  if (!isNaN(hours) && hours > 0 && hours <= 24) {
+    targetWorkHours.value = hours
+  }
+}
+```
+
+### Window Configuration
+
+Main window settings in `src/main/main.ts`:
+
+- **Default Size**: 1200x800 pixels
+- **Minimum Size**: 1050x750 pixels (prevents UI breaking)
+- **Security**: Context isolation enabled, node integration disabled
 
 ## Development Patterns
 
@@ -230,6 +318,22 @@ When adding new UI features:
 - Add loading states for async operations
 - Include error handling with toast notifications
 - Maintain compact design philosophy
+
+When working with report calculations:
+
+- Use ALL records for duration boundaries, not just standard tasks
+- Ensure report totals match left panel task durations
+- Consider special tasks (pause, end) as valid time endpoints
+- Use `getTotalMinutesTracked()` for comparing against target work hours
+- Apply `.status-emoji` class to emojis in gradient text contexts
+
+When adding new settings:
+
+- Add reactive state variables for current and temporary values
+- Update `openSetup()` to initialize temp values
+- Update `saveSettings()` to persist to localStorage
+- Add validation in `onMounted()` for saved values
+- Include appropriate UI controls in setup modal
 
 ## Markdown Formatting Notes
 
