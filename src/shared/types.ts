@@ -1,8 +1,16 @@
-export type TaskType = 'normal' | 'pause' | 'end'
+export const TASK_TYPES = ['normal', 'pause', 'end'] as const
+export type TaskType = typeof TASK_TYPES[number]
 
-export type SpecialTaskType = 'pause' | 'end'
+export type SpecialTaskType = Exclude<TaskType, 'normal'>
+export const SPECIAL_TASK_TYPES = ['pause', 'end'] as const satisfies readonly SpecialTaskType[]
 
 export const SPECIAL_TASK_CATEGORY = '__special__' as const
+
+export const DURATION_VISIBLE_BY_TASK_TYPE: Record<TaskType, boolean> = {
+  normal: true,
+  pause: false,
+  end: false
+} as const
 
 export interface DatabaseError extends Error {
   code?: 'END_DUPLICATE' | 'SQLITE_CONSTRAINT' | 'SQLITE_CONSTRAINT_UNIQUE' | string

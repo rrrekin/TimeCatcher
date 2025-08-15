@@ -115,12 +115,12 @@
                     class="editable-cell editable-input time-input"
                 />
               </td>
-              <!-- Duration column (hidden for 'end' tasks) -->
-              <td class="duration-cell" v-if="record.task_type !== 'end'">
+              <!-- Duration column (visibility based on task type) -->
+              <td class="duration-cell" v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]">
                 {{ calculateDuration(record, taskRecords) }}
               </td>
               <td class="duration-cell" v-else>
-                <!-- Empty cell for 'end' tasks -->
+                <!-- Empty cell for tasks where duration is not visible -->
               </td>
               <!-- Actions column -->
               <td>
@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {SPECIAL_TASK_CATEGORY, type Category, type TaskRecord, type TaskType, type SpecialTaskType} from '../shared/types'
+import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType} from '../shared/types'
 
 interface NewTaskForm {
   categoryId: number | null
@@ -587,7 +587,7 @@ const categoriesListRef = ref<HTMLElement | null>(null)
 
 // Helper functions
 const isSpecial = (taskType: TaskType | undefined): taskType is SpecialTaskType => {
-  return taskType === 'pause' || taskType === 'end'
+  return SPECIAL_TASK_TYPES.includes(taskType as SpecialTaskType)
 }
 
 const formattedDate = computed(() => {
