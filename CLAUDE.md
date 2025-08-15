@@ -83,18 +83,21 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, setDefa
 ### Type System & Runtime Constants
 
 **Task Type Management**:
+
 - `TASK_TYPES` - Runtime constant array `['normal', 'pause', 'end']` for validation and UI generation
 - `TaskType` - Derived type alias using `typeof TASK_TYPES[number]` to eliminate duplication
 - `SpecialTaskType` - Derived as `Exclude<TaskType, 'normal'>` to stay synchronized
 - `SPECIAL_TASK_TYPES` - Runtime array `['pause', 'end']` for special task handling
 
 **Duration Display Configuration**:
+
 - `DURATION_VISIBLE_BY_TASK_TYPE` - Centralized mapping controlling which task types show duration:
   - `normal: true` - Regular tasks show calculated duration
   - `pause: true` - Pause tasks show calculated duration  
   - `end: false` - End tasks hide duration (no meaningful duration)
 
 **Immutable Task Types**:
+
 - `TaskRecordInsert` - Allows setting task_type during creation
 - `TaskRecordUpdate` - Excludes task_type to prevent modification after creation
 - Type safety enforced throughout IPC chain (preload → main → database)
@@ -218,3 +221,11 @@ When adding new UI features:
 - Add loading states for async operations
 - Include error handling with toast notifications
 - Maintain compact design philosophy
+
+## Markdown Formatting Notes
+
+When editing markdown files, always ensure proper markdown formatting:
+
+- **List Spacing**: Always include blank lines before and after list blocks to avoid MD032 violations
+- **Consistent Indentation**: Use consistent spacing for nested list items
+- **Line Endings**: File must end with a single newline character

@@ -133,16 +133,16 @@ class DatabaseService {
     `)
     // Use sentinel value for special tasks (when category_name is empty)
     const categoryName = record.category_name === '' ? SPECIAL_TASK_CATEGORY : record.category_name
-    const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type || 'normal')
+    const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type)
     return this.db.prepare(`
-      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, COALESCE(task_type, 'normal') as task_type, created_at 
+      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at 
       FROM task_records WHERE id = ?
     `).get(SPECIAL_TASK_CATEGORY, result.lastInsertRowid) as TaskRecord
   }
 
   getTaskRecordsByDate(date: string): TaskRecord[] {
     return this.db.prepare(`
-      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, COALESCE(task_type, 'normal') as task_type, created_at 
+      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at 
       FROM task_records 
       WHERE date = ? 
       ORDER BY start_time
