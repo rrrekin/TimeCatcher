@@ -970,11 +970,12 @@ const initializeNewTask = () => {
 
 
 // Watch for date changes to reload task records and manage auto-refresh
-watch(selectedDate, () => {
-  loadTaskRecords()
-  
-  // Stop any existing auto-refresh
+watch(selectedDate, async () => {
+  // Stop any existing auto-refresh first
   stopAutoRefresh()
+  
+  // Await loading the new task records
+  await loadTaskRecords()
   
   // Start auto-refresh if we're viewing today
   startAutoRefresh()
@@ -1278,40 +1279,44 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
       return '-'
     }
     
-    return formatDurationMinutes(nextTime - currentTime)
+    return formatDurationMinutes(Math.floor(nextTime - currentTime))
   }
 
-  // This is the last task - apply new logic based on date
-  const recordDate = new Date(currentRecord.date + 'T00:00:00')
+  // This is the last task - use helper to get end time based on date context
+  const endTime = getLastTaskEndTime(currentRecord.date, currentTime)
+  const durationMinutes = endTime - currentTime
+  return durationMinutes > 0 ? formatDurationMinutes(Math.floor(durationMinutes)) : '0m'
+}
+
+// Helper function to determine the end time for the last task based on date context
+const getLastTaskEndTime = (taskDate: string, taskStartTime: number): number => {
+  const recordDate = new Date(taskDate + 'T00:00:00')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   
   const recordDateOnly = new Date(recordDate)
   recordDateOnly.setHours(0, 0, 0, 0)
   
-  // For future days: duration is always 0
+  // For future days: end time is start time (duration = 0)
   if (recordDateOnly > today) {
-    return '0m'
+    return taskStartTime
   }
   
-  // For past days: duration goes until midnight (end of day)
+  // For past days: end time is midnight (24:00 = 1440 minutes)
   if (recordDateOnly < today) {
-    const endOfDay = 24 * 60 // midnight in minutes
-    const durationMinutes = endOfDay - currentTime
-    return durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'
+    return 24 * 60 // midnight in minutes
   }
   
-  // For today: duration goes until current time (unless start time is in future)
+  // For today: end time is current time (or start time if start is in future)
   const now = new Date()
   const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
   
-  // If task start time is in the future, duration is 0
-  if (currentTime > nowMinutes) {
-    return '0m'
+  // If task start time is in the future, end time is start time (duration = 0)
+  if (taskStartTime > nowMinutes) {
+    return taskStartTime
   }
   
-  const durationMinutes = nowMinutes - currentTime
-  return durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'
+  return nowMinutes
 }
 
 const parseTimeString = (timeString: string): number | null => {
@@ -1437,7 +1442,7 @@ const handleClickOutside = (event: Event) => {
 }
 
 
-// Auto-refresh state
+// Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
 let autoRefreshInterval: number | null = null
 
 // Auto-refresh functions
@@ -1449,6 +1454,7 @@ const isToday = (date: Date): boolean => {
 const startAutoRefresh = () => {
   if (autoRefreshInterval) {
     clearInterval(autoRefreshInterval)
+    autoRefreshInterval = null
   }
   
   if (isToday(selectedDate.value)) {
@@ -1458,6 +1464,12 @@ const startAutoRefresh = () => {
         // Force reactivity update for duration calculations
         // The computed properties will recalculate automatically
         taskRecords.value = [...taskRecords.value]
+      } else {
+        // Date is no longer today - clear the interval to prevent lingering timer
+        if (autoRefreshInterval) {
+          clearInterval(autoRefreshInterval)
+          autoRefreshInterval = null
+        }
       }
     }, 15000) // 15 seconds
   }
@@ -1503,40 +1515,14 @@ const getTotalMinutesTracked = (): number => {
       const nextTime = parseTimeString(nextRecord.start_time)
       
       if (nextTime !== null && nextTime > currentTime) {
-        totalMinutes += nextTime - currentTime
+        totalMinutes += Math.floor(nextTime - currentTime)
       }
     } else {
-      // This is the last task - apply new logic based on date
-      const recordDate = new Date(standardRecord.date + 'T00:00:00')
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const recordDateOnly = new Date(recordDate)
-      recordDateOnly.setHours(0, 0, 0, 0)
-      
-      // For future days: duration is always 0
-      if (recordDateOnly > today) {
-        // Add 0 minutes
-      }
-      // For past days: duration goes until midnight
-      else if (recordDateOnly < today) {
-        const endOfDay = 24 * 60 // midnight in minutes
-        const durationMinutes = endOfDay - currentTime
-        if (durationMinutes > 0) {
-          totalMinutes += durationMinutes
-        }
-      }
-      // For today: duration goes until current time (unless start time is in future)
-      else {
-        const now = new Date()
-        const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
-        
-        if (currentTime <= nowMinutes) {
-          const durationMinutes = nowMinutes - currentTime
-          if (durationMinutes > 0) {
-            totalMinutes += durationMinutes
-          }
-        }
+      // This is the last task - use helper to get end time based on date context
+      const endTime = getLastTaskEndTime(standardRecord.date, currentTime)
+      const durationMinutes = endTime - currentTime
+      if (durationMinutes > 0) {
+        totalMinutes += Math.floor(durationMinutes)
       }
     }
   }
@@ -1609,43 +1595,20 @@ const getCategoryBreakdown = () => {
         duration = nextTime - currentTime
       }
     } else {
-      // This is the last task - apply new logic based on date
-      const recordDate = new Date(standardRecord.date + 'T00:00:00')
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      
-      const recordDateOnly = new Date(recordDate)
-      recordDateOnly.setHours(0, 0, 0, 0)
-      
-      // For future days: duration is always 0
-      if (recordDateOnly > today) {
-        duration = 0
-      }
-      // For past days: duration goes until midnight
-      else if (recordDateOnly < today) {
-        const endOfDay = 24 * 60 // midnight in minutes
-        const durationMinutes = endOfDay - currentTime
-        duration = durationMinutes > 0 ? durationMinutes : 0
-      }
-      // For today: duration goes until current time (unless start time is in future)
-      else {
-        const now = new Date()
-        const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
-        
-        if (currentTime <= nowMinutes) {
-          const durationMinutes = nowMinutes - currentTime
-          duration = durationMinutes > 0 ? durationMinutes : 0
-        }
-      }
+      // This is the last task - use helper to get end time based on date context
+      const endTime = getLastTaskEndTime(standardRecord.date, currentTime)
+      duration = endTime - currentTime
     }
     
+    // Apply "floor per task, then sum" policy
     if (duration > 0) {
+      const flooredDuration = Math.floor(duration)
       const category = categoryMap.get(standardRecord.category_name)
-      category.totalMinutes += duration
+      category.totalMinutes += flooredDuration
       
-      // Add duration to specific task
+      // Add floored duration to specific task
       if (category.tasks.has(standardRecord.task_name)) {
-        category.tasks.get(standardRecord.task_name).totalMinutes += duration
+        category.tasks.get(standardRecord.task_name).totalMinutes += flooredDuration
       }
     }
   }

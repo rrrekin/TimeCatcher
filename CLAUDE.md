@@ -200,7 +200,14 @@ for (const standardRecord of standardRecords) {
 }
 ```
 
-This ensures report totals match the sum of individual task durations in the left panel.
+**Duration Rounding Policy**: To prevent 1-minute mismatches between individual task durations and report totals, all duration calculations use a consistent rounding strategy:
+
+1. **Parse time with seconds precision**: `parseTimeString()` converts time to fractional minutes (includes seconds/60)
+2. **Floor individual task minutes**: Each task's duration is floored to whole minutes before display/summation  
+3. **Sum floored values**: Report totals sum the individual floored minutes rather than flooring the final sum
+4. **Consistent application**: `calculateDuration()`, `getTotalMinutesTracked()`, and `getCategoryBreakdown()` all use `Math.floor()` per-task before aggregation
+
+This policy is fully implemented in App.vue - all three functions apply `Math.floor()` to individual task durations before summing or display, ensuring report totals exactly match the sum of individual task durations in the left panel.
 
 ### Auto-Refresh Functionality
 
@@ -345,6 +352,8 @@ When working with auto-refresh functionality:
 - Trigger reactivity updates with `taskRecords.value = [...taskRecords.value]`
 - Auto-refresh affects both task list durations and daily report calculations
 
+**Midnight Rollover Behavior**: When users keep the app open past midnight, the auto-refresh interval will naturally stop updating because the `isToday(selectedDate.value)` guard prevents updates once today becomes yesterday. To handle midnight transitions properly, consider calling `stopAutoRefresh()` at midnight or re-evaluating `isToday()` and restarting via `startAutoRefresh()` when appropriate. Always ensure `onUnmounted` cleanup is still required for proper resource management. This prevents lingering timers and ensures daily report calculations switch correctly at midnight.
+
 When working with report calculations:
 
 - Use ALL records for duration boundaries, not just standard tasks
@@ -352,11 +361,13 @@ When working with report calculations:
 - Consider special tasks (pause, end) as valid time endpoints
 - Use `getTotalMinutesTracked()` for comparing against target work hours
 - Apply `.status-emoji` class to emojis in gradient text contexts
-- Apply date-aware last task duration logic:
-  - Past days: last task duration extends until midnight (24:00)
-  - Today: last task duration extends until current time (0 if start time is future)
-  - Future days: last task duration is always 0
-- Ensure consistency between `calculateDuration()`, `getTotalMinutesTracked()`, and `getCategoryBreakdown()`
+- Use the `getLastTaskEndTime(taskDate: string, taskStartTime: number): number` helper for date-aware last task logic:
+  - **Contract**: Returns end time in minutes for the last task based on date context
+  - **Past days**: Returns 1440 (midnight) for any start time
+  - **Today**: Returns current time in minutes, or start time if start is in future
+  - **Future days**: Returns start time (creating zero duration)
+  - **DRY principle**: This helper is used by all three duration functions to prevent logic duplication
+  - **Testing**: Manual test available in `test-helper.js` covering past/today/future edge cases
 
 When adding new settings:
 
