@@ -24,7 +24,7 @@
           No tasks recorded for {{ formattedDate.split(',')[0] }}
         </td>
       </tr>
-      <tr v-else v-for="record in taskRecords" :key="record.id" 
+      <tr v-else v-for="record in taskRecords" :key="record.id || 0" 
           :class="{ 
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === 'pause',
@@ -46,7 +46,7 @@
               <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
                 <div
                     v-for="category in categories"
-                    :key="category.id"
+                    :key="category.id || 0"
                     class="dropdown-item"
                     :class="{ selected: record.category_name === category.name }"
                     @click="$emit('selectInlineCategory', record.id, category.name)"
@@ -74,7 +74,6 @@
               @blur="$emit('handleBlur', record.id, 'start_time', $event)"
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               class="editable-cell time-input"
-              step="1"
           />
         </td>
         <!-- Duration column (visibility based on task type) -->
@@ -84,7 +83,7 @@
         <td v-else class="duration-cell">-</td>
         <td class="actions-cell">
           <button class="action-btn replay-btn" @click="$emit('replayTask', record)" title="Replay this task for today">
-            ↻
+            ▶▶︎
           </button>
           <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task">
             🗑
@@ -104,7 +103,7 @@
             <div v-if="showFormCategoryDropdown" class="dropdown-menu">
               <div
                   v-for="category in categories"
-                  :key="category.id"
+                  :key="category.id || 0"
                   class="dropdown-item"
                   :class="{ selected: newTask.categoryId === category.id }"
                   @click="$emit('selectFormCategory', category)"
@@ -129,7 +128,6 @@
               v-model="newTask.time"
               @keydown.enter="$emit('addTask')"
               class="editable-cell time-input"
-              step="1"
               :placeholder="getCurrentTime()"
           />
         </td>

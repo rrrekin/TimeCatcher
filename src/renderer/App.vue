@@ -251,7 +251,7 @@ const dateInputValue = computed({
   set: (value: string) => {
     // Parse as UTC to avoid timezone issues
     const [year, month, day] = value.split('-').map(Number)
-    selectedDate.value = new Date(year, month - 1, day)
+    selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
   }
 })
 
@@ -276,7 +276,7 @@ const goToToday = () => {
 // Handle date input updates from DateNavigation component
 const updateDateFromInput = (value: string) => {
   const [year, month, day] = value.split('-').map(Number)
-  selectedDate.value = new Date(year, month - 1, day)
+  selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
 }
 
 const openSetup = async () => {
@@ -434,7 +434,7 @@ const setDefaultCategoryWrapper = async (category: Category) => {
 // Task record management functions - wrappers with UI state management
 const loadTaskRecordsWrapper = async () => {
   try {
-    await loadTaskRecordsWrapper()
+    await loadTaskRecords()
   } catch (error) {
     showToastMessage('Failed to load task records. Please try again.', 'error')
   }
@@ -743,6 +743,13 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
     processedValue = value.trim()
   } else if (field === 'start_time') {
     try {
+      // HTML time input provides HH:MM format, validate and normalize
+      if (!value || value.length === 0) {
+        showToastMessage('Time cannot be empty', 'error')
+        await loadTaskRecordsWrapper()
+        return
+      }
+      
       // Use parseTimeInput for consistent validation and formatting
       processedValue = parseTimeInput(value)
     } catch (timeError) {
@@ -781,16 +788,24 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
 }
 
 const convertToTimeInput = (timeString: string): string => {
-  // Convert HH:MM:SS format to time input value
-  if (!timeString) return '00:00:00'
+  // Convert HH:MM or HH:MM:SS format to HTML time input value
+  if (!timeString) return ''
 
   const parts = timeString.split(':')
-  if (parts.length >= 3) {
-    return timeString
-  } else if (parts.length === 2) {
-    return `${timeString}:00`
+  
+  // Validate and normalize the parts
+  if (parts.length >= 2) {
+    const hours = parseInt(parts[0] || '0', 10)
+    const minutes = parseInt(parts[1] || '0', 10)
+    
+    // Validate ranges
+    if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
+      // Return HH:MM format for HTML time input (no seconds needed)
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+    }
   }
-  return '00:00:00'
+  
+  return ''
 }
 
 
@@ -979,8 +994,8 @@ const formatTime12Hour = (timeString: string): string => {
   const parts = timeString.split(':')
   if (parts.length < 2) return '12:00 AM'
 
-  const hours = parseInt(parts[0], 10)
-  const minutes = parts[1].padStart(2, '0')
+  const hours = parseInt(parts[0]!, 10)
+  const minutes = parts[1]!.padStart(2, '0')
 
   if (isNaN(hours)) return '12:00 AM'
 
@@ -1038,7 +1053,7 @@ body {
 
 .layout {
   display: flex;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 44px);
 }
 
 .task-table-pane {

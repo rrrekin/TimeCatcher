@@ -59,7 +59,7 @@ defineEmits<{
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 12px 24px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 2px 8px var(--shadow-color);
@@ -119,9 +119,9 @@ defineEmits<{
 
 .date-display {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   position: relative;
 }
 
@@ -129,8 +129,7 @@ defineEmits<{
   font-weight: 600;
   color: var(--text-primary);
   font-size: 16px;
-  text-align: center;
-  min-width: 200px;
+  white-space: nowrap;
 }
 
 .date-picker {

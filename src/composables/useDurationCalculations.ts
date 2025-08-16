@@ -40,7 +40,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
     // If this is NOT the last task, calculate duration to next task
     if (currentIndex < sortedRecords.length - 1) {
-      const nextRecord = sortedRecords[currentIndex + 1]
+      const nextRecord = sortedRecords[currentIndex + 1]!
       const nextTime = parseTimeString(nextRecord.start_time)
       
       if (nextTime === null || nextTime <= currentTime) {
@@ -77,7 +77,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
       // If this is NOT the last task, calculate duration to next task
       if (currentIndex < sortedRecords.length - 1) {
-        const nextRecord = sortedRecords[currentIndex + 1]
+        const nextRecord = sortedRecords[currentIndex + 1]!
         const nextTime = parseTimeString(nextRecord.start_time)
         
         if (nextTime !== null && nextTime > currentTime) {
@@ -117,7 +117,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
       // If this is NOT the last task, calculate duration to next task
       if (currentIndex < sortedRecords.length - 1) {
-        const nextRecord = sortedRecords[currentIndex + 1]
+        const nextRecord = sortedRecords[currentIndex + 1]!
         const nextTime = parseTimeString(nextRecord.start_time)
         
         if (nextTime !== null && nextTime > currentTime) {

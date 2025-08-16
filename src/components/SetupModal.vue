@@ -64,7 +64,7 @@
             <div class="categories-list" v-else ref="categoriesListRef">
               <div
                   v-for="category in categories"
-                  :key="category.id"
+                  :key="category.id || 0"
                   class="category-item"
                   @dblclick="$emit('startEditCategory', category)"
                   title="Double-click to edit"

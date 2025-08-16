@@ -1,10 +1,12 @@
 <template>
   <div class="daily-report">
-    <h2>
-      Daily Report - Standard Tasks: {{ totalTimeTracked }}
-      <span v-if="!hasEndTaskForSelectedDate" class="status-emoji">⚠️</span>
-      <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji">😊</span>
-    </h2>
+    <div class="report-header">
+      <h2>Daily Report - Standard Tasks: {{ totalTimeTracked }}</h2>
+      <div class="status-emojis">
+        <span v-if="!hasEndTaskForSelectedDate" class="status-emoji">⚠️</span>
+        <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji">😊</span>
+      </div>
+    </div>
     <p>
       {{ formattedDate.split(',')[0] }} - Overview of your time and productivity
       {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
@@ -119,18 +121,26 @@ const standardTaskCount = computed(() => {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 24px;
   font-weight: 700;
+}
+
+.report-header {
   display: flex;
   align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.status-emojis {
+  display: flex;
   gap: 8px;
 }
 
 .status-emoji {
-  background: none !important;
-  -webkit-text-fill-color: unset !important;
   font-size: 20px;
+  line-height: 1;
 }
 
 .daily-report p {

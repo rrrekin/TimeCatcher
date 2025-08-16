@@ -44,8 +44,8 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
       throw new Error('Time must be in HH:mm format (e.g., 09:30 or 14:15)')
     }
     
-    const hours = parseInt(match[1], 10)
-    const minutes = parseInt(match[2], 10)
+    const hours = parseInt(match[1]!, 10)
+    const minutes = parseInt(match[2]!, 10)
     
     if (hours < 0 || hours > 23) {
       throw new Error('Hours must be between 00 and 23')

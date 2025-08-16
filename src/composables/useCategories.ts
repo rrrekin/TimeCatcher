@@ -56,7 +56,7 @@ export function useCategories() {
       await window.electronAPI.updateCategory(id, trimmedName)
       const categoryIndex = categories.value.findIndex(cat => cat.id === id)
       if (categoryIndex !== -1) {
-        categories.value[categoryIndex].name = trimmedName
+        categories.value[categoryIndex]!.name = trimmedName
       }
     } catch (error) {
       console.error('Failed to update category:', error)

@@ -16,13 +16,13 @@ export function useAutoRefresh(
       return // Already running
     }
 
-    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const dateString = selectedDate.value.toISOString().split('T')[0]!
     if (!isToday(dateString)) {
       return // Only auto-refresh for today
     }
 
     autoRefreshInterval.value = window.setInterval(() => {
-      const currentDateString = selectedDate.value.toISOString().split('T')[0]
+      const currentDateString = selectedDate.value.toISOString().split('T')[0]!
       
       // Stop auto-refresh if date is no longer today
       if (!isToday(currentDateString)) {
