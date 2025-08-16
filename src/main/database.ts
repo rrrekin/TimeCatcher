@@ -53,16 +53,23 @@ class DatabaseService {
     
     if (existingCount.count === 0) {
       console.log('No categories found, creating default categories...')
-      const insert = this.db.prepare('INSERT INTO categories (name, is_default) VALUES (?, ?)')
+      const insert = this.db.prepare('INSERT OR IGNORE INTO categories (name, is_default) VALUES (?, ?)')
       defaultCategories.forEach((category, index) => {
         try {
           // Set Development (first category) as default - use 1/0 for SQLite boolean
           const isDefault = index === 0 ? 1 : 0
-          console.log(`Creating category: ${category}, is_default: ${isDefault}`)
-          insert.run(category, isDefault)
+          console.log('Attempting to create category:', { category, is_default: Boolean(isDefault) })
+          const result = insert.run(category, isDefault)
+          
+          if (result.changes === 0) {
+            console.warn('Category already exists during initialization:', { category, is_default: Boolean(isDefault) })
+          } else if (result.changes > 0) {
+            console.log('Created category:', { category, is_default: Boolean(isDefault) })
+          }
         } catch (error) {
-          // Category might already exist
-          console.log(`Category ${category} already exists:`, error)
+          // Re-throw unexpected database errors (IO, schema, etc.)
+          console.error('Unexpected error creating default category:', { category, error })
+          throw error
         }
       })
       console.log('Default categories creation completed')
