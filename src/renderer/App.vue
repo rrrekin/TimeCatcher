@@ -969,9 +969,15 @@ const initializeNewTask = () => {
 }
 
 
-// Watch for date changes to reload task records
+// Watch for date changes to reload task records and manage auto-refresh
 watch(selectedDate, () => {
   loadTaskRecords()
+  
+  // Stop any existing auto-refresh
+  stopAutoRefresh()
+  
+  // Start auto-refresh if we're viewing today
+  startAutoRefresh()
 }, {immediate: false})
 
 onMounted(async () => {
@@ -1015,12 +1021,18 @@ onMounted(async () => {
   console.log('Loading task records...')
   await loadTaskRecords()
   console.log('App initialization complete')
+  
+  // Start auto-refresh for today's tasks
+  startAutoRefresh()
 
   // Add click outside listener for custom dropdown
   document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
+  // Stop auto-refresh
+  stopAutoRefresh()
+  
   // Clean up click outside event listener
   document.removeEventListener('click', handleClickOutside)
 
@@ -1252,32 +1264,54 @@ const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]):
     return '-'
   }
 
-  // If this is the last task, show "ongoing"
-  if (currentIndex === sortedRecords.length - 1) {
-    return 'Ongoing'
-  }
-
-  // Get the next task
-  const nextRecord = sortedRecords[currentIndex + 1]
-  if (!nextRecord) {
-    return 'Ongoing'
-  }
-
-  // Calculate duration between current and next task
   const currentTime = parseTimeString(currentRecord.start_time)
-  const nextTime = parseTimeString(nextRecord.start_time)
-
-  if (currentTime === null || nextTime === null) {
+  if (currentTime === null) {
     return '-'
   }
 
-  const durationMinutes = nextTime - currentTime
-
-  if (durationMinutes <= 0) {
-    return '-'
+  // If this is NOT the last task, calculate duration to next task
+  if (currentIndex < sortedRecords.length - 1) {
+    const nextRecord = sortedRecords[currentIndex + 1]
+    const nextTime = parseTimeString(nextRecord.start_time)
+    
+    if (nextTime === null || nextTime <= currentTime) {
+      return '-'
+    }
+    
+    return formatDurationMinutes(nextTime - currentTime)
   }
 
-  return formatDurationMinutes(durationMinutes)
+  // This is the last task - apply new logic based on date
+  const recordDate = new Date(currentRecord.date + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const recordDateOnly = new Date(recordDate)
+  recordDateOnly.setHours(0, 0, 0, 0)
+  
+  // For future days: duration is always 0
+  if (recordDateOnly > today) {
+    return '0m'
+  }
+  
+  // For past days: duration goes until midnight (end of day)
+  if (recordDateOnly < today) {
+    const endOfDay = 24 * 60 // midnight in minutes
+    const durationMinutes = endOfDay - currentTime
+    return durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'
+  }
+  
+  // For today: duration goes until current time (unless start time is in future)
+  const now = new Date()
+  const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+  
+  // If task start time is in the future, duration is 0
+  if (currentTime > nowMinutes) {
+    return '0m'
+  }
+  
+  const durationMinutes = nowMinutes - currentTime
+  return durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'
 }
 
 const parseTimeString = (timeString: string): number | null => {
@@ -1403,38 +1437,42 @@ const handleClickOutside = (event: Event) => {
 }
 
 
+// Auto-refresh state
+let autoRefreshInterval: number | null = null
+
+// Auto-refresh functions
+const isToday = (date: Date): boolean => {
+  const today = new Date()
+  return date.toDateString() === today.toDateString()
+}
+
+const startAutoRefresh = () => {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval)
+  }
+  
+  if (isToday(selectedDate.value)) {
+    autoRefreshInterval = window.setInterval(() => {
+      // Only refresh if we're still on today's date
+      if (isToday(selectedDate.value)) {
+        // Force reactivity update for duration calculations
+        // The computed properties will recalculate automatically
+        taskRecords.value = [...taskRecords.value]
+      }
+    }, 15000) // 15 seconds
+  }
+}
+
+const stopAutoRefresh = () => {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval)
+    autoRefreshInterval = null
+  }
+}
+
 // Daily report functions
 const getTotalTimeTracked = (): string => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
-  if (standardRecords.length === 0) return '0h 0m'
-
-  // Sort ALL records (including special tasks) for accurate duration calculation
-  const allSortedRecords = taskRecords.value
-      .filter(record => record.start_time && record.start_time.trim() !== '')
-      .sort((a, b) => {
-        const timeA = parseTimeString(a.start_time) || 0
-        const timeB = parseTimeString(b.start_time) || 0
-        return timeA - timeB
-      })
-
-  let totalMinutes = 0
-  
-  // Calculate duration for each standard task using ALL records as boundaries
-  for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
-    const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
-    
-    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
-      const nextRecord = allSortedRecords[currentIndex + 1]
-      const currentTime = parseTimeString(standardRecord.start_time)
-      const nextTime = parseTimeString(nextRecord.start_time)
-      
-      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
-        totalMinutes += nextTime - currentTime
-      }
-    }
-  }
-
-  return formatDurationMinutes(totalMinutes)
+  return formatDurationMinutes(getTotalMinutesTracked())
 }
 
 const getTotalMinutesTracked = (): number => {
@@ -1452,17 +1490,53 @@ const getTotalMinutesTracked = (): number => {
 
   let totalMinutes = 0
   
-  // Calculate duration for each standard task using ALL records as boundaries
+  // Calculate duration for each standard task using new logic
   for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
     const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+    const currentTime = parseTimeString(standardRecord.start_time)
     
-    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
+    if (currentIndex === -1 || currentTime === null) continue
+    
+    // If NOT the last task, calculate duration to next task
+    if (currentIndex < allSortedRecords.length - 1) {
       const nextRecord = allSortedRecords[currentIndex + 1]
-      const currentTime = parseTimeString(standardRecord.start_time)
       const nextTime = parseTimeString(nextRecord.start_time)
       
-      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
+      if (nextTime !== null && nextTime > currentTime) {
         totalMinutes += nextTime - currentTime
+      }
+    } else {
+      // This is the last task - apply new logic based on date
+      const recordDate = new Date(standardRecord.date + 'T00:00:00')
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const recordDateOnly = new Date(recordDate)
+      recordDateOnly.setHours(0, 0, 0, 0)
+      
+      // For future days: duration is always 0
+      if (recordDateOnly > today) {
+        // Add 0 minutes
+      }
+      // For past days: duration goes until midnight
+      else if (recordDateOnly < today) {
+        const endOfDay = 24 * 60 // midnight in minutes
+        const durationMinutes = endOfDay - currentTime
+        if (durationMinutes > 0) {
+          totalMinutes += durationMinutes
+        }
+      }
+      // For today: duration goes until current time (unless start time is in future)
+      else {
+        const now = new Date()
+        const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+        
+        if (currentTime <= nowMinutes) {
+          const durationMinutes = nowMinutes - currentTime
+          if (durationMinutes > 0) {
+            totalMinutes += durationMinutes
+          }
+        }
       }
     }
   }
@@ -1517,25 +1591,61 @@ const getCategoryBreakdown = () => {
     category.tasks.get(record.task_name).count++
   }
 
-  // Calculate time for each standard task using ALL records as boundaries
+  // Calculate time for each standard task using new logic
   for (const standardRecord of standardRecords.filter(record => record.start_time && record.start_time.trim() !== '')) {
-    // Find current record in the sorted list (including special tasks)
     const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
+    const currentTime = parseTimeString(standardRecord.start_time)
     
-    if (currentIndex !== -1 && currentIndex < allSortedRecords.length - 1) {
+    if (currentIndex === -1 || currentTime === null) continue
+    
+    let duration = 0
+    
+    // If NOT the last task, calculate duration to next task
+    if (currentIndex < allSortedRecords.length - 1) {
       const nextRecord = allSortedRecords[currentIndex + 1]
-      const currentTime = parseTimeString(standardRecord.start_time)
       const nextTime = parseTimeString(nextRecord.start_time)
-
-      if (currentTime !== null && nextTime !== null && nextTime > currentTime) {
-        const duration = nextTime - currentTime
-        const category = categoryMap.get(standardRecord.category_name)
-        category.totalMinutes += duration
+      
+      if (nextTime !== null && nextTime > currentTime) {
+        duration = nextTime - currentTime
+      }
+    } else {
+      // This is the last task - apply new logic based on date
+      const recordDate = new Date(standardRecord.date + 'T00:00:00')
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      const recordDateOnly = new Date(recordDate)
+      recordDateOnly.setHours(0, 0, 0, 0)
+      
+      // For future days: duration is always 0
+      if (recordDateOnly > today) {
+        duration = 0
+      }
+      // For past days: duration goes until midnight
+      else if (recordDateOnly < today) {
+        const endOfDay = 24 * 60 // midnight in minutes
+        const durationMinutes = endOfDay - currentTime
+        duration = durationMinutes > 0 ? durationMinutes : 0
+      }
+      // For today: duration goes until current time (unless start time is in future)
+      else {
+        const now = new Date()
+        const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
         
-        // Add duration to specific task
-        if (category.tasks.has(standardRecord.task_name)) {
-          category.tasks.get(standardRecord.task_name).totalMinutes += duration
+        if (currentTime <= nowMinutes) {
+          const durationMinutes = nowMinutes - currentTime
+          duration = durationMinutes > 0 ? durationMinutes : 0
         }
+      }
+    }
+    
+    if (duration > 0) {
+      const category = categoryMap.get(standardRecord.category_name)
+      category.totalMinutes += duration
+      
+      // Add duration to specific task
+      if (category.tasks.has(standardRecord.task_name)) {
+        category.tasks.get(standardRecord.task_name).totalMinutes += duration
       }
     }
   }
