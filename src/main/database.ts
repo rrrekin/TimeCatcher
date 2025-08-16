@@ -58,11 +58,21 @@ class DatabaseService {
         try {
           // Set Development (first category) as default - use 1/0 for SQLite boolean
           const isDefault = index === 0 ? 1 : 0
-          console.log(`Creating category: ${category}, is_default: ${isDefault}`)
+          console.log('Creating category:', { category, is_default: isDefault })
           insert.run(category, isDefault)
         } catch (error) {
-          // Category might already exist
-          console.log('Category already exists:', { category, error })
+          // Check if this is a unique constraint violation (category already exists)
+          const isUniqueConstraint = error && typeof error === 'object' && 
+            ((error as any).code === 'SQLITE_CONSTRAINT' || (error as any).code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+             (error as any).message?.includes('UNIQUE') || (error as any).message?.includes('CONSTRAINT'))
+          
+          if (isUniqueConstraint) {
+            console.warn('Category already exists during initialization:', { category, error })
+          } else {
+            // Re-throw unexpected database errors (IO, schema, etc.)
+            console.error('Unexpected error creating default category:', { category, error })
+            throw error
+          }
         }
       })
       console.log('Default categories creation completed')
