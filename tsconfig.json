@@ -23,7 +23,10 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "src/composables/**/*.ts",
+    "src/utils/**/*.ts",
+    "src/components/**/*.vue"
   ],
   "exclude": [
     "node_modules",

@@ -1,0 +1,506 @@
+<template>
+  <div class="task-table">
+    <table>
+      <thead>
+      <tr>
+        <th>Category</th>
+        <th>Task</th>
+        <th>Start time</th>
+        <th>Duration</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-if="isLoadingTasks">
+        <td colspan="5" class="loading-cell">
+          <div class="loading-indicator">
+            <span class="loading-spinner"></span>
+            Loading tasks...
+          </div>
+        </td>
+      </tr>
+      <tr v-else-if="taskRecords.length === 0">
+        <td colspan="5" class="empty-cell">
+          No tasks recorded for {{ formattedDate.split(',')[0] }}
+        </td>
+      </tr>
+      <tr v-else v-for="record in taskRecords" :key="record.id" 
+          :class="{ 
+            'special-task-row': isSpecial(record.task_type),
+            'pause-task-row': record.task_type === 'pause',
+            'end-task-row': record.task_type === 'end'
+          }">
+        <!-- Special task layout: merged category + task columns -->
+        <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
+          {{ record.task_name }}
+        </td>
+        <!-- Normal task layout: separate category and task columns -->
+        <template v-else>
+          <td>
+            <div class="custom-dropdown table-dropdown"
+                 :class="{ open: record.id != null && showInlineDropdown[record.id] }">
+              <div class="dropdown-trigger" @click="record.id != null && $emit('toggleInlineDropdown', record.id)">
+                <span class="dropdown-value">{{ record.category_name }}</span>
+                <span class="dropdown-arrow">▼</span>
+              </div>
+              <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
+                <div
+                    v-for="category in categories"
+                    :key="category.id"
+                    class="dropdown-item"
+                    :class="{ selected: record.category_name === category.name }"
+                    @click="$emit('selectInlineCategory', record.id, category.name)"
+                >
+                  {{ category.name }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <input
+                type="text"
+                :value="record.task_name"
+                @blur="$emit('handleBlur', record.id, 'task_name', $event)"
+                @keydown.enter="$emit('handleEnter', record.id, 'task_name', $event)"
+                class="editable-cell editable-input"
+                placeholder="Task name"
+            />
+          </td>
+        </template>
+        <td>
+          <input
+              type="time"
+              :value="convertToTimeInput(record.start_time)"
+              @blur="$emit('handleBlur', record.id, 'start_time', $event)"
+              @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
+              class="editable-cell time-input"
+              step="1"
+          />
+        </td>
+        <!-- Duration column (visibility based on task type) -->
+        <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell">
+          {{ calculateDuration(record) }}
+        </td>
+        <td v-else class="duration-cell">-</td>
+        <td class="actions-cell">
+          <button class="action-btn replay-btn" @click="$emit('replayTask', record)" title="Replay this task for today">
+            ↻
+          </button>
+          <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task">
+            🗑
+          </button>
+        </td>
+      </tr>
+      
+      <!-- Add task form row (always visible at bottom) -->
+      <tr class="add-task-row">
+        <td>
+          <div class="custom-dropdown table-dropdown add-task-dropdown"
+               :class="{ open: showFormCategoryDropdown }">
+            <div class="dropdown-trigger" @click="$emit('toggleFormDropdown')">
+              <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
+              <span class="dropdown-arrow">▼</span>
+            </div>
+            <div v-if="showFormCategoryDropdown" class="dropdown-menu">
+              <div
+                  v-for="category in categories"
+                  :key="category.id"
+                  class="dropdown-item"
+                  :class="{ selected: newTask.categoryId === category.id }"
+                  @click="$emit('selectFormCategory', category)"
+              >
+                {{ category.name }}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <input
+              type="text"
+              v-model="newTask.name"
+              @keydown.enter="$emit('addTask')"
+              class="editable-cell add-task-input"
+              placeholder="Enter task name..."
+          />
+        </td>
+        <td>
+          <input
+              type="time"
+              v-model="newTask.time"
+              @keydown.enter="$emit('addTask')"
+              class="editable-cell time-input"
+              step="1"
+              :placeholder="getCurrentTime()"
+          />
+        </td>
+        <td class="duration-cell">-</td>
+        <td class="actions-cell">
+          <button class="action-btn add-btn" @click="$emit('addTask')" title="Add new task">
+            ✓
+          </button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- Special task buttons -->
+    <div class="special-task-buttons">
+      <button class="special-task-btn pause-btn" @click="$emit('addPauseTask')">
+        ⏸ Pause
+      </button>
+      <button 
+        class="special-task-btn end-btn" 
+        @click="$emit('addEndTask')"
+        :disabled="hasEndTaskForSelectedDate"
+        :title="hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task for this day'"
+      >
+        ⏹ End
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { type PropType } from 'vue'
+import type { TaskRecord, Category } from '@/shared/types'
+import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
+
+// Props
+defineProps({
+  taskRecords: {
+    type: Array as PropType<TaskRecord[]>,
+    required: true
+  },
+  categories: {
+    type: Array as PropType<Category[]>,
+    required: true
+  },
+  isLoadingTasks: {
+    type: Boolean,
+    required: true
+  },
+  formattedDate: {
+    type: String,
+    required: true
+  },
+  hasEndTaskForSelectedDate: {
+    type: Boolean,
+    required: true
+  },
+  showInlineDropdown: {
+    type: Object as PropType<{ [key: number]: boolean }>,
+    required: true
+  },
+  showFormCategoryDropdown: {
+    type: Boolean,
+    required: true
+  },
+  newTask: {
+    type: Object as PropType<{
+      categoryId: number | null
+      name: string
+      time: string
+    }>,
+    required: true
+  },
+  // Function props
+  calculateDuration: {
+    type: Function as PropType<(record: TaskRecord) => string>,
+    required: true
+  },
+  convertToTimeInput: {
+    type: Function as PropType<(timeString: string) => string>,
+    required: true
+  },
+  getCurrentTime: {
+    type: Function as PropType<() => string>,
+    required: true
+  },
+  getSelectedCategoryName: {
+    type: Function as PropType<() => string>,
+    required: true
+  },
+  isSpecial: {
+    type: Function as PropType<(taskType: any) => boolean>,
+    required: true
+  }
+})
+
+// Emits
+defineEmits<{
+  toggleInlineDropdown: [recordId: number | undefined]
+  selectInlineCategory: [recordId: number | undefined, categoryName: string]
+  handleBlur: [recordId: number | undefined, field: string, event: Event]
+  handleEnter: [recordId: number | undefined, field: string, event: Event]
+  replayTask: [record: TaskRecord]
+  confirmDeleteTask: [record: TaskRecord]
+  toggleFormDropdown: []
+  selectFormCategory: [category: Category]
+  addTask: []
+  addPauseTask: []
+  addEndTask: []
+}>()
+</script>
+
+<style scoped>
+/* Task table styles */
+.task-table {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  background: var(--primary);
+  color: white;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* Loading and empty states */
+.loading-cell, .empty-cell {
+  text-align: center;
+  padding: 32px;
+  color: var(--text-muted);
+}
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Special task row styles */
+.special-task-row {
+  background: var(--bg-secondary);
+  font-weight: 500;
+}
+
+.pause-task-row {
+  background: rgba(255, 193, 7, 0.1);
+}
+
+.end-task-row {
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.special-task-cell {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Input styles */
+.editable-cell {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+.editable-cell:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+}
+
+.time-input {
+  max-width: 120px;
+}
+
+/* Custom dropdown styles */
+.custom-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.dropdown-trigger:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.dropdown-arrow {
+  font-size: 12px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.custom-dropdown.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--shadow-color);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.dropdown-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-secondary);
+}
+
+.dropdown-item.selected {
+  background: var(--primary);
+  color: white;
+}
+
+/* Action buttons */
+.actions-cell {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  margin: 0 2px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.action-btn:hover {
+  background: var(--bg-secondary);
+  transform: scale(1.1);
+}
+
+.replay-btn {
+  color: var(--aero);
+}
+
+.delete-btn {
+  color: var(--mantis);
+}
+
+.add-btn {
+  color: var(--emerald);
+}
+
+/* Add task row */
+.add-task-row {
+  background: var(--bg-secondary);
+}
+
+.add-task-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Special task buttons */
+.special-task-buttons {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.special-task-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.pause-btn {
+  background: var(--aero);
+}
+
+.pause-btn:hover {
+  background: #1a9bd1;
+  transform: translateY(-2px);
+}
+
+.end-btn {
+  background: var(--emerald);
+}
+
+.end-btn:hover:not(:disabled) {
+  background: #4a9960;
+  transform: translateY(-2px);
+}
+
+.end-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Duration cell specific styles */
+.duration-cell {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: right;
+  min-width: 80px;
+}
+</style>
