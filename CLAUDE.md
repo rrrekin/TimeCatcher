@@ -368,6 +368,7 @@ When working with report calculations:
   - **Future days**: Returns start time (creating zero duration)
   - **DRY principle**: This helper is used by all three duration functions to prevent logic duplication
   - **Testing**: Manual test available in `test-helper.js` covering past/today/future edge cases
+  - **Time zone note**: Returns end times in minutes based on local calendar day; date-only strings must be persisted/compared in local time (e.g., "YYYY-MM-DD derived from local getters") to avoid UTC off-by-one-day errors
 
 When adding new settings:
 

@@ -114,7 +114,7 @@
               </td>
               <!-- Duration column (visibility based on task type) -->
               <td class="duration-cell" v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]">
-                {{ calculateDuration(record, taskRecords) }}
+                {{ calculateDuration(record, sortedTaskRecords) }}
               </td>
               <td class="duration-cell" v-else>
                 <!-- Empty cell for tasks where duration is not visible -->
@@ -569,7 +569,7 @@ const formattedDate = computed(() => {
 })
 
 const dateInputValue = computed({
-  get: () => selectedDate.value.toISOString().split('T')[0],
+  get: () => toYMDLocal(selectedDate.value),
   set: (value: string) => {
     // Parse as UTC to avoid timezone issues
     const [year, month, day] = value.split('-').map(Number)
@@ -579,6 +579,17 @@ const dateInputValue = computed({
 
 const hasEndTaskForSelectedDate = computed(() => {
   return taskRecords.value.some(record => record.task_type === 'end')
+})
+
+// Computed sorted records to avoid O(n²) sorting in calculateDuration
+const sortedTaskRecords = computed(() => {
+  return taskRecords.value
+      .filter(record => record.start_time && record.start_time.trim() !== '')
+      .sort((a, b) => {
+        const timeA = parseTimeString(a.start_time) || 0
+        const timeB = parseTimeString(b.start_time) || 0
+        return timeA - timeB
+      })
 })
 
 const goToPreviousDay = () => {
@@ -828,7 +839,7 @@ const loadTaskRecords = async () => {
       showToastMessage('API not available. Please restart the application.', 'error')
       return
     }
-    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const dateString = toYMDLocal(selectedDate.value)
     taskRecords.value = await window.electronAPI.getTaskRecordsByDate(dateString)
   } catch (error) {
     console.error('Failed to load task records:', error)
@@ -857,7 +868,7 @@ const addTask = async () => {
       return
     }
 
-    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const dateString = toYMDLocal(selectedDate.value)
     let timeString: string
 
     try {
@@ -896,7 +907,7 @@ const addSpecialTask = async (taskType: SpecialTaskType, taskName: string, succe
       return
     }
 
-    const dateString = selectedDate.value.toISOString().split('T')[0]
+    const dateString = toYMDLocal(selectedDate.value)
     const currentTime = getCurrentTime()
 
     const taskRecord = {
@@ -1078,7 +1089,7 @@ const replayTask = async (record: TaskRecord) => {
     }
 
     const now = new Date()
-    const dateString = now.toISOString().split('T')[0] // Use current date
+    const dateString = toYMDLocal(now) // Use current date
     const timeString = getCurrentTime()
 
     const taskRecord = {
@@ -1092,8 +1103,8 @@ const replayTask = async (record: TaskRecord) => {
     await window.electronAPI.addTaskRecord(taskRecord)
     
     // Check if the user is viewing today's date
-    const todayString = now.toISOString().split('T')[0]
-    const selectedDateString = selectedDate.value.toISOString().split('T')[0]
+    const todayString = toYMDLocal(now)
+    const selectedDateString = toYMDLocal(selectedDate.value)
     
     if (selectedDateString !== todayString) {
       // Automatically switch to today to show the replayed task
@@ -1245,21 +1256,12 @@ const convertToTimeInput = (timeString: string): string => {
 }
 
 // Duration calculation function
-const calculateDuration = (currentRecord: TaskRecord, allRecords: TaskRecord[]): string => {
-  if (!currentRecord || !allRecords || allRecords.length === 0) {
+const calculateDuration = (currentRecord: TaskRecord, sortedRecords: TaskRecord[]): string => {
+  if (!currentRecord || !sortedRecords || sortedRecords.length === 0) {
     return '-'
   }
 
-  // Sort records by start time to find the next task
-  const sortedRecords = allRecords
-      .filter(record => record.start_time && record.start_time.trim() !== '')
-      .sort((a, b) => {
-        const timeA = parseTimeString(a.start_time) || 0
-        const timeB = parseTimeString(b.start_time) || 0
-        return timeA - timeB
-      })
-
-  // Find the current record index
+  // Find the current record index in pre-sorted array
   const currentIndex = sortedRecords.findIndex(record => record.id === currentRecord.id)
   if (currentIndex === -1) {
     return '-'
@@ -1317,6 +1319,14 @@ const getLastTaskEndTime = (taskDate: string, taskStartTime: number): number => 
   }
   
   return nowMinutes
+}
+
+// Helper function to get local date as YYYY-MM-DD string (avoids UTC timezone issues)
+const toYMDLocal = (date: Date): string => {
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, '0')
+  const day = date.getDate().toString().padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 const parseTimeString = (timeString: string): number | null => {
