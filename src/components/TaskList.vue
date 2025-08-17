@@ -55,7 +55,7 @@
                 class="dropdown-menu"
                 role="listbox"
                 :id="`dropdown-menu-${record.id}`"
-                @keydown="handleDropdownKeydown($event, record.id)"
+                @keydown="handleDropdownKeydown($event, record.id!)"
                 tabindex="-1"
               >
                 <div
@@ -65,8 +65,11 @@
                     role="option"
                     :class="{ selected: record.category_name === category.name }"
                     :aria-selected="record.category_name === category.name"
-                    :tabindex="(activeOptionIndex[record.id] ?? 0) === index ? '0' : '-1'"
-                    @click="$emit('selectInlineCategory', record.id, category.name)"
+                    :tabindex="(activeOptionIndex[record.id!] ?? 0) === index ? '0' : '-1'"
+                    :data-record-id="record.id!"
+                    :data-index="index"
+                    @click="handleCategorySelection(record.id!, category.name)"
+                    @keydown="handleDropdownItemKeydown($event, record.id!, category.name)"
                 >
                   {{ category.name }}
                 </div>
@@ -77,8 +80,8 @@
             <input
                 type="text"
                 :value="record.task_name"
-                @blur="$emit('handleBlur', record.id, 'task_name', $event)"
-                @keydown.enter="$emit('handleEnter', record.id, 'task_name', $event)"
+                @blur="$emit('handleBlur', record.id!, 'task_name', $event)"
+                @keydown.enter="$emit('handleEnter', record.id!, 'task_name', $event)"
                 class="editable-cell editable-input"
                 placeholder="Task name"
             />
@@ -89,8 +92,8 @@
               type="time"
               step="60"
               :value="convertToTimeInput(record.start_time)"
-              @blur="$emit('handleBlur', record.id, 'start_time', $event)"
-              @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
+              @blur="$emit('handleBlur', record.id!, 'start_time', $event)"
+              @keydown.enter="$emit('handleEnter', record.id!, 'start_time', $event)"
               class="editable-cell time-input"
           />
         </td>
@@ -100,7 +103,13 @@
         </td>
         <td v-else class="duration-cell">-</td>
         <td class="actions-cell">
-          <button class="action-btn replay-btn" @click="$emit('replayTask', record)" title="Replay this task for today" aria-label="Replay this task">
+          <button 
+            v-if="record.task_type !== 'pause' && record.task_type !== 'end'" 
+            class="action-btn replay-btn" 
+            @click="$emit('replayTask', record)" 
+            title="Replay this task for today" 
+            aria-label="Replay this task"
+          >
             ▶▶︎
           </button>
           <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task" aria-label="Delete this task">
@@ -119,7 +128,7 @@
               class="dropdown-trigger" 
               @click="$emit('toggleFormDropdown')"
               :aria-expanded="showFormCategoryDropdown"
-              aria-controls="form-dropdown-menu"
+              :aria-controls="formDropdownMenuId"
               aria-haspopup="listbox"
             >
               <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
@@ -129,7 +138,7 @@
               v-if="showFormCategoryDropdown" 
               class="dropdown-menu"
               role="listbox"
-              id="form-dropdown-menu"
+              :id="formDropdownMenuId"
             >
               <div
                   v-for="(category, index) in categories"
@@ -199,6 +208,10 @@
 import { type PropType, ref, nextTick } from 'vue'
 import type { TaskRecord, Category, TaskType } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
+
+// Generate unique component instance ID for ARIA references
+const componentId = `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const formDropdownMenuId = `form-dropdown-menu-${componentId}`
 
 // Props
 const props = defineProps({
@@ -304,10 +317,11 @@ const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => 
       break
       
     case 'Enter':
+    case ' ':
       event.preventDefault()
       const selectedCategory = props.categories[currentIndex]
       if (selectedCategory) {
-        emit('selectInlineCategory', recordId, selectedCategory.name)
+        handleCategorySelection(recordId, selectedCategory.name)
       }
       break
       
@@ -320,9 +334,30 @@ const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => 
   }
 }
 
+// Unified category selection handler
+const handleCategorySelection = async (recordId: number, categoryName: string) => {
+  // 1. Emit the category selection
+  emit('selectInlineCategory', recordId, categoryName)
+  
+  // 2. Close the dropdown
+  emit('toggleInlineDropdown', recordId)
+  
+  // 3. Return focus to the trigger button
+  await nextTick()
+  focusTriggerButton(recordId)
+}
+
+// Dropdown item keydown handler
+const handleDropdownItemKeydown = (event: KeyboardEvent, recordId: number, categoryName: string) => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    handleCategorySelection(recordId, categoryName)
+  }
+}
+
 // Focus management helpers
 const focusOption = (recordId: number, optionIndex: number) => {
-  const option = document.querySelector(`#dropdown-menu-${recordId} [role="option"]:nth-child(${optionIndex + 1})`) as HTMLElement
+  const option = document.querySelector(`#dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`) as HTMLElement
   option?.focus()
 }
 

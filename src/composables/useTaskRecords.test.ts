@@ -1,42 +1,44 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useTaskRecords } from './useTaskRecords'
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
 describe('useTaskRecords', () => {
   describe('parseTimeInput', () => {
-    // Create a minimal setup to access parseTimeInput
-    const selectedDate = ref(new Date())
-    const { parseTimeInput } = useTaskRecords(selectedDate)
+    let selectedDate: Ref<Date>
+    let parseTimeInput: (timeInput: string) => string
+    let cleanup: (() => void) | undefined
+
+    beforeEach(() => {
+      // Create fresh instances for each test
+      selectedDate = ref(new Date())
+      const composableResult = useTaskRecords(selectedDate)
+      parseTimeInput = composableResult.parseTimeInput
+      
+      // Store any cleanup function if the composable returns one
+      cleanup = undefined // useTaskRecords doesn't currently return cleanup, but ready for future
+    })
+
+    afterEach(() => {
+      // Clean up any watchers or side effects
+      if (cleanup) {
+        cleanup()
+      }
+      // Clear refs to help with garbage collection
+      selectedDate = null as any
+      parseTimeInput = null as any
+    })
 
     describe('Valid input normalization', () => {
-      it('should normalize "9:5" to "09:05"', () => {
-        const result = parseTimeInput('9:5')
-        expect(result).toBe('09:05')
-      })
-
-      it('should normalize "9:30" to "09:30"', () => {
-        const result = parseTimeInput('9:30')
-        expect(result).toBe('09:30')
-      })
-
-      it('should keep "09:05" as "09:05"', () => {
-        const result = parseTimeInput('09:05')
-        expect(result).toBe('09:05')
-      })
-
-      it('should keep "14:15" as "14:15"', () => {
-        const result = parseTimeInput('14:15')
-        expect(result).toBe('14:15')
-      })
-
-      it('should handle edge case "0:0" to "00:00"', () => {
-        const result = parseTimeInput('0:0')
-        expect(result).toBe('00:00')
-      })
-
-      it('should handle edge case "23:59" to "23:59"', () => {
-        const result = parseTimeInput('23:59')
-        expect(result).toBe('23:59')
+      it.each([
+        ['9:5', '09:05'],
+        ['9:30', '09:30'],
+        ['09:05', '09:05'],
+        ['14:15', '14:15'],
+        ['0:0', '00:00'],
+        ['23:59', '23:59']
+      ])('should normalize "%s" to "%s"', (input, expected) => {
+        const result = parseTimeInput(input)
+        expect(result).toBe(expected)
       })
     })
 
@@ -56,27 +58,27 @@ describe('useTaskRecords', () => {
 
     describe('Malformed format input', () => {
       it('should throw error for missing colon', () => {
-        expect(() => parseTimeInput('930')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput('930')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for too many parts', () => {
-        expect(() => parseTimeInput('9:30:45')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput('9:30:45')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for non-numeric hours', () => {
-        expect(() => parseTimeInput('abc:30')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput('abc:30')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for non-numeric minutes', () => {
-        expect(() => parseTimeInput('9:abc')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput('9:abc')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for empty hours', () => {
-        expect(() => parseTimeInput(':30')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput(':30')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for empty minutes', () => {
-        expect(() => parseTimeInput('9:')).toThrow('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
+        expect(() => parseTimeInput('9:')).toThrow(/^Time must be in/)
       })
     })
 

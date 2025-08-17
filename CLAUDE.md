@@ -357,7 +357,17 @@ Main window settings in `src/main/main.ts`:
 
 ### Testing
 
-No test configuration currently exists in the project.
+The project uses Vitest for unit testing with the following test files:
+
+- **`src/utils/timeUtils.test.ts`** - Comprehensive tests for time utility functions including DST transitions, edge cases, and date validation
+- **`src/composables/useTaskRecords.test.ts`** - Unit tests for the `parseTimeInput` function covering validation, normalization, and error handling
+
+**Test Patterns**:
+
+- **Parameterized tests**: Use `it.each()` for table-driven testing to reduce duplication
+- **Per-test isolation**: Create fresh composable instances in `beforeEach` to prevent test contamination
+- **Regex error matching**: Use regex patterns (e.g., `/^Time must be in/`) instead of exact strings for error message assertions to improve test resilience
+- **Mock management**: Use Vitest fake timers (`vi.useFakeTimers()`, `vi.setSystemTime()`) for reliable date/time testing
 
 ## Key Files to Understand
 
@@ -391,7 +401,12 @@ No test configuration currently exists in the project.
 ### Utility Modules
 
 1. **`src/utils/timeUtils.ts`** - Time parsing and formatting utilities
+1. **`src/utils/timeUtils.test.ts`** - Comprehensive unit tests for time utilities
 1. **`src/utils/dateUtils.ts`** - Date operations and timezone handling
+
+### Test Files
+
+1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions
 
 ## Common Development Tasks
 

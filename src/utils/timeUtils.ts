@@ -93,7 +93,9 @@ export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): num
 
   // For today: end time is current time (or start time if start is in future)
   const now = new Date()
-  const nowMinutes = Math.round(now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60)
+  const rawNowMinutes = Math.round(now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60)
+  // Clamp to valid day range [0, 1439] to handle edge case where rounding reaches 1440 at 23:59:30
+  const nowMinutes = Math.min(rawNowMinutes, MINUTES_PER_DAY - 1)
   
   // If task start time is in the future, end time is start time (duration = 0)
   if (taskStartTime > nowMinutes) {

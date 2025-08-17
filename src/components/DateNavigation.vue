@@ -26,7 +26,7 @@
     </div>
 
     <button type="button" class="setup-btn" @click="$emit('openSetup')" title="Open Settings" aria-label="Open settings">
-      <span class="setup-icon">⚙️</span>
+      <span class="setup-icon" aria-hidden="true">⚙️</span>
       Settings
     </button>
   </nav>

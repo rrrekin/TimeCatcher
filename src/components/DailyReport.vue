@@ -30,7 +30,7 @@
         >
           <div class="category-header">
             <div class="category-info">
-              <span class="category-name">{{ categoryData.name }}</span>
+              <span class="category-name" :id="`category-name-${index}`">{{ categoryData.name }}</span>
               <span class="category-tasks">{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span>
             </div>
             <div class="category-time">{{ categoryData.totalTime }}</div>
@@ -42,7 +42,7 @@
                   aria-valuemin="0"
                   aria-valuemax="100"
                   :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
-                  :aria-label="`${categoryData.name} progress: ${clampPercent(categoryData.percentage).toFixed(0)}%`"
+                  :aria-labelledby="`category-name-${index}`"
                   :style="{ width: clampPercent(categoryData.percentage) + '%' }"
               ></div>
             </div>
