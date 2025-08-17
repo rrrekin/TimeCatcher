@@ -66,13 +66,13 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
         return '-'
       }
       
-      return formatDurationMinutes(Math.floor(nextTime - currentTime))
+      return formatDurationMinutes(nextTime - currentTime)
     }
 
     // This is the last task - use helper to get end time based on date context
     const endTime = getLastTaskEndTime(currentRecord.date, currentTime)
     const durationMinutes = endTime - currentTime
-    return durationMinutes > 0 ? formatDurationMinutes(Math.floor(durationMinutes)) : '0m'
+    return durationMinutes > 0 ? formatDurationMinutes(durationMinutes) : '0m'
   }
 
   /**
@@ -108,10 +108,10 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
         durationMinutes = Math.max(0, endTime - currentTime)
       }
 
-      totalMinutes += Math.floor(durationMinutes)
+      totalMinutes += durationMinutes
     }
 
-    return totalMinutes
+    return Math.round(totalMinutes)
   }
 
   /**
@@ -149,16 +149,16 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
       }
 
       const categoryName = standardRecord.category_name
-      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + Math.floor(durationMinutes)
+      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + durationMinutes
     }
 
-    const totalMinutes = Object.values(categoryTotals).reduce((sum, minutes) => sum + minutes, 0)
+    const totalRawMinutes = Object.values(categoryTotals).reduce((sum, minutes) => sum + minutes, 0)
     
     return Object.entries(categoryTotals)
-      .map(([categoryName, minutes]) => ({
+      .map(([categoryName, rawMinutes]) => ({
         categoryName,
-        minutes,
-        percentage: totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0
+        minutes: Math.floor(rawMinutes),
+        percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0
       }))
       .sort((a, b) => b.minutes - a.minutes)
   }

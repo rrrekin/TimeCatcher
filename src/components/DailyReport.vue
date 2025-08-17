@@ -33,7 +33,7 @@
             <div class="category-bar">
               <div
                   class="category-progress"
-                  :style="{ width: categoryData.percentage + '%' }"
+                  :style="{ width: Math.max(0, Math.min(100, categoryData.percentage)) + '%' }"
               ></div>
             </div>
           </div>
@@ -41,8 +41,8 @@
           <!-- Task summaries within category -->
           <div class="task-summaries">
             <div
-                v-for="task in categoryData.taskSummaries"
-                :key="task.name"
+                v-for="(task, index) in categoryData.taskSummaries"
+                :key="task.name ? `${task.name}-${index}` : index"
                 class="task-summary"
             >
               <span class="task-name">{{ task.name }}</span>

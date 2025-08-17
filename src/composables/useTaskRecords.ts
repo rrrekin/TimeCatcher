@@ -103,10 +103,11 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     taskType: SpecialTaskType, 
     taskName: string
   ): Promise<void> => {
+    if (!window.electronAPI) {
+      throw new Error('API not available. Please restart the application.')
+    }
+
     try {
-      if (!window.electronAPI) {
-        throw new Error('API not available. Please restart the application.')
-      }
 
       // Early guard: prevent creating a second 'end' task
       if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
@@ -135,9 +136,9 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
         // SQLite errno 19 check (SQLITE_CONSTRAINT)
         (error && typeof error === 'object' && 'errno' in error && (error as any).errno === 19) ||
-        // Fallback check: regex pattern matching for broader SQLite UNIQUE constraint messages
+        // Fallback check: regex pattern matching for specific SQLite UNIQUE constraint messages
         (error && typeof error === 'object' && 'message' in error && 
-         /(?:unique.*constraint.*failed|constraint.*(?:failed|violation)).*(?:task_records\.(?:date|idx_end_per_day)|idx_end_per_day|task_records\..*)/i.test((error as any).message))
+         /(?:unique.*constraint.*failed|constraint.*(?:failed|violation)).*(?:task_records\.(?:date|idx_end_per_day)|idx_end_per_day)/i.test((error as any).message))
       
       if (isDuplicateEndTask) {
         throw new Error('An end task already exists for this day. Only one end task is allowed per day.')

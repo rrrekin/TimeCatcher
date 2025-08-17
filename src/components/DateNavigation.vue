@@ -5,7 +5,7 @@
         <span class="nav-arrow">‹</span>
       </button>
 
-      <button type="button" class="today-btn" @click="$emit('goToToday')" aria-label="Today">
+      <button type="button" class="today-btn" @click="$emit('goToToday')" title="Today" aria-label="Today">
         Today
       </button>
 
@@ -14,13 +14,14 @@
       </button>
 
       <div class="date-display">
-        <label class="date-label">{{ formattedDate }}</label>
+        <label class="date-label" :id="dateLabelId">{{ formattedDate }}</label>
         <input
             type="date"
             :value="dateInputValue"
             @change="$emit('updateDate', ($event.target as HTMLInputElement).value)"
             class="date-picker"
             aria-label="Select date"
+            :aria-describedby="dateLabelId"
         />
       </div>
     </div>
@@ -47,6 +48,9 @@ defineEmits<{
   updateDate: [value: string]
   openSetup: []
 }>()
+
+// Component-scoped unique identifier
+const dateLabelId = 'date-navigation-label'
 </script>
 
 <style scoped>

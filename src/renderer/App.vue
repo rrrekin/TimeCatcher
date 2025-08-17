@@ -17,6 +17,7 @@
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
           :formatted-date="formattedDate"
+          :display-date="displayDate"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :show-inline-dropdown="showInlineDropdown"
           :show-form-category-dropdown="showFormCategoryDropdown"
@@ -246,6 +247,10 @@ const categoriesListRef = ref<HTMLElement | null>(null)
 
 const formattedDate = computed(() => {
   return formatDateString(toYMDLocalUtil(selectedDate.value))
+})
+
+const displayDate = computed(() => {
+  return formattedDate.value.split(',')[0]
 })
 
 const dateTitle = computed(() => {

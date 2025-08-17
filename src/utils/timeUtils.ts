@@ -4,11 +4,12 @@
  * @returns Total minutes as number (including fractional minutes for seconds), or null if invalid
  */
 export const parseTimeString = (timeString: string): number | null => {
-  if (!timeString) return null
+  const trimmed = timeString.trim()
+  if (!trimmed) return null
 
   // Strict regex: matches exactly HH:mm or HH:mm:ss format with valid ranges
   const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/
-  const match = timeString.match(timeRegex)
+  const match = trimmed.match(timeRegex)
   
   if (!match) return null
   

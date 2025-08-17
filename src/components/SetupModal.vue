@@ -1,9 +1,9 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="!isAddingCategory && $emit('close')">
+  <div v-if="isOpen" class="modal-overlay" @click="canClose && $emit('close')">
     <div class="modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-header">
         <h3 id="modal-title">Settings</h3>
-        <button class="close-btn" @click="$emit('close')" :disabled="isAddingCategory"
+        <button class="close-btn" @click="canClose && $emit('close')" :disabled="!canClose"
                 aria-label="Close settings modal">×
         </button>
       </div>
@@ -63,8 +63,8 @@
             </div>
             <div class="categories-list" v-else>
               <div
-                  v-for="category in categories"
-                  :key="category.id || 0"
+                  v-for="(category, index) in categories"
+                  :key="category.id ? category.id : `category-${index}`"
                   class="category-item"
                   @dblclick="$emit('startEditCategory', category)"
                   title="Double-click to edit"
@@ -233,6 +233,9 @@ const isBusy = computed(() =>
   props.isDeletingCategory || 
   props.isSettingDefault
 )
+
+// Computed property to determine if modal can be closed
+const canClose = computed(() => !isBusy.value)
 
 function onTargetHoursInput(e: Event) {
   const raw = parseFloat((e.target as HTMLInputElement).value)

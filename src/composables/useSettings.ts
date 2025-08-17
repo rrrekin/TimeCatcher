@@ -10,6 +10,7 @@ export function useSettings() {
 
   // Media query for OS theme detection
   let mediaQueryList: MediaQueryList | null = null
+  let usedModernAPI = false
 
   /**
    * Handle OS theme changes
@@ -25,13 +26,21 @@ export function useSettings() {
    * Apply theme to document root
    */
   const applyTheme = (theme: Theme) => {
+    // Guard against non-browser environments
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return
+    }
+
     const root = document.documentElement
     let resolvedTheme = theme
 
     if (theme === 'auto') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      const prefersDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false
       resolvedTheme = prefersDark ? 'dark' : 'light'
     }
+
+    // Set color-scheme for native UI elements
+    root.style.setProperty('color-scheme', resolvedTheme)
 
     if (resolvedTheme === 'dark') {
       root.style.setProperty('--bg-primary', '#1a1f2e')
@@ -116,14 +125,26 @@ export function useSettings() {
     // Set up OS theme change detection
     if (typeof window !== 'undefined' && window.matchMedia) {
       mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)')
-      mediaQueryList.addEventListener('change', handleOSThemeChange)
+      if (mediaQueryList.addEventListener) {
+        mediaQueryList.addEventListener('change', handleOSThemeChange)
+        usedModernAPI = true
+      } else {
+        // Fallback for older Safari
+        mediaQueryList.addListener(handleOSThemeChange)
+        usedModernAPI = false
+      }
     }
   })
 
   // Cleanup on unmount
   onUnmounted(() => {
     if (mediaQueryList) {
-      mediaQueryList.removeEventListener('change', handleOSThemeChange)
+      if (usedModernAPI) {
+        mediaQueryList.removeEventListener('change', handleOSThemeChange)
+      } else {
+        // Fallback for older Safari
+        mediaQueryList.removeListener(handleOSThemeChange)
+      }
       mediaQueryList = null
     }
   })

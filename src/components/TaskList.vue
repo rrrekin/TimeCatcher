@@ -21,7 +21,7 @@
       </tr>
       <tr v-else-if="taskRecords.length === 0">
         <td colspan="5" class="empty-cell">
-          No tasks recorded for {{ formattedDate.split(',')[0] }}
+          No tasks recorded for {{ displayDate }}
         </td>
       </tr>
       <tr v-else v-for="(record, index) in taskRecords" :key="record.id || `${record.task_type}-${record.created_at || record.task_name}-${index}`" 
@@ -182,6 +182,10 @@ defineProps({
     required: true
   },
   formattedDate: {
+    type: String,
+    required: true
+  },
+  displayDate: {
     type: String,
     required: true
   },
