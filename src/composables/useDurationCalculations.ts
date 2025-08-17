@@ -96,18 +96,14 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
-      
-      // Skip if record not found in sorted list
-      if (nextRecord == null) continue
-
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
-      if (nextRecord != null) {
-        const nextTime = timeMap.get(nextRecord)
+      if (nextRecord !== null) {
+        const nextTime = timeMap.get(nextRecord!)
         
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
@@ -137,18 +133,14 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     // Calculate duration for each standard task
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
-      
-      // Skip if record not found in sorted list
-      if (nextRecord == null) continue
-
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
-      if (nextRecord != null) {
-        const nextTime = timeMap.get(nextRecord)
+      if (nextRecord !== null) {
+        const nextTime = timeMap.get(nextRecord!)
         
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
@@ -168,7 +160,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     return Object.entries(categoryTotals)
       .map(([categoryName, rawMinutes]) => ({
         categoryName,
-        minutes: Math.floor(rawMinutes),
+        minutes: Math.round(rawMinutes),
         percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0
       }))
       .sort((a, b) => b.minutes - a.minutes)

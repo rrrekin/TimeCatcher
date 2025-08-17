@@ -1,3 +1,6 @@
+// Constants
+const MINUTES_PER_DAY = 24 * 60 // 1440 minutes in a day
+
 /**
  * Parse time string (HH:mm or HH:mm:ss) into total minutes
  * @param timeString - Time string in format "HH:mm" or "HH:mm:ss"
@@ -83,7 +86,7 @@ export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): num
   
   // For past days: end time is midnight (24:00 = 1440 minutes)
   if (recordDateOnly < today) {
-    return 24 * 60 // midnight in minutes
+    return MINUTES_PER_DAY // midnight in minutes
   }
 
   // For today: end time is current time (or start time if start is in future)

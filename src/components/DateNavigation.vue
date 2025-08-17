@@ -1,5 +1,5 @@
 <template>
-  <nav class="time-navigation">
+  <nav class="time-navigation" aria-label="Date navigation">
     <div class="nav-controls">
       <button type="button" class="nav-btn" @click="$emit('goToPreviousDay')" title="Previous Day" aria-label="Previous day">
         <span class="nav-arrow">‹</span>
@@ -49,8 +49,7 @@ defineEmits<{
 }>()
 
 // Generate unique identifier per component instance
-const dateLabelId = `date-navigation-label-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-const dateInputId = `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const dateInputId = crypto?.randomUUID?.() ?? `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 </script>
 
 <style scoped>

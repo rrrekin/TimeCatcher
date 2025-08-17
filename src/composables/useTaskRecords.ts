@@ -111,13 +111,12 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
       throw new Error('API not available. Please restart the application.')
     }
 
+    // Early guard: prevent creating a second 'end' task
+    if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
+      throw new Error(DUPLICATE_END_TASK_MSG)
+    }
+
     try {
-
-      // Early guard: prevent creating a second 'end' task
-      if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
-        throw new Error(DUPLICATE_END_TASK_MSG)
-      }
-
       const dateString = toYMDLocal(selectedDate.value)
       const currentTime = getCurrentTime()
 
@@ -150,9 +149,17 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
       }
       
       const originalMessage = error instanceof Error ? error.message : String(error)
-      throw new Error(`Failed to add ${taskType} task. Please try again. Cause: ${originalMessage}`, {
-        cause: error
-      })
+      const newError = new Error(`Failed to add ${taskType} task. Please try again. Cause: ${originalMessage}`)
+      
+      // Add cause with backwards compatibility
+      try {
+        // ES2022 Error.cause support
+        ;(newError as any).cause = error
+      } catch {
+        // Fallback for older environments
+      }
+      
+      throw newError
     }
   }
 

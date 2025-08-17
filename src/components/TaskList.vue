@@ -13,8 +13,8 @@
       <tbody>
       <tr v-if="isLoadingTasks">
         <td colspan="5" class="loading-cell">
-          <div class="loading-indicator">
-            <span class="loading-spinner"></span>
+          <div class="loading-indicator" role="status" aria-busy="true">
+            <span class="loading-spinner" aria-hidden="true"></span>
             Loading tasks...
           </div>
         </td>
@@ -52,13 +52,16 @@
               <div 
                 v-if="record.id != null && showInlineDropdown[record.id]" 
                 class="dropdown-menu"
+                role="listbox"
                 :id="`dropdown-menu-${record.id}`"
               >
                 <div
                     v-for="(category, index) in categories"
-                    :key="category.id || `inline-cat-${category.name}-${index}`"
+                    :key="category.id ?? `inline-cat-${category.name}-${index}`"
                     class="dropdown-item"
+                    role="option"
                     :class="{ selected: record.category_name === category.name }"
+                    :aria-selected="record.category_name === category.name"
                     @click="$emit('selectInlineCategory', record.id, category.name)"
                 >
                   {{ category.name }}
@@ -106,16 +109,29 @@
         <td>
           <div class="custom-dropdown table-dropdown add-task-dropdown"
                :class="{ open: showFormCategoryDropdown }">
-            <div class="dropdown-trigger" @click="$emit('toggleFormDropdown')">
+            <button 
+              type="button"
+              class="dropdown-trigger" 
+              @click="$emit('toggleFormDropdown')"
+              :aria-expanded="showFormCategoryDropdown"
+              aria-controls="form-dropdown-menu"
+            >
               <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
               <span class="dropdown-arrow">▼</span>
-            </div>
-            <div v-if="showFormCategoryDropdown" class="dropdown-menu">
+            </button>
+            <div 
+              v-if="showFormCategoryDropdown" 
+              class="dropdown-menu"
+              role="listbox"
+              id="form-dropdown-menu"
+            >
               <div
                   v-for="(category, index) in categories"
-                  :key="category.id || `form-cat-${category.name}-${index}`"
+                  :key="category.id ?? `form-cat-${category.name}-${index}`"
                   class="dropdown-item"
+                  role="option"
                   :class="{ selected: newTask.categoryId === category.id }"
+                  :aria-selected="newTask.categoryId === category.id"
                   @click="$emit('selectFormCategory', category)"
               >
                 {{ category.name }}
@@ -147,7 +163,7 @@
         </td>
         <td class="duration-cell">-</td>
         <td class="actions-cell">
-          <button class="action-btn add-btn" @click="$emit('addTask')" title="Add new task">
+          <button class="action-btn add-btn" @click="$emit('addTask')" title="Add new task" aria-label="Add task">
             ✓
           </button>
         </td>
@@ -240,10 +256,10 @@ defineProps({
 
 // Emits
 defineEmits<{
-  toggleInlineDropdown: [recordId: number | undefined]
-  selectInlineCategory: [recordId: number | undefined, categoryName: string]
-  handleBlur: [recordId: number | undefined, field: string, event: Event]
-  handleEnter: [recordId: number | undefined, field: string, event: Event]
+  toggleInlineDropdown: [recordId: number]
+  selectInlineCategory: [recordId: number, categoryName: string]
+  handleBlur: [recordId: number, field: string, event: Event]
+  handleEnter: [recordId: number, field: string, event: Event]
   replayTask: [record: TaskRecord]
   confirmDeleteTask: [record: TaskRecord]
   toggleFormDropdown: []

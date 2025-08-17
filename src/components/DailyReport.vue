@@ -34,11 +34,11 @@
               <div
                   class="category-progress"
                   role="progressbar"
-                  :aria-valuenow="Math.max(0, Math.min(100, categoryData.percentage))"
+                  :aria-valuenow="clampPercent(categoryData.percentage)"
                   aria-valuemin="0"
                   aria-valuemax="100"
-                  :aria-valuetext="`${Math.max(0, Math.min(100, categoryData.percentage)).toFixed(0)}%`"
-                  :style="{ width: Math.max(0, Math.min(100, categoryData.percentage)) + '%' }"
+                  :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
+                  :style="{ width: clampPercent(categoryData.percentage) + '%' }"
               ></div>
             </div>
           </div>
@@ -87,6 +87,11 @@ interface DailyReportProps {
 
 // Props
 const props = defineProps<DailyReportProps>()
+
+// Helper function
+const clampPercent = (p: number): number => {
+  return Math.max(0, Math.min(100, p))
+}
 
 // Computed properties
 const standardTaskCount = computed(() => {
