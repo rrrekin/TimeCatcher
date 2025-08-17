@@ -256,7 +256,7 @@ for (const standardRecord of standardRecords) {
 3. **Sum floored values**: Report totals sum the individual floored minutes rather than flooring the final sum
 4. **Consistent application**: `calculateDuration()`, `getTotalMinutesTracked()`, and `getCategoryBreakdown()` all use `Math.floor()` per-task before aggregation
 
-This policy is fully implemented in the `useDurationCalculations` composable - all three functions apply `Math.floor()` to individual task durations before summing or display, ensuring report totals exactly match the sum of individual task durations in the left panel.
+This policy is fully implemented in the `useDurationCalculations` composable — all three functions apply `Math.floor()` to individual task durations before summing or display, ensuring report totals exactly match the sum of individual task durations in the left panel.
 
 ### Auto-Refresh Functionality
 

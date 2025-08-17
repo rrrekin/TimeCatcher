@@ -55,12 +55,14 @@
                 class="dropdown-menu"
                 role="listbox"
                 :id="`dropdown-menu-${record.id}`"
+                :aria-activedescendant="activeOptionId[record.id!] || undefined"
                 @keydown="handleDropdownKeydown($event, record.id!)"
                 tabindex="-1"
               >
                 <div
                     v-for="(category, index) in categories"
                     :key="category.id ?? `inline-cat-${category.name}-${index}`"
+                    :id="`dropdown-option-${record.id}-${index}`"
                     class="dropdown-item"
                     role="option"
                     :class="{ selected: record.category_name === category.name }"
@@ -69,7 +71,6 @@
                     :data-record-id="record.id!"
                     :data-index="index"
                     @click="handleCategorySelection(record.id!, category.name)"
-                    @keydown="handleDropdownItemKeydown($event, record.id!, category.name)"
                 >
                   {{ category.name }}
                 </div>
@@ -126,7 +127,7 @@
             <button 
               type="button"
               class="dropdown-trigger" 
-              @click="$emit('toggleFormDropdown')"
+              @click="($emit('toggleFormDropdown'), initializeFormActiveOption())"
               :aria-expanded="showFormCategoryDropdown"
               :aria-controls="formDropdownMenuId"
               aria-haspopup="listbox"
@@ -139,15 +140,20 @@
               class="dropdown-menu"
               role="listbox"
               :id="formDropdownMenuId"
+              :aria-activedescendant="formActiveOptionId || undefined"
+              @keydown="handleFormDropdownKeydown"
+              tabindex="-1"
             >
               <div
                   v-for="(category, index) in categories"
                   :key="category.id ?? `form-cat-${category.name}-${index}`"
+                  :id="`form-option-${index}`"
                   class="dropdown-item"
                   role="option"
                   :class="{ selected: newTask.categoryId === category.id }"
                   :aria-selected="newTask.categoryId === category.id"
-                  @click="$emit('selectFormCategory', category)"
+                  :tabindex="formActiveOptionIndex === index ? '0' : '-1'"
+                  @click="handleFormCategorySelection(category)"
               >
                 {{ category.name }}
               </div>
@@ -292,6 +298,11 @@ const emit = defineEmits<{
 
 // Reactive state for dropdown keyboard navigation
 const activeOptionIndex = ref<Record<number, number>>({}) // recordId -> option index
+const activeOptionId = ref<Record<number, string>>({}) // recordId -> active option element id
+
+// Form dropdown keyboard navigation state
+const formActiveOptionIndex = ref<number>(0)
+const formActiveOptionId = ref<string>('')
 
 // Keyboard handling for dropdown navigation
 const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => {
@@ -304,6 +315,7 @@ const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => 
       event.preventDefault()
       const nextIndex = Math.min(currentIndex + 1, props.categories.length - 1)
       activeOptionIndex.value[recordId] = nextIndex
+      activeOptionId.value[recordId] = `dropdown-option-${recordId}-${nextIndex}`
       await nextTick()
       focusOption(recordId, nextIndex)
       break
@@ -312,6 +324,7 @@ const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => 
       event.preventDefault()
       const prevIndex = Math.max(currentIndex - 1, 0)
       activeOptionIndex.value[recordId] = prevIndex
+      activeOptionId.value[recordId] = `dropdown-option-${recordId}-${prevIndex}`
       await nextTick()
       focusOption(recordId, prevIndex)
       break
@@ -347,14 +360,6 @@ const handleCategorySelection = async (recordId: number, categoryName: string) =
   focusTriggerButton(recordId)
 }
 
-// Dropdown item keydown handler
-const handleDropdownItemKeydown = (event: KeyboardEvent, recordId: number, categoryName: string) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault()
-    handleCategorySelection(recordId, categoryName)
-  }
-}
-
 // Focus management helpers
 const focusOption = (recordId: number, optionIndex: number) => {
   const option = document.querySelector(`#dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`) as HTMLElement
@@ -366,23 +371,105 @@ const focusTriggerButton = (recordId: number) => {
   button?.focus()
 }
 
-// Initialize active option when dropdown opens
-const initializeActiveOption = async (recordId: number, selectedCategoryName: string) => {
-  const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
+// Form dropdown keyboard handling
+const handleFormDropdownKeydown = async (event: KeyboardEvent) => {
+  if (!props.categories.length) return
+  
+  const currentIndex = formActiveOptionIndex.value
+  
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault()
+      const nextIndex = Math.min(currentIndex + 1, props.categories.length - 1)
+      formActiveOptionIndex.value = nextIndex
+      formActiveOptionId.value = `form-option-${nextIndex}`
+      await nextTick()
+      focusFormOption(nextIndex)
+      break
+      
+    case 'ArrowUp':
+      event.preventDefault()
+      const prevIndex = Math.max(currentIndex - 1, 0)
+      formActiveOptionIndex.value = prevIndex
+      formActiveOptionId.value = `form-option-${prevIndex}`
+      await nextTick()
+      focusFormOption(prevIndex)
+      break
+      
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      const selectedCategory = props.categories[currentIndex]
+      if (selectedCategory) {
+        handleFormCategorySelection(selectedCategory)
+      }
+      break
+      
+    case 'Escape':
+      event.preventDefault()
+      emit('toggleFormDropdown')
+      await nextTick()
+      focusFormTriggerButton()
+      break
+  }
+}
+
+// Form category selection handler
+const handleFormCategorySelection = async (category: Category) => {
+  // 1. Emit the category selection
+  emit('selectFormCategory', category)
+  
+  // 2. Close the dropdown
+  emit('toggleFormDropdown')
+  
+  // 3. Return focus to the trigger button
+  await nextTick()
+  focusFormTriggerButton()
+}
+
+// Form dropdown focus management helpers
+const focusFormOption = (optionIndex: number) => {
+  const option = document.querySelector(`#form-option-${optionIndex}`) as HTMLElement
+  option?.focus()
+}
+
+const focusFormTriggerButton = () => {
+  const button = document.querySelector(`[aria-controls="${formDropdownMenuId}"]`) as HTMLElement
+  button?.focus()
+}
+
+// Initialize form dropdown active option when opened
+const initializeFormActiveOption = async () => {
+  const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
   const resolvedIndex = Math.max(0, selectedIndex)
-  activeOptionIndex.value[recordId] = resolvedIndex
+  formActiveOptionIndex.value = resolvedIndex
+  formActiveOptionId.value = `form-option-${resolvedIndex}`
   
   // Wait for DOM update to ensure dropdown menu is rendered
   await nextTick()
   
   // Focus the active option in the dropdown
   try {
-    const activeOption = document.querySelector(`#dropdown-menu-${recordId} [role="option"]:nth-child(${resolvedIndex + 1})`) as HTMLElement
+    const activeOption = document.querySelector(`#form-option-${resolvedIndex}`) as HTMLElement
     activeOption?.focus()
   } catch (error) {
     // Silently handle cases where the element is not found or focus fails
-    console.debug('Could not focus dropdown option:', error)
+    console.debug('Could not focus form dropdown option:', error)
   }
+}
+
+// Initialize active option when dropdown opens
+const initializeActiveOption = async (recordId: number, selectedCategoryName: string) => {
+  const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
+  const resolvedIndex = Math.max(0, selectedIndex)
+  activeOptionIndex.value[recordId] = resolvedIndex
+  activeOptionId.value[recordId] = `dropdown-option-${recordId}-${resolvedIndex}`
+  
+  // Wait for DOM update to ensure dropdown menu is rendered
+  await nextTick()
+  
+  // Focus the active option using the existing helper
+  focusOption(recordId, resolvedIndex)
 }
 </script>
 
