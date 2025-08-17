@@ -24,7 +24,7 @@
           No tasks recorded for {{ displayDate }}
         </td>
       </tr>
-      <tr v-else v-for="(record, index) in taskRecords" :key="record.id || `${record.task_type}-${record.created_at || record.task_name}-${index}`" 
+      <tr v-else v-for="(record, index) in taskRecords" :key="record.id ?? `${record.task_type}-${record.created_at || record.task_name}-${index}`" 
           :class="{ 
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === 'pause',
@@ -83,6 +83,7 @@
         <td>
           <input
               type="time"
+              step="60"
               :value="convertToTimeInput(record.start_time)"
               @blur="$emit('handleBlur', record.id, 'start_time', $event)"
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
@@ -153,6 +154,7 @@
           <div class="time-input-container">
             <input
                 type="time"
+                step="60"
                 :value="newTask.time"
                 @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
                 @keydown.enter="$emit('addTask')"

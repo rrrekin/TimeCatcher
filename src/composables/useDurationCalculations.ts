@@ -96,6 +96,10 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
+      
+      // Skip if record not found in map (undefined means missing from map)
+      if (nextRecord === undefined) continue
+      
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
@@ -103,13 +107,13 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
-        const nextTime = timeMap.get(nextRecord!)
+        const nextTime = timeMap.get(nextRecord)
         
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
       } else {
-        // This is the last task - use helper to get end time based on date context
+        // This is the last task (null means explicit last record) - use helper to get end time based on date context
         const endTime = getLastTaskEndTime(standardRecord.date, currentTime)
         durationMinutes = Math.max(0, endTime - currentTime)
       }
@@ -133,6 +137,10 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     // Calculate duration for each standard task
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
+      
+      // Skip if record not found in map (undefined means missing from map)
+      if (nextRecord === undefined) continue
+      
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
@@ -140,13 +148,13 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
 
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
-        const nextTime = timeMap.get(nextRecord!)
+        const nextTime = timeMap.get(nextRecord)
         
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
       } else {
-        // This is the last task - use helper to get end time based on date context
+        // This is the last task (null means explicit last record) - use helper to get end time based on date context
         const endTime = getLastTaskEndTime(standardRecord.date, currentTime)
         durationMinutes = Math.max(0, endTime - currentTime)
       }

@@ -45,7 +45,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     const match = trimmed.match(timeRegex)
     
     if (!match) {
-      throw new Error('Time must be in H:mm or HH:mm format (e.g., 9:30, 09:30, or 14:15)')
+      throw new Error('Time must be in H:mm, H:m, HH:mm, or HH:m format (e.g., 9:5, 9:30, 09:05, or 14:15)')
     }
     
     const hours = parseInt(match[1]!, 10)

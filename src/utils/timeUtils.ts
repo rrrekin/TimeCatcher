@@ -1,5 +1,5 @@
 // Constants
-const MINUTES_PER_DAY = 24 * 60 // 1440 minutes in a day
+export const MINUTES_PER_DAY = 24 * 60 // 1440 minutes in a day
 
 /**
  * Parse time string (HH:mm or HH:mm:ss) into total minutes

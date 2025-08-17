@@ -2,7 +2,7 @@
   <nav class="time-navigation" aria-label="Date navigation">
     <div class="nav-controls">
       <button type="button" class="nav-btn" @click="$emit('goToPreviousDay')" title="Previous Day" aria-label="Previous day">
-        <span class="nav-arrow">‹</span>
+        <span class="nav-arrow" aria-hidden="true">‹</span>
       </button>
 
       <button type="button" class="today-btn" @click="$emit('goToToday')" title="Today" aria-label="Today">
@@ -10,7 +10,7 @@
       </button>
 
       <button type="button" class="nav-btn" @click="$emit('goToNextDay')" title="Next Day" aria-label="Next day">
-        <span class="nav-arrow">›</span>
+        <span class="nav-arrow" aria-hidden="true">›</span>
       </button>
 
       <div class="date-display">
@@ -27,7 +27,7 @@
 
     <button type="button" class="setup-btn" @click="$emit('openSetup')" title="Open Settings" aria-label="Open settings">
       <span class="setup-icon">⚙️</span>
-      Setup
+      Settings
     </button>
   </nav>
 </template>

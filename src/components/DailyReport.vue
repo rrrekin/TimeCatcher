@@ -20,8 +20,8 @@
       </div>
       <div v-else class="category-breakdown">
         <div
-            v-for="categoryData in categoryBreakdown"
-            :key="categoryData.name"
+            v-for="(categoryData, index) in categoryBreakdown"
+            :key="`${categoryData.name}-${index}`"
             class="category-section"
         >
           <div class="category-header">
