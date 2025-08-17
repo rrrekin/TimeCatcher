@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click="$emit('close')">
+  <div v-if="isOpen" class="modal-overlay" @click="!isAddingCategory && $emit('close')">
     <div class="modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-header">
         <h3 id="modal-title">Settings</h3>
@@ -44,7 +44,7 @@
               type="number"
               id="target-hours"
               :value="tempTargetWorkHours"
-              @input="$emit('updateTempTargetWorkHours', parseFloat(($event.target as HTMLInputElement).value))"
+              @input="onTargetHoursInput($event)"
               min="1"
               max="24"
               step="0.5"
@@ -61,7 +61,7 @@
               <span class="loading-spinner"></span>
               Loading categories...
             </div>
-            <div class="categories-list" v-else ref="categoriesListRef">
+            <div class="categories-list" v-else>
               <div
                   v-for="category in categories"
                   :key="category.id || 0"
@@ -75,8 +75,8 @@
                     :value="editingCategoryName"
                     @input="$emit('updateEditingCategoryName', ($event.target as HTMLInputElement).value)"
                     @keyup.enter="$emit('saveEditCategory', category)"
-                    @keyup.escape="$emit('cancelEditCategory')"
-                    @blur="$emit('saveEditCategory', category)"
+                    @keyup.escape="handleEscapeCancel"
+                    @blur="handleBlurSave(category)"
                     class="category-input"
                     autofocus
                 />
@@ -138,10 +138,10 @@
       </div>
 
       <div class="modal-footer">
-        <button class="cancel-btn" @click="$emit('close')" :disabled="isAddingCategory">
+        <button class="cancel-btn" @click="$emit('close')" :disabled="isBusy">
           Cancel
         </button>
-        <button class="save-btn" @click="$emit('save')" :disabled="isAddingCategory">
+        <button class="save-btn" @click="$emit('save')" :disabled="isBusy">
           Save
         </button>
       </div>
@@ -150,11 +150,11 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType } from 'vue'
+import { type PropType, ref, nextTick, computed } from 'vue'
 import type { Category } from '@/shared/types'
 
 // Props
-defineProps({
+const props = defineProps({
   isOpen: {
     type: Boolean,
     required: true
@@ -206,7 +206,7 @@ defineProps({
 })
 
 // Emits
-defineEmits<{
+const emit = defineEmits<{
   close: []
   save: []
   updateTempTheme: [theme: 'light' | 'dark' | 'auto']
@@ -222,6 +222,38 @@ defineEmits<{
   cancelAddingCategory: []
   startAddingCategory: []
 }>()
+
+// Flag to prevent blur save when cancelling
+const isCancellingEdit = ref(false)
+
+// Computed property to track if any operation is in progress
+const isBusy = computed(() => 
+  props.isAddingCategory || 
+  props.isUpdatingCategory || 
+  props.isDeletingCategory || 
+  props.isSettingDefault
+)
+
+function onTargetHoursInput(e: Event) {
+  const raw = parseFloat((e.target as HTMLInputElement).value)
+  const clamped = Number.isFinite(raw) ? Math.min(24, Math.max(1, raw)) : 1
+  emit('updateTempTargetWorkHours', clamped)
+}
+
+function handleEscapeCancel() {
+  isCancellingEdit.value = true
+  emit('cancelEditCategory')
+  // Reset flag after current tick
+  nextTick(() => {
+    isCancellingEdit.value = false
+  })
+}
+
+function handleBlurSave(category: Category) {
+  if (!isCancellingEdit.value) {
+    emit('saveEditCategory', category)
+  }
+}
 </script>
 
 <style scoped>

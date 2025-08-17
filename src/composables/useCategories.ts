@@ -110,12 +110,19 @@ export function useCategories() {
   }
 
   const categoryExists = async (name: string): Promise<boolean> => {
+    const trimmedName = name.trim()
+    
+    // Short-circuit for empty names - no IPC needed
+    if (!trimmedName) {
+      return false
+    }
+
     if (!window.electronAPI) {
       return false
     }
 
     try {
-      return await window.electronAPI.categoryExists(name.trim())
+      return await window.electronAPI.categoryExists(trimmedName)
     } catch (error) {
       console.error('Failed to check category existence:', error)
       return false

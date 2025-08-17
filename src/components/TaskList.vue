@@ -24,7 +24,7 @@
           No tasks recorded for {{ formattedDate.split(',')[0] }}
         </td>
       </tr>
-      <tr v-else v-for="record in taskRecords" :key="record.id || 0" 
+      <tr v-else v-for="(record, index) in taskRecords" :key="record.id || `${record.task_type}-${record.created_at || record.task_name}-${index}`" 
           :class="{ 
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === 'pause',
@@ -45,8 +45,8 @@
               </div>
               <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
                 <div
-                    v-for="category in categories"
-                    :key="category.id || 0"
+                    v-for="(category, index) in categories"
+                    :key="category.id || `inline-cat-${category.name}-${index}`"
                     class="dropdown-item"
                     :class="{ selected: record.category_name === category.name }"
                     @click="$emit('selectInlineCategory', record.id, category.name)"
@@ -102,8 +102,8 @@
             </div>
             <div v-if="showFormCategoryDropdown" class="dropdown-menu">
               <div
-                  v-for="category in categories"
-                  :key="category.id || 0"
+                  v-for="(category, index) in categories"
+                  :key="category.id || `form-cat-${category.name}-${index}`"
                   class="dropdown-item"
                   :class="{ selected: newTask.categoryId === category.id }"
                   @click="$emit('selectFormCategory', category)"
@@ -116,20 +116,24 @@
         <td>
           <input
               type="text"
-              v-model="newTask.name"
+              :value="newTask.name"
+              @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
               @keydown.enter="$emit('addTask')"
               class="editable-cell add-task-input"
               placeholder="Enter task name..."
           />
         </td>
         <td>
-          <input
-              type="time"
-              v-model="newTask.time"
-              @keydown.enter="$emit('addTask')"
-              class="editable-cell time-input"
-              :placeholder="getCurrentTime()"
-          />
+          <div class="time-input-container">
+            <input
+                type="time"
+                :value="newTask.time"
+                @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
+                @keydown.enter="$emit('addTask')"
+                class="editable-cell time-input"
+            />
+            <span v-if="!newTask.time" class="current-time-hint">{{ getCurrentTime() }}</span>
+          </div>
         </td>
         <td class="duration-cell">-</td>
         <td class="actions-cell">
@@ -160,7 +164,7 @@
 
 <script setup lang="ts">
 import { type PropType } from 'vue'
-import type { TaskRecord, Category } from '@/shared/types'
+import type { TaskRecord, Category, TaskType } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
 // Props
@@ -219,7 +223,7 @@ defineProps({
     required: true
   },
   isSpecial: {
-    type: Function as PropType<(taskType: any) => boolean>,
+    type: Function as PropType<(taskType: TaskType | undefined) => boolean>,
     required: true
   }
 })
@@ -234,6 +238,7 @@ defineEmits<{
   confirmDeleteTask: [record: TaskRecord]
   toggleFormDropdown: []
   selectFormCategory: [category: Category]
+  updateNewTask: [newTask: { categoryId: number | null; name: string; time: string }]
   addTask: []
   addPauseTask: []
   addEndTask: []
@@ -344,6 +349,23 @@ tr:last-child td {
 
 .time-input {
   max-width: 120px;
+}
+
+.time-input-container {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.current-time-hint {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
 }
 
 /* Custom dropdown styles */

@@ -165,12 +165,14 @@ Two separate tsconfig files:
 The application follows a **composable-first architecture** where business logic is separated from UI components:
 
 **Composables Layer** (Business Logic):
+
 - Encapsulate reactive state and logic
 - Provide clean APIs for components to use
 - Handle all database operations and side effects
 - Maintain separation of concerns
 
 **Component Layer** (UI Logic):
+
 - Focus solely on presentation and user interaction
 - Communicate with parent via props (down) and events (up)
 - Use composables for business logic needs
@@ -181,6 +183,7 @@ The application follows a **composable-first architecture** where business logic
 No external store used. State is distributed across composables:
 
 **Core State Composables**:
+
 - **useCategories**: Category CRUD operations and reactive state
 - **useTaskRecords**: Task management, validation, and database operations  
 - **useSettings**: Theme and localStorage management
@@ -188,6 +191,7 @@ No external store used. State is distributed across composables:
 - **useAutoRefresh**: Timer lifecycle management for real-time updates
 
 **UI State** (Component-local):
+
 - Loading states, modals, form visibility
 - Component interaction states (dropdowns, editing modes)
 - Temporary form data and validation states
@@ -364,30 +368,30 @@ No test configuration currently exists in the project.
    - Handles application-level state and lifecycle
    - Manages IPC communication and error handling
 
-2. **`src/main/database.ts`** - Database service layer with all CRUD operations
-3. **`src/main/main.ts`** - Electron main process with IPC handlers
-4. **`src/shared/types.ts`** - Type definitions with runtime constants and UI configuration
-5. **`package.json`** - Build scripts and dependency management
+1. **`src/main/database.ts`** - Database service layer with all CRUD operations
+1. **`src/main/main.ts`** - Electron main process with IPC handlers
+1. **`src/shared/types.ts`** - Type definitions with runtime constants and UI configuration
+1. **`package.json`** - Build scripts and dependency management
 
 ### Business Logic (Composables)
 
-6. **`src/composables/useCategories.ts`** - Category management logic
-7. **`src/composables/useTaskRecords.ts`** - Task operations and validation
-8. **`src/composables/useSettings.ts`** - Settings and theme management
-9. **`src/composables/useDurationCalculations.ts`** - Duration calculation engine
-10. **`src/composables/useAutoRefresh.ts`** - Real-time update management
+1. **`src/composables/useCategories.ts`** - Category management logic
+1. **`src/composables/useTaskRecords.ts`** - Task operations and validation
+1. **`src/composables/useSettings.ts`** - Settings and theme management
+1. **`src/composables/useDurationCalculations.ts`** - Duration calculation engine
+1. **`src/composables/useAutoRefresh.ts`** - Real-time update management
 
 ### UI Components
 
-11. **`src/components/TaskList.vue`** - Task table with inline editing
-12. **`src/components/DailyReport.vue`** - Report visualization
-13. **`src/components/DateNavigation.vue`** - Date controls and settings
-14. **`src/components/SetupModal.vue`** - Configuration modal
+1. **`src/components/TaskList.vue`** - Task table with inline editing
+1. **`src/components/DailyReport.vue`** - Report visualization
+1. **`src/components/DateNavigation.vue`** - Date controls and settings
+1. **`src/components/SetupModal.vue`** - Configuration modal
 
 ### Utility Modules
 
-15. **`src/utils/timeUtils.ts`** - Time parsing and formatting utilities
-16. **`src/utils/dateUtils.ts`** - Date operations and timezone handling
+1. **`src/utils/timeUtils.ts`** - Time parsing and formatting utilities
+1. **`src/utils/dateUtils.ts`** - Date operations and timezone handling
 
 ## Common Development Tasks
 
@@ -469,12 +473,14 @@ The application underwent a major refactoring that reduced the main component fi
 ### Improved Maintainability
 
 **Separation of Concerns**:
+
 - **Business Logic**: Extracted to 5 composables with single responsibilities
 - **UI Components**: Split into 4 focused components with clear interfaces
 - **Utilities**: Common functions moved to 2 utility modules
 - **Type Safety**: Maintained throughout all extracted modules
 
 **Benefits Achieved**:
+
 - **Better Readability**: Each file has a clear, single purpose
 - **Enhanced Testability**: Business logic isolated in composables can be unit tested
 - **Improved Reusability**: Composables can be shared across components
@@ -484,12 +490,14 @@ The application underwent a major refactoring that reduced the main component fi
 ### Architecture Patterns
 
 **Composable-First Design**:
+
 - All business logic encapsulated in reusable composables
 - Components focus solely on presentation and user interaction
 - Clear APIs between composables and components
 - Reactive state management without external stores
 
 **Component Communication**:
+
 - **Props Down**: Parent passes data to children via props
 - **Events Up**: Children emit events to notify parents of changes
 - **No Direct DOM Manipulation**: Vue's reactive system handles all updates

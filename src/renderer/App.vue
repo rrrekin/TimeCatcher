@@ -34,6 +34,7 @@
           @confirm-delete-task="confirmDeleteTask"
           @toggle-form-dropdown="toggleFormDropdown"
           @select-form-category="selectFormCategory"
+          @update-new-task="updateNewTask"
           @add-task="addTask"
           @add-pause-task="addPauseTask"
           @add-end-task="addEndTask"
@@ -44,6 +45,7 @@
         <DailyReport
           :task-records="taskRecords"
           :formatted-date="formattedDate"
+          :date-title="dateTitle"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :target-work-hours="targetWorkHours"
           :total-time-tracked="getTotalTimeTracked()"
@@ -244,6 +246,14 @@ const categoriesListRef = ref<HTMLElement | null>(null)
 
 const formattedDate = computed(() => {
   return formatDateString(toYMDLocalUtil(selectedDate.value))
+})
+
+const dateTitle = computed(() => {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long', 
+    day: 'numeric'
+  }).format(selectedDate.value)
 })
 
 const dateInputValue = computed({
@@ -860,6 +870,10 @@ const toggleFormDropdown = () => {
 const selectFormCategory = (category: Category) => {
   newTask.value.categoryId = category.id ?? null
   showFormCategoryDropdown.value = false
+}
+
+const updateNewTask = (updatedTask: NewTaskForm) => {
+  newTask.value = updatedTask
 }
 
 const getSelectedCategoryName = (): string => {

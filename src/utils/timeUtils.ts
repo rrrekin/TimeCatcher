@@ -6,16 +6,20 @@
 export const parseTimeString = (timeString: string): number | null => {
   if (!timeString) return null
 
-  const parts = timeString.split(':').map(Number)
-  if (parts.length < 2 || parts.some(isNaN)) return null
-
-  const hours = parts[0] || 0
-  const minutes = parts[1] || 0
-  const seconds = parts[2] || 0
-
-  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-    return null
-  }
+  // Strict regex: matches exactly HH:mm or HH:mm:ss format with valid ranges
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/
+  const match = timeString.match(timeRegex)
+  
+  if (!match) return null
+  
+  // Extract captured groups and parse as integers
+  const hours = parseInt(match[1]!, 10)
+  const minutes = parseInt(match[2]!, 10)
+  const seconds = match[3] ? parseInt(match[3], 10) : 0
+  
+  // Additional validation for parsed numbers (should not be needed due to regex, but defensive)
+  if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) return null
+  
   return hours * 60 + minutes + seconds / 60
 }
 
@@ -25,8 +29,11 @@ export const parseTimeString = (timeString: string): number | null => {
  * @returns Formatted string like "2h 30m" or "45m"
  */
 export const formatDurationMinutes = (totalMinutes: number): string => {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = Math.floor(totalMinutes % 60)
+  // Normalize input: clamp negatives to 0 and round fractional minutes
+  const rounded = Math.max(0, Math.round(totalMinutes))
+  
+  const hours = Math.floor(rounded / 60)
+  const minutes = rounded % 60
 
   if (hours > 0) {
     return `${hours}h ${minutes}m`
@@ -42,12 +49,18 @@ export const formatDurationMinutes = (totalMinutes: number): string => {
  * @returns End time in minutes based on date context
  */
 export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): number => {
-  const recordDate = new Date(taskDate + 'T00:00:00')
+  // Parse YYYY-MM-DD safely by splitting and using Date constructor
+  const [yearStr, monthStr, dayStr] = taskDate.split('-')
+  const year = parseInt(yearStr!, 10)
+  const month = parseInt(monthStr!, 10)
+  const day = parseInt(dayStr!, 10)
+  
+  // Construct date with explicit year, monthIndex (month - 1), day
+  const recordDateOnly = new Date(year, month - 1, day)
+  recordDateOnly.setHours(0, 0, 0, 0)
+  
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  
-  const recordDateOnly = new Date(recordDate)
-  recordDateOnly.setHours(0, 0, 0, 0)
   
   // For future days: end time is start time (duration = 0)
   if (recordDateOnly > today) {
@@ -61,7 +74,7 @@ export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): num
   
   // For today: end time is current time (or start time if start is in future)
   const now = new Date()
-  const nowMinutes = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60
+  const nowMinutes = Math.floor(now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60)
   
   // If task start time is in the future, end time is start time (duration = 0)
   if (taskStartTime > nowMinutes) {

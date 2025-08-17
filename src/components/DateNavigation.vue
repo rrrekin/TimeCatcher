@@ -1,15 +1,15 @@
 <template>
   <nav class="time-navigation">
     <div class="nav-controls">
-      <button class="nav-btn" @click="$emit('goToPreviousDay')" title="Previous Day">
+      <button type="button" class="nav-btn" @click="$emit('goToPreviousDay')" title="Previous Day" aria-label="Previous day">
         <span class="nav-arrow">‹</span>
       </button>
 
-      <button class="today-btn" @click="$emit('goToToday')">
+      <button type="button" class="today-btn" @click="$emit('goToToday')" aria-label="Today">
         Today
       </button>
 
-      <button class="nav-btn" @click="$emit('goToNextDay')" title="Next Day">
+      <button type="button" class="nav-btn" @click="$emit('goToNextDay')" title="Next Day" aria-label="Next day">
         <span class="nav-arrow">›</span>
       </button>
 
@@ -18,13 +18,14 @@
         <input
             type="date"
             :value="dateInputValue"
-            @input="$emit('updateDate', ($event.target as HTMLInputElement).value)"
+            @change="$emit('updateDate', ($event.target as HTMLInputElement).value)"
             class="date-picker"
+            aria-label="Select date"
         />
       </div>
     </div>
 
-    <button class="setup-btn" @click="$emit('openSetup')" title="Open Settings">
+    <button type="button" class="setup-btn" @click="$emit('openSetup')" title="Open Settings" aria-label="Open settings">
       <span class="setup-icon">⚙️</span>
       Setup
     </button>
@@ -33,16 +34,10 @@
 
 <script setup lang="ts">
 // Props
-defineProps({
-  formattedDate: {
-    type: String,
-    required: true
-  },
-  dateInputValue: {
-    type: String,
-    required: true
-  }
-})
+defineProps<{
+  formattedDate: string
+  dateInputValue: string
+}>()
 
 // Emits
 defineEmits<{

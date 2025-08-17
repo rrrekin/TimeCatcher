@@ -23,11 +23,20 @@ export const isToday = (dateString: string): boolean => {
 /**
  * Format date string to readable format
  * @param dateString - Date string in YYYY-MM-DD format
+ * @param locale - Optional locale for formatting (defaults to user's locale)
  * @returns Formatted date string like "Friday, January 15, 2024"
  */
-export const formatDateString = (dateString: string): string => {
-  const date = new Date(dateString + 'T00:00:00')
-  return date.toLocaleDateString('en-US', {
+export const formatDateString = (dateString: string, locale?: string): string => {
+  // Parse YYYY-MM-DD safely by splitting and using Date constructor
+  const [yearStr, monthStr, dayStr] = dateString.split('-')
+  const year = parseInt(yearStr!, 10)
+  const month = parseInt(monthStr!, 10)
+  const day = parseInt(dayStr!, 10)
+  
+  // Construct date with explicit year, monthIndex (month - 1), day
+  const date = new Date(year, month - 1, day)
+  
+  return date.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

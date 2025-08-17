@@ -9,7 +9,8 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
 
   // Helper functions
   const isSpecial = (taskType: TaskType | undefined): taskType is SpecialTaskType => {
-    return SPECIAL_TASK_TYPES.includes(taskType as SpecialTaskType)
+    if (taskType === undefined) return false
+    return taskType === 'pause' || taskType === 'end'
   }
 
   const hasEndTaskForSelectedDate = computed(() => {
@@ -107,6 +108,11 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         throw new Error('API not available. Please restart the application.')
       }
 
+      // Early guard: prevent creating a second 'end' task
+      if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
+        throw new Error('End task already exists for selected date')
+      }
+
       const dateString = toYMDLocal(selectedDate.value)
       const currentTime = getCurrentTime()
 
@@ -127,9 +133,11 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
       const isDuplicateEndTask = 
         // Primary check: custom error code
         (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
-        // Fallback check: regex pattern matching error message for duplicate end task
+        // SQLite errno 19 check (SQLITE_CONSTRAINT)
+        (error && typeof error === 'object' && 'errno' in error && (error as any).errno === 19) ||
+        // Fallback check: regex pattern matching for broader SQLite UNIQUE constraint messages
         (error && typeof error === 'object' && 'message' in error && 
-         /(?:unique.*constraint.*failed|constraint.*violation).*(?:task_records.*idx_end_per_day|idx_end_per_day.*task_records)/i.test((error as any).message))
+         /(?:unique.*constraint.*failed|constraint.*(?:failed|violation)).*(?:task_records\.(?:date|idx_end_per_day)|idx_end_per_day|task_records\..*)/i.test((error as any).message))
       
       if (isDuplicateEndTask) {
         throw new Error('An end task already exists for this day. Only one end task is allowed per day.')

@@ -8,7 +8,7 @@
       </div>
     </div>
     <p>
-      {{ formattedDate.split(',')[0] }} - Overview of your time and productivity
+      {{ dateTitle }} - Overview of your time and productivity
       {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
     </p>
 
@@ -67,6 +67,10 @@ const props = defineProps({
     required: true
   },
   formattedDate: {
+    type: String,
+    required: true
+  },
+  dateTitle: {
     type: String,
     required: true
   },
