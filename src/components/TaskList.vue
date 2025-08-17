@@ -82,10 +82,10 @@
         </td>
         <td v-else class="duration-cell">-</td>
         <td class="actions-cell">
-          <button class="action-btn replay-btn" @click="$emit('replayTask', record)" title="Replay this task for today">
+          <button class="action-btn replay-btn" @click="$emit('replayTask', record)" title="Replay this task for today" aria-label="Replay this task">
             ▶▶︎
           </button>
-          <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task">
+          <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task" aria-label="Delete this task">
             🗑
           </button>
         </td>

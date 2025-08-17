@@ -4,13 +4,23 @@ import { parseTimeString, formatDurationMinutes, getLastTaskEndTime } from '@/ut
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
 export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
+  // Precomputed parsed times for performance (computed once per render/refresh)
+  const timeByRecord = computed(() => {
+    const timeMap = new Map<TaskRecord, number | null>()
+    for (const record of taskRecords.value) {
+      timeMap.set(record, parseTimeString(record.start_time))
+    }
+    return timeMap
+  })
+
   // Pre-sorted records for performance (computed once per render/refresh)
   const sortedTaskRecords = computed(() => {
+    const timeMap = timeByRecord.value
     return taskRecords.value
       .filter(record => record.start_time)
       .sort((a, b) => {
-        const timeA = parseTimeString(a.start_time)
-        const timeB = parseTimeString(b.start_time)
+        const timeA = timeMap.get(a)
+        const timeB = timeMap.get(b)
         
         // Handle invalid times deterministically - push nulls to end
         if (timeA === null && timeB === null) return 0
@@ -21,18 +31,16 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
       })
   })
 
-  // Precomputed maps for O(1) lookups (computed once per refresh)
-  const indexMaps = computed(() => {
+  // Precomputed map for O(1) lookups (computed once per refresh)
+  const nextRecordByRecord = computed(() => {
     const records = sortedTaskRecords.value
-    const indexByRecord = new Map<TaskRecord, number>()
-    const nextRecordByRecord = new Map<TaskRecord, TaskRecord | null>()
+    const nextRecordMap = new Map<TaskRecord, TaskRecord | null>()
     
     records.forEach((record, index) => {
-      indexByRecord.set(record, index)
-      nextRecordByRecord.set(record, index < records.length - 1 ? records[index + 1]! : null)
+      nextRecordMap.set(record, index < records.length - 1 ? records[index + 1]! : null)
     })
     
-    return { indexByRecord, nextRecordByRecord }
+    return nextRecordMap
   })
 
   /**
@@ -45,22 +53,23 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
       return '-'
     }
 
-    const { nextRecordByRecord } = indexMaps.value
-    const nextRecord = nextRecordByRecord.get(currentRecord)
+    const nextRecordMap = nextRecordByRecord.value
+    const timeMap = timeByRecord.value
+    const nextRecord = nextRecordMap.get(currentRecord)
     
     // Check if record exists in sorted list
     if (nextRecord === undefined) {
       return '-'
     }
 
-    const currentTime = parseTimeString(currentRecord.start_time)
+    const currentTime = timeMap.get(currentRecord)
     if (currentTime === null) {
       return '-'
     }
 
     // If this is NOT the last task, calculate duration to next task
     if (nextRecord !== null) {
-      const nextTime = parseTimeString(nextRecord.start_time)
+      const nextTime = timeMap.get(nextRecord)
       
       if (nextTime === null || nextTime <= currentTime) {
         return '-'
@@ -81,23 +90,24 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
    */
   const getTotalMinutesTracked = (): number => {
     const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
-    const { nextRecordByRecord } = indexMaps.value
+    const nextRecordMap = nextRecordByRecord.value
+    const timeMap = timeByRecord.value
     let totalMinutes = 0
 
     for (const standardRecord of standardRecords) {
-      const nextRecord = nextRecordByRecord.get(standardRecord)
+      const nextRecord = nextRecordMap.get(standardRecord)
       
       // Skip if record not found in sorted list
       if (nextRecord === undefined) continue
 
-      const currentTime = parseTimeString(standardRecord.start_time)
+      const currentTime = timeMap.get(standardRecord)
       if (currentTime === null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
-        const nextTime = parseTimeString(nextRecord.start_time)
+        const nextTime = timeMap.get(nextRecord)
         
         if (nextTime !== null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
@@ -120,24 +130,25 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
    */
   const getCategoryBreakdown = () => {
     const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
-    const { nextRecordByRecord } = indexMaps.value
+    const nextRecordMap = nextRecordByRecord.value
+    const timeMap = timeByRecord.value
     const categoryTotals: { [categoryName: string]: number } = {}
 
     // Calculate duration for each standard task
     for (const standardRecord of standardRecords) {
-      const nextRecord = nextRecordByRecord.get(standardRecord)
+      const nextRecord = nextRecordMap.get(standardRecord)
       
       // Skip if record not found in sorted list
       if (nextRecord === undefined) continue
 
-      const currentTime = parseTimeString(standardRecord.start_time)
+      const currentTime = timeMap.get(standardRecord)
       if (currentTime === null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
-        const nextTime = parseTimeString(nextRecord.start_time)
+        const nextTime = timeMap.get(nextRecord)
         
         if (nextTime !== null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime

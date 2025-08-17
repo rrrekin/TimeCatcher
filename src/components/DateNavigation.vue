@@ -20,8 +20,7 @@
             :value="dateInputValue"
             @change="$emit('updateDate', ($event.target as HTMLInputElement).value)"
             class="date-picker"
-            aria-label="Select date"
-            :aria-describedby="dateLabelId"
+            :aria-labelledby="dateLabelId"
         />
       </div>
     </div>
@@ -49,8 +48,8 @@ defineEmits<{
   openSetup: []
 }>()
 
-// Component-scoped unique identifier
-const dateLabelId = 'date-navigation-label'
+// Generate unique identifier per component instance
+const dateLabelId = `date-navigation-label-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 </script>
 
 <style scoped>

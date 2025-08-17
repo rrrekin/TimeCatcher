@@ -3,6 +3,9 @@ import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType, SpecialT
 import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES } from '@/shared/types'
 import { toYMDLocal } from '@/utils/dateUtils'
 
+// Error message constants
+const DUPLICATE_END_TASK_MSG = 'An end task already exists for this day. Only one end task is allowed per day.'
+
 export function useTaskRecords(selectedDate: Ref<Date>) {
   const taskRecords: Ref<TaskRecord[]> = ref([])
   const isLoadingTasks = ref(false)
@@ -10,7 +13,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
   // Helper functions
   const isSpecial = (taskType: TaskType | undefined): taskType is SpecialTaskType => {
     if (taskType === undefined) return false
-    return taskType === 'pause' || taskType === 'end'
+    return SPECIAL_TASK_TYPES.includes(taskType as SpecialTaskType)
   }
 
   const hasEndTaskForSelectedDate = computed(() => {
@@ -64,11 +67,12 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
    * Load task records for selected date
    */
   const loadTaskRecords = async (): Promise<void> => {
+    if (!window.electronAPI) {
+      throw new Error('API not available. Please restart the application.')
+    }
+
     isLoadingTasks.value = true
     try {
-      if (!window.electronAPI) {
-        throw new Error('API not available. Please restart the application.')
-      }
       const dateString = toYMDLocal(selectedDate.value)
       taskRecords.value = await window.electronAPI.getTaskRecordsByDate(dateString)
     } catch (error) {
@@ -111,7 +115,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
 
       // Early guard: prevent creating a second 'end' task
       if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
-        throw new Error('End task already exists for selected date')
+        throw new Error(DUPLICATE_END_TASK_MSG)
       }
 
       const dateString = toYMDLocal(selectedDate.value)
@@ -130,18 +134,19 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     } catch (error) {
       console.error(`Failed to add ${taskType} task:`, error)
       
-      // Check if error is due to duplicate end task constraint
-      const isDuplicateEndTask = 
+      // Check if error is due to duplicate end task constraint (only for 'end' tasks)
+      const isDuplicateEndTask = taskType === 'end' && (
         // Primary check: custom error code
         (error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
         // SQLite errno 19 check (SQLITE_CONSTRAINT)
         (error && typeof error === 'object' && 'errno' in error && (error as any).errno === 19) ||
-        // Fallback check: regex pattern matching for specific SQLite UNIQUE constraint messages
+        // Fallback check: regex pattern matching for end-task specific constraint messages
         (error && typeof error === 'object' && 'message' in error && 
-         /(?:unique.*constraint.*failed|constraint.*(?:failed|violation)).*(?:task_records\.(?:date|idx_end_per_day)|idx_end_per_day)/i.test((error as any).message))
+         /(?:unique.*constraint.*failed|constraint.*(?:failed|violation)).*idx_end_per_day/i.test((error as any).message))
+      )
       
       if (isDuplicateEndTask) {
-        throw new Error('An end task already exists for this day. Only one end task is allowed per day.')
+        throw new Error(DUPLICATE_END_TASK_MSG)
       }
       
       throw new Error(`Failed to add ${taskType} task. Please try again.`)

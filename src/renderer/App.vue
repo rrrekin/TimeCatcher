@@ -45,7 +45,6 @@
       <div class="reports-pane">
         <DailyReport
           :task-records="taskRecords"
-          :formatted-date="formattedDate"
           :date-title="dateTitle"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :target-work-hours="targetWorkHours"

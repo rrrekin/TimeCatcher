@@ -90,11 +90,10 @@ export function useSettings() {
     // Validate and update theme
     currentTheme.value = tempTheme.value
     
-    // Validate tempTargetWorkHours before committing
-    if (Number.isFinite(tempTargetWorkHours.value) && 
-        tempTargetWorkHours.value > 0 && 
-        tempTargetWorkHours.value <= 24) {
-      targetWorkHours.value = tempTargetWorkHours.value
+    // Validate tempTargetWorkHours before committing (coerce to number first)
+    const coerced = Number(tempTargetWorkHours.value)
+    if (Number.isFinite(coerced) && coerced > 0 && coerced <= 24) {
+      targetWorkHours.value = coerced
     } else {
       // Keep old value or use safe default if current value is also invalid
       if (!Number.isFinite(targetWorkHours.value) || 

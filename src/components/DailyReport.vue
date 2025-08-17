@@ -3,8 +3,8 @@
     <div class="report-header">
       <h2>Daily Report - Standard Tasks: {{ totalTimeTracked }}</h2>
       <div class="status-emojis">
-        <span v-if="!hasEndTaskForSelectedDate" class="status-emoji">⚠️</span>
-        <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji">😊</span>
+        <span v-if="!hasEndTaskForSelectedDate" class="status-emoji" role="img" aria-label="Missing end task" title="Missing end task">⚠️</span>
+        <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji" role="img" aria-label="Target reached" title="Target reached">😊</span>
       </div>
     </div>
     <p>
@@ -57,54 +57,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue'
+import { computed } from 'vue'
 import type { TaskRecord } from '@/shared/types'
 
-// Props
-const props = defineProps({
-  taskRecords: {
-    type: Array as PropType<TaskRecord[]>,
-    required: true
-  },
-  formattedDate: {
-    type: String,
-    required: true
-  },
-  dateTitle: {
-    type: String,
-    required: true
-  },
-  hasEndTaskForSelectedDate: {
-    type: Boolean,
-    required: true
-  },
-  targetWorkHours: {
-    type: Number,
-    required: true
-  },
-  totalTimeTracked: {
-    type: String,
-    required: true
-  },
-  totalMinutesTracked: {
-    type: Number,
-    required: true
-  },
-  categoryBreakdown: {
-    type: Array as PropType<Array<{
+interface DailyReportProps {
+  taskRecords: TaskRecord[]
+  dateTitle: string
+  hasEndTaskForSelectedDate: boolean
+  targetWorkHours: number
+  totalTimeTracked: string
+  totalMinutesTracked: number
+  categoryBreakdown: Array<{
+    name: string
+    taskCount: number
+    totalTime: string
+    percentage: number
+    taskSummaries: Array<{
       name: string
-      taskCount: number
+      count: number
       totalTime: string
-      percentage: number
-      taskSummaries: Array<{
-        name: string
-        count: number
-        totalTime: string
-      }>
-    }>>,
-    required: true
-  }
-})
+    }>
+  }>
+}
+
+// Props
+const props = defineProps<DailyReportProps>()
 
 // Computed properties
 const standardTaskCount = computed(() => {
