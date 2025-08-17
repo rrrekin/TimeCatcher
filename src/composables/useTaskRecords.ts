@@ -148,8 +148,11 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         throw new Error(DUPLICATE_END_TASK_MSG)
       }
       
-      const originalMessage = error instanceof Error ? error.message : String(error)
-      const newError = new Error(`Failed to add ${taskType} task. Please try again. Cause: ${originalMessage}`)
+      // Log the original error for internal debugging
+      console.error(`Failed to add ${taskType} task - Internal error:`, error)
+      
+      // Create a generic user-facing error
+      const newError = new Error(`Failed to add ${taskType} task. Please try again.`)
       
       // Add cause with backwards compatibility
       try {

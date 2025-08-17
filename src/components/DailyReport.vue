@@ -1,20 +1,24 @@
 <template>
   <div class="daily-report">
     <div class="report-header">
-      <h2>Daily Report - Standard Tasks: {{ totalTimeTracked }}</h2>
-      <div class="status-emojis">
+      <h2>Daily Report: {{ totalTimeTracked }}</h2>
+      <div class="status-emojis" aria-live="polite" aria-atomic="true">
         <span v-if="!hasEndTaskForSelectedDate" class="status-emoji" role="img" aria-label="Missing end task" title="Missing end task">⚠️</span>
         <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji" role="img" aria-label="Target reached" title="Target reached">😊</span>
+        <!-- Screen reader accessible status text -->
+        <span class="sr-only">
+          {{ getStatusText() }}
+        </span>
       </div>
     </div>
     <p>
-      {{ dateTitle }} - Overview of your time and productivity
+      {{ dateTitle }}
       {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
     </p>
 
     <!-- Category Breakdown -->
     <div class="report-section">
-      <h3>Detailed Time by Category</h3>
+      <h3>Summary per Category & Task</h3>
       <div v-if="standardTaskCount === 0" class="empty-report">
         No standard tasks recorded for this day
       </div>
@@ -27,7 +31,7 @@
           <div class="category-header">
             <div class="category-info">
               <span class="category-name">{{ categoryData.name }}</span>
-              <span class="category-tasks">{{ categoryData.taskCount }} tasks</span>
+              <span class="category-tasks">{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span>
             </div>
             <div class="category-time">{{ categoryData.totalTime }}</div>
             <div class="category-bar">
@@ -44,8 +48,8 @@
           </div>
           
           <!-- Task summaries within category -->
-          <div class="task-summaries">
-            <div
+          <ul class="task-summaries">
+            <li
                 v-for="(task, index) in categoryData.taskSummaries"
                 :key="task.name ? `${task.name}-${index}` : index"
                 class="task-summary"
@@ -53,8 +57,8 @@
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
               <span class="task-time">{{ task.totalTime }}</span>
-            </div>
-          </div>
+            </li>
+          </ul>
         </div>
       </div>
     </div>
@@ -97,9 +101,36 @@ const clampPercent = (p: number): number => {
 const standardTaskCount = computed(() => {
   return props.taskRecords.filter(r => r.task_type === 'normal').length
 })
+
+const getStatusText = () => {
+  const statusMessages = []
+  
+  if (!props.hasEndTaskForSelectedDate) {
+    statusMessages.push('Day not finalized - missing end task')
+  }
+  
+  if (props.totalMinutesTracked >= (props.targetWorkHours * 60)) {
+    statusMessages.push('Daily target work hours reached')
+  }
+  
+  return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
+}
 </script>
 
 <style scoped>
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .daily-report {
   background: var(--bg-primary);
   border-radius: 12px;

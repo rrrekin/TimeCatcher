@@ -17,7 +17,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
   const sortedTaskRecords = computed(() => {
     const timeMap = timeByRecord.value
     return taskRecords.value
-      .filter(record => record.start_time)
+      .filter(record => typeof record.start_time === 'string' ? record.start_time.trim().length > 0 : Boolean(record.start_time))
       .sort((a, b) => {
         const timeA: number | null = timeMap.get(a) ?? null
         const timeB: number | null = timeMap.get(b) ?? null
@@ -71,8 +71,12 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     if (nextRecord !== null) {
       const nextTime = timeMap.get(nextRecord)
       
-      if (nextTime === null || nextTime <= currentTime) {
+      if (nextTime === null || nextTime < currentTime) {
         return '-'
+      }
+      
+      if (nextTime === currentTime) {
+        return formatDurationMinutes(0)
       }
       
       return formatDurationMinutes(nextTime - currentTime)

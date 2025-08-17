@@ -18,16 +18,6 @@ describe('getLastTaskEndTime', () => {
     vi.setSystemTime(mockDate)
   }
 
-  /**
-   * Helper to create YYYY-MM-DD string from Date
-   */
-  function toDateString(date: Date): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
   describe('Future dates', () => {
     it('should return taskStartTime for future dates (duration = 0)', () => {
       // Mock current time to Dec 15, 2024, 10:00 AM
@@ -179,6 +169,19 @@ describe('getLastTaskEndTime', () => {
       const result = getLastTaskEndTime(emptyDate, taskStartTime)
       
       // Should return taskStartTime as fallback for empty dates
+      expect(result).toBe(taskStartTime)
+    })
+
+    it('should handle non-existent calendar dates gracefully', () => {
+      // Mock current time to Dec 15, 2024, 10:00 AM
+      mockDateToTime('2024-12-15T10:00:00')
+      
+      const nonExistentDate = '2024-02-31' // February 31st doesn't exist
+      const taskStartTime = 540 // 9:00 AM
+      
+      const result = getLastTaskEndTime(nonExistentDate, taskStartTime)
+      
+      // Should return taskStartTime as fallback for non-existent dates
       expect(result).toBe(taskStartTime)
     })
   })

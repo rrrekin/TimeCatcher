@@ -42,7 +42,7 @@
               <button 
                 type="button"
                 class="dropdown-trigger" 
-                @click="record.id != null && $emit('toggleInlineDropdown', record.id)"
+                @click="record.id != null && ($emit('toggleInlineDropdown', record.id), initializeActiveOption(record.id, record.category_name))"
                 :aria-expanded="record.id != null && showInlineDropdown[record.id]"
                 :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : undefined"
               >
@@ -54,6 +54,8 @@
                 class="dropdown-menu"
                 role="listbox"
                 :id="`dropdown-menu-${record.id}`"
+                @keydown="handleDropdownKeydown($event, record.id)"
+                tabindex="-1"
               >
                 <div
                     v-for="(category, index) in categories"
@@ -62,6 +64,7 @@
                     role="option"
                     :class="{ selected: record.category_name === category.name }"
                     :aria-selected="record.category_name === category.name"
+                    :tabindex="(activeOptionIndex[record.id] ?? 0) === index ? '0' : '-1'"
                     @click="$emit('selectInlineCategory', record.id, category.name)"
                 >
                   {{ category.name }}
@@ -191,7 +194,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType } from 'vue'
+import { type PropType, ref, nextTick } from 'vue'
 import type { TaskRecord, Category, TaskType } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
@@ -257,7 +260,7 @@ defineProps({
 })
 
 // Emits
-defineEmits<{
+const emit = defineEmits<{
   toggleInlineDropdown: [recordId: number]
   selectInlineCategory: [recordId: number, categoryName: string]
   handleBlur: [recordId: number, field: string, event: Event]
@@ -271,6 +274,66 @@ defineEmits<{
   addPauseTask: []
   addEndTask: []
 }>()
+
+// Reactive state for dropdown keyboard navigation
+const activeOptionIndex = ref<Record<number, number>>({}) // recordId -> option index
+
+// Keyboard handling for dropdown navigation
+const handleDropdownKeydown = async (event: KeyboardEvent, recordId: number) => {
+  if (!props.categories.length) return
+  
+  const currentIndex = activeOptionIndex.value[recordId] ?? 0
+  
+  switch (event.key) {
+    case 'ArrowDown':
+      event.preventDefault()
+      const nextIndex = Math.min(currentIndex + 1, props.categories.length - 1)
+      activeOptionIndex.value[recordId] = nextIndex
+      await nextTick()
+      focusOption(recordId, nextIndex)
+      break
+      
+    case 'ArrowUp':
+      event.preventDefault()
+      const prevIndex = Math.max(currentIndex - 1, 0)
+      activeOptionIndex.value[recordId] = prevIndex
+      await nextTick()
+      focusOption(recordId, prevIndex)
+      break
+      
+    case 'Enter':
+      event.preventDefault()
+      const selectedCategory = props.categories[currentIndex]
+      if (selectedCategory) {
+        emit('selectInlineCategory', recordId, selectedCategory.name)
+      }
+      break
+      
+    case 'Escape':
+      event.preventDefault()
+      emit('toggleInlineDropdown', recordId)
+      await nextTick()
+      focusTriggerButton(recordId)
+      break
+  }
+}
+
+// Focus management helpers
+const focusOption = (recordId: number, optionIndex: number) => {
+  const option = document.querySelector(`#dropdown-menu-${recordId} [role="option"]:nth-child(${optionIndex + 1})`) as HTMLElement
+  option?.focus()
+}
+
+const focusTriggerButton = (recordId: number) => {
+  const button = document.querySelector(`[aria-controls="dropdown-menu-${recordId}"]`) as HTMLElement
+  button?.focus()
+}
+
+// Initialize active option when dropdown opens
+const initializeActiveOption = (recordId: number, selectedCategoryName: string) => {
+  const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
+  activeOptionIndex.value[recordId] = Math.max(0, selectedIndex)
+}
 </script>
 
 <style scoped>

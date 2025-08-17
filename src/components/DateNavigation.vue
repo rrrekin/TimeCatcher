@@ -49,7 +49,7 @@ defineEmits<{
 }>()
 
 // Generate unique identifier per component instance
-const dateInputId = crypto?.randomUUID?.() ?? `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const dateInputId = globalThis.crypto?.randomUUID?.() ?? `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 </script>
 
 <style scoped>
