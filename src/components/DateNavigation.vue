@@ -33,6 +33,8 @@
 </template>
 
 <script setup lang="ts">
+import { useId } from 'vue'
+
 // Props
 defineProps<{
   formattedDate: string
@@ -48,8 +50,8 @@ defineEmits<{
   openSetup: []
 }>()
 
-// Generate unique identifier per component instance
-const dateInputId = globalThis.crypto?.randomUUID?.() ?? `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+// Generate SSR-safe unique identifier per component instance
+const dateInputId = useId()
 </script>
 
 <style scoped>

@@ -63,7 +63,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     }
 
     const currentTime = timeMap.get(currentRecord)
-    if (currentTime === null) {
+    if (currentTime == null) {
       return '-'
     }
 
@@ -71,7 +71,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     if (nextRecord !== null) {
       const nextTime = timeMap.get(nextRecord)
       
-      if (nextTime === null || nextTime < currentTime) {
+      if (nextTime == null || nextTime < currentTime) {
         return '-'
       }
       

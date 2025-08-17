@@ -70,9 +70,11 @@ export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): num
   const recordDateOnly = new Date(year, month - 1, day)
   recordDateOnly.setHours(0, 0, 0, 0)
   
-  // Validate that the constructed date is valid
-  if (isNaN(recordDateOnly.getTime())) {
-    // Invalid date - return start time (duration = 0)
+  // Round-trip validation to catch JS date rollover (e.g., Feb 31 → Mar 2)
+  if (recordDateOnly.getFullYear() !== year ||
+      recordDateOnly.getMonth() !== month - 1 ||
+      recordDateOnly.getDate() !== day) {
+    // Date rollover occurred - return start time (duration = 0)
     return taskStartTime
   }
   

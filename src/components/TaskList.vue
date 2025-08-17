@@ -45,6 +45,7 @@
                 @click="record.id != null && ($emit('toggleInlineDropdown', record.id), initializeActiveOption(record.id, record.category_name))"
                 :aria-expanded="record.id != null && showInlineDropdown[record.id]"
                 :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : undefined"
+                aria-haspopup="listbox"
               >
                 <span class="dropdown-value">{{ record.category_name }}</span>
                 <span class="dropdown-arrow">▼</span>
@@ -119,6 +120,7 @@
               @click="$emit('toggleFormDropdown')"
               :aria-expanded="showFormCategoryDropdown"
               aria-controls="form-dropdown-menu"
+              aria-haspopup="listbox"
             >
               <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
               <span class="dropdown-arrow">▼</span>
@@ -199,7 +201,7 @@ import type { TaskRecord, Category, TaskType } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
 // Props
-defineProps({
+const props = defineProps({
   taskRecords: {
     type: Array as PropType<TaskRecord[]>,
     required: true
@@ -330,9 +332,22 @@ const focusTriggerButton = (recordId: number) => {
 }
 
 // Initialize active option when dropdown opens
-const initializeActiveOption = (recordId: number, selectedCategoryName: string) => {
+const initializeActiveOption = async (recordId: number, selectedCategoryName: string) => {
   const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
-  activeOptionIndex.value[recordId] = Math.max(0, selectedIndex)
+  const resolvedIndex = Math.max(0, selectedIndex)
+  activeOptionIndex.value[recordId] = resolvedIndex
+  
+  // Wait for DOM update to ensure dropdown menu is rendered
+  await nextTick()
+  
+  // Focus the active option in the dropdown
+  try {
+    const activeOption = document.querySelector(`#dropdown-menu-${recordId} [role="option"]:nth-child(${resolvedIndex + 1})`) as HTMLElement
+    activeOption?.focus()
+  } catch (error) {
+    // Silently handle cases where the element is not found or focus fails
+    console.debug('Could not focus dropdown option:', error)
+  }
 }
 </script>
 

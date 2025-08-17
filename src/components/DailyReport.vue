@@ -42,6 +42,7 @@
                   aria-valuemin="0"
                   aria-valuemax="100"
                   :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
+                  :aria-label="`${categoryData.name} progress: ${clampPercent(categoryData.percentage).toFixed(0)}%`"
                   :style="{ width: clampPercent(categoryData.percentage) + '%' }"
               ></div>
             </div>
