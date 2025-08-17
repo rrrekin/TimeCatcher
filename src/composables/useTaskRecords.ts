@@ -45,7 +45,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     const match = trimmed.match(timeRegex)
     
     if (!match) {
-      throw new Error('Time must be in HH:mm format (e.g., 09:30 or 14:15)')
+      throw new Error('Time must be in H:mm or HH:mm format (e.g., 9:30, 09:30, or 14:15)')
     }
     
     const hours = parseInt(match[1]!, 10)
@@ -149,7 +149,10 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         throw new Error(DUPLICATE_END_TASK_MSG)
       }
       
-      throw new Error(`Failed to add ${taskType} task. Please try again.`)
+      const originalMessage = error instanceof Error ? error.message : String(error)
+      throw new Error(`Failed to add ${taskType} task. Please try again. Cause: ${originalMessage}`, {
+        cause: error
+      })
     }
   }
 

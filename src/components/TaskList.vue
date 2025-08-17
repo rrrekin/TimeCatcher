@@ -39,11 +39,21 @@
           <td>
             <div class="custom-dropdown table-dropdown"
                  :class="{ open: record.id != null && showInlineDropdown[record.id] }">
-              <div class="dropdown-trigger" @click="record.id != null && $emit('toggleInlineDropdown', record.id)">
+              <button 
+                type="button"
+                class="dropdown-trigger" 
+                @click="record.id != null && $emit('toggleInlineDropdown', record.id)"
+                :aria-expanded="record.id != null && showInlineDropdown[record.id]"
+                :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : undefined"
+              >
                 <span class="dropdown-value">{{ record.category_name }}</span>
                 <span class="dropdown-arrow">▼</span>
-              </div>
-              <div v-if="record.id != null && showInlineDropdown[record.id]" class="dropdown-menu">
+              </button>
+              <div 
+                v-if="record.id != null && showInlineDropdown[record.id]" 
+                class="dropdown-menu"
+                :id="`dropdown-menu-${record.id}`"
+              >
                 <div
                     v-for="(category, index) in categories"
                     :key="category.id || `inline-cat-${category.name}-${index}`"
@@ -179,10 +189,6 @@ defineProps({
   },
   isLoadingTasks: {
     type: Boolean,
-    required: true
-  },
-  formattedDate: {
-    type: String,
     required: true
   },
   displayDate: {

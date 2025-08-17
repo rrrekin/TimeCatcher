@@ -33,6 +33,11 @@
             <div class="category-bar">
               <div
                   class="category-progress"
+                  role="progressbar"
+                  :aria-valuenow="Math.max(0, Math.min(100, categoryData.percentage))"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  :aria-valuetext="`${Math.max(0, Math.min(100, categoryData.percentage)).toFixed(0)}%`"
                   :style="{ width: Math.max(0, Math.min(100, categoryData.percentage)) + '%' }"
               ></div>
             </div>

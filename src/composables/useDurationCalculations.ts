@@ -19,8 +19,8 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
     return taskRecords.value
       .filter(record => record.start_time)
       .sort((a, b) => {
-        const timeA = timeMap.get(a)
-        const timeB = timeMap.get(b)
+        const timeA: number | null = timeMap.get(a) ?? null
+        const timeB: number | null = timeMap.get(b) ?? null
         
         // Handle invalid times deterministically - push nulls to end
         if (timeA === null && timeB === null) return 0
@@ -98,18 +98,18 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
       const nextRecord = nextRecordMap.get(standardRecord)
       
       // Skip if record not found in sorted list
-      if (nextRecord === undefined) continue
+      if (nextRecord == null) continue
 
       const currentTime = timeMap.get(standardRecord)
-      if (currentTime === null) continue
+      if (currentTime == null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
-      if (nextRecord !== null) {
+      if (nextRecord != null) {
         const nextTime = timeMap.get(nextRecord)
         
-        if (nextTime !== null && nextTime > currentTime) {
+        if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
       } else {
@@ -139,18 +139,18 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
       const nextRecord = nextRecordMap.get(standardRecord)
       
       // Skip if record not found in sorted list
-      if (nextRecord === undefined) continue
+      if (nextRecord == null) continue
 
       const currentTime = timeMap.get(standardRecord)
-      if (currentTime === null) continue
+      if (currentTime == null) continue
 
       let durationMinutes = 0
 
       // If this is NOT the last task, calculate duration to next task
-      if (nextRecord !== null) {
+      if (nextRecord != null) {
         const nextTime = timeMap.get(nextRecord)
         
-        if (nextTime !== null && nextTime > currentTime) {
+        if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
       } else {

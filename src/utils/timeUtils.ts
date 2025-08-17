@@ -56,9 +56,22 @@ export const getLastTaskEndTime = (taskDate: string, taskStartTime: number): num
   const month = parseInt(monthStr!, 10)
   const day = parseInt(dayStr!, 10)
   
+  // Validate parsed components
+  if (isNaN(year) || isNaN(month) || isNaN(day) || 
+      month < 1 || month > 12 || day < 1 || day > 31) {
+    // Invalid date format - return start time (duration = 0)
+    return taskStartTime
+  }
+  
   // Construct date with explicit year, monthIndex (month - 1), day
   const recordDateOnly = new Date(year, month - 1, day)
   recordDateOnly.setHours(0, 0, 0, 0)
+  
+  // Validate that the constructed date is valid
+  if (isNaN(recordDateOnly.getTime())) {
+    // Invalid date - return start time (duration = 0)
+    return taskStartTime
+  }
   
   const today = new Date()
   today.setHours(0, 0, 0, 0)

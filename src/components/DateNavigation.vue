@@ -14,13 +14,13 @@
       </button>
 
       <div class="date-display">
-        <label class="date-label" :id="dateLabelId">{{ formattedDate }}</label>
+        <label class="date-label" :for="dateInputId">{{ formattedDate }}</label>
         <input
             type="date"
+            :id="dateInputId"
             :value="dateInputValue"
             @change="$emit('updateDate', ($event.target as HTMLInputElement).value)"
             class="date-picker"
-            :aria-labelledby="dateLabelId"
         />
       </div>
     </div>
@@ -50,6 +50,7 @@ defineEmits<{
 
 // Generate unique identifier per component instance
 const dateLabelId = `date-navigation-label-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const dateInputId = `date-navigation-input-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 </script>
 
 <style scoped>

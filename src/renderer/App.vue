@@ -16,7 +16,6 @@
           :task-records="taskRecords"
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
-          :formatted-date="formattedDate"
           :display-date="displayDate"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :show-inline-dropdown="showInlineDropdown"
