@@ -426,11 +426,14 @@ const focusFormTriggerButton = () => {
 
 // Handle form dropdown toggle - only initialize when opening
 const handleFormDropdownToggle = async () => {
-  // 1. Emit the toggle first
+  // Capture pre-toggle intent to avoid race condition
+  const willOpen = !props.showFormCategoryDropdown
+  
+  // Emit the toggle
   emit('toggleFormDropdown')
   
-  // 2. Only initialize when opening (showFormCategoryDropdown was false before toggle)
-  if (!props.showFormCategoryDropdown) {
+  // Only initialize when opening and categories exist
+  if (willOpen) {
     // Guard against empty/loading categories
     if (!props.categories || props.categories.length === 0) {
       return
