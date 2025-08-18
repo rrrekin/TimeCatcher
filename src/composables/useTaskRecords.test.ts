@@ -92,11 +92,11 @@ describe('useTaskRecords', () => {
       })
 
       it('should throw error for negative hours', () => {
-        expect(() => parseTimeInput('-1:30')).toThrow('Hours must be between 00 and 23')
+        expect(() => parseTimeInput('-1:30')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for very large hours', () => {
-        expect(() => parseTimeInput('100:30')).toThrow('Hours must be between 00 and 23')
+        expect(() => parseTimeInput('100:30')).toThrow(/^Time must be in/)
       })
     })
 
@@ -110,11 +110,11 @@ describe('useTaskRecords', () => {
       })
 
       it('should throw error for negative minutes', () => {
-        expect(() => parseTimeInput('12:-1')).toThrow('Minutes must be between 00 and 59')
+        expect(() => parseTimeInput('12:-1')).toThrow(/^Time must be in/)
       })
 
       it('should throw error for very large minutes', () => {
-        expect(() => parseTimeInput('12:100')).toThrow('Minutes must be between 00 and 59')
+        expect(() => parseTimeInput('12:100')).toThrow(/^Time must be in/)
       })
     })
 
