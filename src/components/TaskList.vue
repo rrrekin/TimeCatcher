@@ -362,7 +362,7 @@ const formListbox = useListboxNavigation({
     focusFormTriggerButton()
   },
   getOptionSelector: (contextId: string | number, optionIndex: number) => 
-    `[data-option-index="${optionIndex}"]`
+    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
 })
 
 // Keyboard handling for inline dropdown navigation
@@ -451,7 +451,8 @@ const handleFormDropdownToggle = async () => {
 // Initialize form dropdown active option when opened
 const initializeFormActiveOption = () => {
   const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
-  formListbox.initializeActiveOption('form', selectedIndex)
+  const clampedIndex = Math.max(0, selectedIndex)
+  formListbox.initializeActiveOption('form', clampedIndex)
 }
 
 // Guarded add task handler
@@ -473,7 +474,8 @@ const onAddTaskEnter = () => {
 // Initialize active option when dropdown opens
 const initializeActiveOption = (recordId: number, selectedCategoryName: string) => {
   const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
-  inlineListbox.initializeActiveOption(recordId, selectedIndex)
+  const index = selectedIndex === -1 ? 0 : selectedIndex
+  inlineListbox.initializeActiveOption(recordId, index)
 }
 </script>
 
