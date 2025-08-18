@@ -20,7 +20,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once and exit
 - `npm run test:ui` - Open Vitest UI for interactive testing
-- `npm run test -- --coverage` - Run tests with coverage reporting
+- `npm run test:coverage` - Run tests with coverage reporting using the v8 provider
+- `npm run test -- --coverage` - Run tests with coverage reporting (alternative syntax)
+
+**Coverage Provider**: Uses @vitest/coverage-v8 for fast, accurate coverage reporting with native V8 coverage.
 
 ### Important Notes
 
@@ -197,7 +200,7 @@ No external store used. State is distributed across composables:
 - **useSettings**: Theme and localStorage management
 - **useDurationCalculations**: Optimized duration calculations and aggregations
 - **useAutoRefresh**: Timer lifecycle management for real-time updates
-- **useListboxNavigation**: Keyboard navigation, focus management, and accessibility for dropdown components
+- **useListboxNavigation**: Keyboard navigation, focus management, and accessibility for dropdown components (see [Keyboard Navigation Implementation](#keyboard-navigation))
 
 **UI State** (Component-local):
 
@@ -212,6 +215,11 @@ No external store used. State is distributed across composables:
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
 - **Keyboard Navigation**: Full keyboard support for dropdowns (Arrow keys, Home/End, Enter/Space, Escape/Tab)
 - **Accessibility Support**: ARIA attributes, focus management, and screen reader compatibility
+  - Use `role="listbox"` on the container and `role="option"` on each item
+  - Manage active item focus with `aria-activedescendant` on the focus owner
+  - Provide stable IDs for each option and reference them from `aria-activedescendant`
+  - Use `aria-controls` where the list interacts with other widgets
+  - Maintain clear ARIA relationships for consistent screen reader experience
 - **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
@@ -368,31 +376,24 @@ Main window settings in `src/main/main.ts`:
 
 ### Testing
 
-The project uses Vitest for comprehensive testing with **109 tests** across **5 test files** achieving **27.7% overall coverage**:
+The project uses Vitest for comprehensive testing. For current test counts and coverage metrics, run `npm run test:coverage` to generate up-to-date reports.
 
 **Test Configuration**:
 
-- **`vitest.config.ts`** - Dedicated Vitest configuration with Vue plugin support for component testing
-- **`vite.config.ts`** - Production build configuration (testing config removed to avoid conflicts)
-- **Coverage reporting** with v8 provider generating text, HTML, and LCOV reports
+- **`vitest.config.ts`** - Vitest setup with Vue plugin for component testing and coverage configuration
+- **`vite.config.ts`** - Production build settings with testing configuration removed to avoid conflicts
+- **Coverage reports** are produced in text, HTML, and LCOV formats via the v8 provider
 
-**Unit Tests**:
+**Unit Tests** (`src/**/*.test.ts`):
 
-- **`src/utils/timeUtils.test.ts`** - Time utility functions (13 tests) including DST transitions, edge cases, and date validation
-- **`src/composables/useTaskRecords.test.ts`** - Task record operations (25 tests) covering validation, normalization, and error handling
-- **`src/composables/useDurationCalculations.test.ts`** - Duration calculation logic (15 tests) covering complex business logic, task sorting, and category breakdowns
-- **`src/composables/useListboxNavigation.test.ts`** - Keyboard navigation (28 tests) covering accessibility, focus management, and dropdown interactions
+- **Time utilities** - Date/time parsing, formatting, and duration calculations
+- **Task record operations** - Validation, normalization, and error handling
+- **Duration calculations** - Business logic for task timing and category breakdowns
+- **Listbox navigation** - Keyboard accessibility and focus management
 
-**Component Tests**:
+**Component Tests** (`src/**/*.spec.ts` or component-specific `.test.ts`):
 
-- **`src/components/TaskList.test.ts`** - Vue component testing (28 tests) using @vue/test-utils covering dropdown interactions, form validation, and user interactions
-
-**Test Coverage Highlights**:
-
-- `useListboxNavigation.ts`: **100% coverage** (recently created composable)
-- `useDurationCalculations.ts`: **96.74% coverage** (complex business logic)
-- `TaskList.vue`: **87.42% coverage** (most complex component)
-- `types.ts`: **100% coverage** (runtime constants and type definitions)
+- **Vue components** via @vue/test-utils covering user interactions and component behavior
 
 **Test Patterns**:
 
@@ -402,6 +403,12 @@ The project uses Vitest for comprehensive testing with **109 tests** across **5 
 - **Mock management**: Use Vitest fake timers (`vi.useFakeTimers()`, `vi.setSystemTime()`) for reliable date/time testing
 - **Component mocking**: Mock complex dependencies (composables, utilities) for focused component testing
 - **Vue Test Utils integration**: Full component rendering with props, events, and DOM interactions
+
+**Test Workflow**:
+
+- **For CI**: Prefer `npm run test:run` with coverage to avoid watch-mode flakiness
+- **Locally**: Use `npm run test:ui` during development and `npm run test:coverage` before committing
+- **UI and coverage**: Can be combined in separate runs for comprehensive development workflow
 
 ## Key Files to Understand
 
@@ -519,6 +526,8 @@ When adding new settings:
 - Include appropriate UI controls in `SetupModal.vue` component
 - Pass new settings via props/events between `App.vue` and `SetupModal.vue`
 
+### Keyboard Navigation Implementation {#keyboard-navigation}
+
 When implementing keyboard navigation for dropdowns:
 
 - Use `useListboxNavigation` composable for consistent keyboard navigation behavior
@@ -527,6 +536,45 @@ When implementing keyboard navigation for dropdowns:
 - Focus management and ARIA attributes are handled automatically
 - Supports multiple dropdown contexts on the same page with contextId parameter
 - Closing keys (Escape/Tab) work even when items list is empty
+
+**Example Usage**:
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useListboxNavigation } from '@/composables/useListboxNavigation'
+
+const containerRef = ref<HTMLElement>()
+const items = computed(() => [
+  { id: 1, name: 'Option 1' },
+  { id: 2, name: 'Option 2' }
+])
+
+const getOptionSelector = (contextId: string | number, optionIndex: number) => 
+  `[data-context="${contextId}"][data-option="${optionIndex}"]`
+
+const onSelect = (item: any, index: number, contextId?: string | number) => {
+  console.log('Selected:', item, 'at index:', index, 'context:', contextId)
+}
+
+const onClose = (contextId?: string | number) => {
+  console.log('Closing dropdown for context:', contextId)
+}
+
+const { handleKeydown, initializeActiveOption } = useListboxNavigation({
+  containerRef,
+  items,
+  onSelect,
+  onClose,
+  getOptionSelector
+})
+
+// Optional: Use contextId for multiple dropdowns
+const contextId = 'my-dropdown'
+</script>
+```
+
+**ARIA Requirements**: Use `role="listbox"` on the container element, `role="option"` on each item, and manage focus with `aria-activedescendant` on the focus owner for proper screen reader support.
 
 When writing tests:
 

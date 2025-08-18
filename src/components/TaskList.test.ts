@@ -214,6 +214,9 @@ describe('TaskList Component', () => {
       
       expect(menu.attributes('role')).toBe('listbox')
       expect(menu.attributes('aria-labelledby')).toBeTruthy()
+
+      const selected = menu.find('[role="option"].selected')
+      expect(selected.attributes('aria-selected')).toBe('true')
     })
   })
 
@@ -399,7 +402,10 @@ describe('TaskList Component', () => {
       const taskRows = wrapper.findAll('tbody tr').filter(row => 
         !row.classes().includes('add-task-row')
       )
-      
+
+      // Control: first row (normal task) should have replay
+      const normalTaskReplay = taskRows[0]?.find('.replay-btn')
+      expect(normalTaskReplay?.exists()).toBe(true)
       const pauseTaskRow = taskRows[2] // Third row (pause task)
       const replayBtn = pauseTaskRow?.find('.replay-btn')
       
