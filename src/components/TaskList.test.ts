@@ -7,16 +7,17 @@ import type { TaskRecord, Category } from '@/shared/types'
 // Mock the composables
 vi.mock('@/composables/useListboxNavigation', () => ({
   useListboxNavigation: vi.fn(() => {
-    const mockActiveIndex: Record<string | number, number> = {}
+    const mockActiveIndexValue: Record<string | number, number> = {}
+    const mockActiveIndex = { value: mockActiveIndexValue }
     return {
-      activeIndex: { value: mockActiveIndex },
-      getActiveIndex: vi.fn((contextId: string | number) => mockActiveIndex[contextId] ?? 0),
-      handleKeydown: vi.fn(),
-      focusOption: vi.fn(),
-      initializeActiveOption: vi.fn((contextId: string | number, index: number) => {
-        mockActiveIndex[contextId] = index
+      activeIndex: mockActiveIndex,
+      getActiveIndex: vi.fn((contextId: string | number) => mockActiveIndexValue[contextId] ?? 0),
+      handleKeydown: vi.fn(async (_event: KeyboardEvent, _contextId: string | number) => {}),
+      focusOption: vi.fn((_contextId: string | number, _optionIndex: number) => {}),
+      initializeActiveOption: vi.fn(async (contextId: string | number, selectedIndex: number = 0): Promise<void> => {
+        mockActiveIndexValue[contextId] = selectedIndex
       }),
-      focusTrigger: vi.fn()
+      focusTrigger: vi.fn((_triggerSelector: string) => {})
     }
   })
 }))
@@ -217,6 +218,8 @@ describe('TaskList Component', () => {
 
       const selected = menu.find('[role="option"].selected')
       expect(selected.attributes('aria-selected')).toBe('true')
+      const unselected = menu.findAll('[role="option"]:not(.selected)')
+      expect(unselected[0]?.attributes('aria-selected')).toBe('false')
     })
   })
 
@@ -266,6 +269,7 @@ describe('TaskList Component', () => {
   describe('Task Input Fields', () => {
     it('should emit handleBlur when task name input loses focus', async () => {
       const taskNameInput = wrapper.find('input[placeholder="Task name"]')
+      expect(taskNameInput.exists()).toBe(true)
       await taskNameInput.trigger('blur')
       
       expect(wrapper.emitted('handleBlur')).toBeTruthy()
@@ -282,6 +286,7 @@ describe('TaskList Component', () => {
 
     it('should emit handleBlur when time input loses focus', async () => {
       const timeInput = wrapper.find('input[type="time"]')
+      expect(timeInput.exists()).toBe(true)
       await timeInput.trigger('blur')
       
       expect(wrapper.emitted('handleBlur')).toBeTruthy()
@@ -321,6 +326,7 @@ describe('TaskList Component', () => {
       
       const endBtn = wrapper.find('.end-btn')
       expect(endBtn.attributes('disabled')).toBeDefined()
+      expect(endBtn.attributes('aria-disabled')).toBe('true')
     })
   })
 
@@ -368,7 +374,10 @@ describe('TaskList Component', () => {
 
   describe('Action Buttons', () => {
     it('should emit replayTask when replay button is clicked', async () => {
-      const replayBtn = wrapper.find('.replay-btn')
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row =>
+          !row.classes().includes('add-task-row')
+      )[0]
+      const replayBtn = firstTaskRow.find('.replay-btn')
       await replayBtn.trigger('click')
       
       expect(wrapper.emitted('replayTask')).toBeTruthy()

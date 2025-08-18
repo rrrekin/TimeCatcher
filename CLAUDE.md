@@ -533,7 +533,7 @@ When implementing keyboard navigation for dropdowns:
 - Use `useListboxNavigation` composable for consistent keyboard navigation behavior
 - Provide required options: `containerRef`, `items`, `onSelect`, `onClose`, `getOptionSelector`
 - The composable handles: Arrow navigation, Home/End keys, Enter/Space selection, Escape/Tab closing
-- Focus management and ARIA attributes are handled automatically
+- Focus management is handled by the composable; roles/ARIA attributes remain the component's responsibility (see ARIA Requirements below)
 - Supports multiple dropdown contexts on the same page with contextId parameter
 - Closing keys (Escape/Tab) work even when items list is empty
 
@@ -580,7 +580,7 @@ When writing tests:
 
 - **Unit tests**: Create test files with `.test.ts` extension alongside source files
 - **Component tests**: Use `@vue/test-utils` for Vue component testing with full DOM rendering
-- **Coverage**: Run `npm run test -- --coverage` to generate coverage reports
+- **Coverage**: Run `npm run test:coverage` to generate coverage reports
 - **Mocking**: Mock complex dependencies (composables, utilities) for focused testing
 - **Isolation**: Use fresh instances in `beforeEach` to prevent test contamination
 - **Accessibility**: Test ARIA attributes, keyboard navigation, and focus management

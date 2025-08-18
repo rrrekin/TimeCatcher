@@ -214,6 +214,7 @@
         class="special-task-btn end-btn" 
         @click="$emit('addEndTask')"
         :disabled="hasEndTaskForSelectedDate"
+        :aria-disabled="hasEndTaskForSelectedDate"
         :title="hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task for this day'"
       >
         ⏹ End
