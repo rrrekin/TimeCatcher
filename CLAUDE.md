@@ -15,6 +15,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Full production build (type checking + Vite build + TypeScript compilation)
 - `npm run build:win` / `npm run build:mac` / `npm run build:linux` - Platform-specific builds
 
+### Testing Commands
+
+- `npm run test` - Run tests in watch mode
+- `npm run test:run` - Run tests once and exit
+- `npm run test:ui` - Open Vitest UI for interactive testing
+- `npm run test -- --coverage` - Run tests with coverage reporting
+
 ### Important Notes
 
 - Always use `npm run dev` for development (not `npm start`)
@@ -49,6 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `useSettings.ts` - Theme and localStorage management with auto-detection
 - `useDurationCalculations.ts` - Optimized duration calculations and aggregations
 - `useAutoRefresh.ts` - Timer lifecycle management for real-time updates
+- `useListboxNavigation.ts` - Keyboard navigation and accessibility for dropdown components
 
 **Components** (`src/components/`):
 
@@ -189,6 +197,7 @@ No external store used. State is distributed across composables:
 - **useSettings**: Theme and localStorage management
 - **useDurationCalculations**: Optimized duration calculations and aggregations
 - **useAutoRefresh**: Timer lifecycle management for real-time updates
+- **useListboxNavigation**: Keyboard navigation, focus management, and accessibility for dropdown components
 
 **UI State** (Component-local):
 
@@ -201,6 +210,8 @@ No external store used. State is distributed across composables:
 - **Inline Editing**: Double-click table cells to edit directly
 - **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
+- **Keyboard Navigation**: Full keyboard support for dropdowns (Arrow keys, Home/End, Enter/Space, Escape/Tab)
+- **Accessibility Support**: ARIA attributes, focus management, and screen reader compatibility
 - **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
@@ -357,10 +368,31 @@ Main window settings in `src/main/main.ts`:
 
 ### Testing
 
-The project uses Vitest for unit testing with the following test files:
+The project uses Vitest for comprehensive testing with **109 tests** across **5 test files** achieving **27.7% overall coverage**:
 
-- **`src/utils/timeUtils.test.ts`** - Comprehensive tests for time utility functions including DST transitions, edge cases, and date validation
-- **`src/composables/useTaskRecords.test.ts`** - Unit tests for the `parseTimeInput` function covering validation, normalization, and error handling
+**Test Configuration**:
+
+- **`vitest.config.ts`** - Dedicated Vitest configuration with Vue plugin support for component testing
+- **`vite.config.ts`** - Production build configuration (testing config removed to avoid conflicts)
+- **Coverage reporting** with v8 provider generating text, HTML, and LCOV reports
+
+**Unit Tests**:
+
+- **`src/utils/timeUtils.test.ts`** - Time utility functions (13 tests) including DST transitions, edge cases, and date validation
+- **`src/composables/useTaskRecords.test.ts`** - Task record operations (25 tests) covering validation, normalization, and error handling
+- **`src/composables/useDurationCalculations.test.ts`** - Duration calculation logic (15 tests) covering complex business logic, task sorting, and category breakdowns
+- **`src/composables/useListboxNavigation.test.ts`** - Keyboard navigation (28 tests) covering accessibility, focus management, and dropdown interactions
+
+**Component Tests**:
+
+- **`src/components/TaskList.test.ts`** - Vue component testing (28 tests) using @vue/test-utils covering dropdown interactions, form validation, and user interactions
+
+**Test Coverage Highlights**:
+
+- `useListboxNavigation.ts`: **100% coverage** (recently created composable)
+- `useDurationCalculations.ts`: **96.74% coverage** (complex business logic)
+- `TaskList.vue`: **87.42% coverage** (most complex component)
+- `types.ts`: **100% coverage** (runtime constants and type definitions)
 
 **Test Patterns**:
 
@@ -368,6 +400,8 @@ The project uses Vitest for unit testing with the following test files:
 - **Per-test isolation**: Create fresh composable instances in `beforeEach` to prevent test contamination
 - **Regex error matching**: Use regex patterns (e.g., `/^Time must be in/`) instead of exact strings for error message assertions to improve test resilience
 - **Mock management**: Use Vitest fake timers (`vi.useFakeTimers()`, `vi.setSystemTime()`) for reliable date/time testing
+- **Component mocking**: Mock complex dependencies (composables, utilities) for focused component testing
+- **Vue Test Utils integration**: Full component rendering with props, events, and DOM interactions
 
 ## Key Files to Understand
 
@@ -383,6 +417,11 @@ The project uses Vitest for unit testing with the following test files:
 1. **`src/shared/types.ts`** - Type definitions with runtime constants and UI configuration
 1. **`package.json`** - Build scripts and dependency management
 
+### Configuration Files
+
+1. **`vite.config.ts`** - Vite configuration for production builds
+1. **`vitest.config.ts`** - Dedicated Vitest configuration for testing with Vue component support
+
 ### Business Logic (Composables)
 
 1. **`src/composables/useCategories.ts`** - Category management logic
@@ -390,6 +429,7 @@ The project uses Vitest for unit testing with the following test files:
 1. **`src/composables/useSettings.ts`** - Settings and theme management
 1. **`src/composables/useDurationCalculations.ts`** - Duration calculation engine
 1. **`src/composables/useAutoRefresh.ts`** - Real-time update management
+1. **`src/composables/useListboxNavigation.ts`** - Keyboard navigation and accessibility for dropdowns
 
 ### UI Components
 
@@ -406,7 +446,11 @@ The project uses Vitest for unit testing with the following test files:
 
 ### Test Files
 
-1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions
+1. **`src/utils/timeUtils.test.ts`** - Comprehensive unit tests for time utilities
+1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions  
+1. **`src/composables/useDurationCalculations.test.ts`** - Unit tests for duration calculation logic
+1. **`src/composables/useListboxNavigation.test.ts`** - Unit tests for keyboard navigation composable
+1. **`src/components/TaskList.test.ts`** - Component tests for TaskList Vue component
 
 ## Common Development Tasks
 
@@ -474,6 +518,24 @@ When adding new settings:
 - Add validation in the composable's initialization
 - Include appropriate UI controls in `SetupModal.vue` component
 - Pass new settings via props/events between `App.vue` and `SetupModal.vue`
+
+When implementing keyboard navigation for dropdowns:
+
+- Use `useListboxNavigation` composable for consistent keyboard navigation behavior
+- Provide required options: `containerRef`, `items`, `onSelect`, `onClose`, `getOptionSelector`
+- The composable handles: Arrow navigation, Home/End keys, Enter/Space selection, Escape/Tab closing
+- Focus management and ARIA attributes are handled automatically
+- Supports multiple dropdown contexts on the same page with contextId parameter
+- Closing keys (Escape/Tab) work even when items list is empty
+
+When writing tests:
+
+- **Unit tests**: Create test files with `.test.ts` extension alongside source files
+- **Component tests**: Use `@vue/test-utils` for Vue component testing with full DOM rendering
+- **Coverage**: Run `npm run test -- --coverage` to generate coverage reports
+- **Mocking**: Mock complex dependencies (composables, utilities) for focused testing
+- **Isolation**: Use fresh instances in `beforeEach` to prevent test contamination
+- **Accessibility**: Test ARIA attributes, keyboard navigation, and focus management
 
 ## Refactored Architecture Benefits
 

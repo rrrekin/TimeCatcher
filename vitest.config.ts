@@ -16,6 +16,8 @@ export default defineConfig({
         'node_modules/',
         '**/*.test.ts',
         '**/*.test.js',
+        '**/*.spec.ts',
+        '**/*.spec.js',
         'src/main/**', // Exclude Electron main process files
         'coverage/**'
       ]

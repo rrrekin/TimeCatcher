@@ -6,14 +6,19 @@ import type { TaskRecord, Category } from '@/shared/types'
 
 // Mock the composables
 vi.mock('@/composables/useListboxNavigation', () => ({
-  useListboxNavigation: vi.fn(() => ({
-    activeIndex: { value: {} },
-    getActiveIndex: vi.fn(() => 0),
-    handleKeydown: vi.fn(),
-    focusOption: vi.fn(),
-    initializeActiveOption: vi.fn(),
-    focusTrigger: vi.fn()
-  }))
+  useListboxNavigation: vi.fn(() => {
+    const mockActiveIndex: Record<string | number, number> = {}
+    return {
+      activeIndex: { value: mockActiveIndex },
+      getActiveIndex: vi.fn((contextId: string | number) => mockActiveIndex[contextId] ?? 0),
+      handleKeydown: vi.fn(),
+      focusOption: vi.fn(),
+      initializeActiveOption: vi.fn((contextId: string | number, index: number) => {
+        mockActiveIndex[contextId] = index
+      }),
+      focusTrigger: vi.fn()
+    }
+  })
 }))
 
 // Mock the types import

@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useListboxNavigation } from './useListboxNavigation'
-import { ref, nextTick, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 
-// Mock Vue's nextTick function
+// Mock only nextTick from vue module  
 vi.mock('vue', async () => {
   const actual = await vi.importActual('vue')
   return {
@@ -10,6 +10,9 @@ vi.mock('vue', async () => {
     nextTick: vi.fn().mockResolvedValue(undefined)
   }
 })
+
+// Import the mocked nextTick
+import { nextTick } from 'vue'
 
 describe('useListboxNavigation', () => {
   let containerRef: Ref<HTMLElement | undefined>
@@ -25,17 +28,22 @@ describe('useListboxNavigation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Create mock DOM elements
-    mockOption1 = { focus: vi.fn() } as unknown as HTMLElement
-    mockOption2 = { focus: vi.fn() } as unknown as HTMLElement
+    // Create real DOM elements and spy on their focus methods
+    mockOption1 = document.createElement('div')
+    mockOption2 = document.createElement('div')
+    vi.spyOn(mockOption1, 'focus').mockImplementation(() => {})
+    vi.spyOn(mockOption2, 'focus').mockImplementation(() => {})
     
-    mockContainer = {
-      querySelector: vi.fn((selector: string) => {
-        if (selector.includes('option="0"')) return mockOption1
-        if (selector.includes('option="1"')) return mockOption2
-        return null
-      })
-    } as unknown as HTMLElement
+    mockContainer = document.createElement('div')
+    vi.spyOn(mockContainer, 'querySelector').mockImplementation((selector: string) => {
+      // Use exact selector matching by reusing the getOptionSelector mock
+      const option0Selector = mockGetOptionSelector('test-context', 0)
+      const option1Selector = mockGetOptionSelector('test-context', 1)
+      
+      if (selector === option0Selector) return mockOption1
+      if (selector === option1Selector) return mockOption2
+      return null
+    })
 
     // Setup refs and mocks
     containerRef = ref(mockContainer)
@@ -58,6 +66,10 @@ describe('useListboxNavigation', () => {
       onClose: mockOnClose,
       getOptionSelector: mockGetOptionSelector
     })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('getActiveIndex', () => {
@@ -139,6 +151,7 @@ describe('useListboxNavigation', () => {
         
         expect(mockEvent.preventDefault).not.toHaveBeenCalled()
         expect(mockGetOptionSelector).not.toHaveBeenCalled()
+        expect(nextTick).not.toHaveBeenCalled()
       })
 
       it('should handle ArrowDown key and move to next option', async () => {
@@ -172,6 +185,9 @@ describe('useListboxNavigation', () => {
         await composable.handleKeydown(mockEvent, 'test-context')
         
         expect(composable.activeIndex.value['test-context']).toBe(1) // Should stay at 1
+        expect(mockEvent.preventDefault).toHaveBeenCalled()
+        expect(nextTick).toHaveBeenCalled()
+        expect(mockGetOptionSelector).toHaveBeenCalledWith('test-context', 1)
       })
 
       it('should handle ArrowUp at first option (should stay at first)', async () => {
@@ -181,6 +197,9 @@ describe('useListboxNavigation', () => {
         await composable.handleKeydown(mockEvent, 'test-context')
         
         expect(composable.activeIndex.value['test-context']).toBe(0) // Should stay at 0
+        expect(mockEvent.preventDefault).toHaveBeenCalled()
+        expect(nextTick).toHaveBeenCalled()
+        expect(mockGetOptionSelector).toHaveBeenCalledWith('test-context', 0)
       })
 
       it('should handle Home key and move to first option', async () => {
@@ -191,6 +210,7 @@ describe('useListboxNavigation', () => {
         
         expect(mockEvent.preventDefault).toHaveBeenCalled()
         expect(composable.activeIndex.value['test-context']).toBe(0)
+        expect(nextTick).toHaveBeenCalled()
         expect(mockGetOptionSelector).toHaveBeenCalledWith('test-context', 0)
       })
 
@@ -202,6 +222,7 @@ describe('useListboxNavigation', () => {
         
         expect(mockEvent.preventDefault).toHaveBeenCalled()
         expect(composable.activeIndex.value['test-context']).toBe(1)
+        expect(nextTick).toHaveBeenCalled()
         expect(mockGetOptionSelector).toHaveBeenCalledWith('test-context', 1)
       })
 
@@ -245,7 +266,7 @@ describe('useListboxNavigation', () => {
 
     describe('unhandled keys', () => {
       it('should not prevent default for unhandled keys', async () => {
-        mockEvent.key = 'KeyA'
+        mockEvent.key = 'a'
         
         await composable.handleKeydown(mockEvent, 'test-context')
         
@@ -270,12 +291,15 @@ describe('useListboxNavigation', () => {
       
       expect(() => composable.focusOption('test-context', 0)).not.toThrow()
       expect(mockGetOptionSelector).toHaveBeenCalledWith('test-context', 0)
+      expect(mockContainer.querySelector).not.toHaveBeenCalled()
     })
 
     it('should handle missing option element gracefully', () => {
       ;(mockContainer.querySelector as ReturnType<typeof vi.fn>).mockReturnValue(null)
       
       expect(() => composable.focusOption('test-context', 0)).not.toThrow()
+      expect(mockOption1.focus).not.toHaveBeenCalled()
+      expect(mockOption2.focus).not.toHaveBeenCalled()
     })
   })
 
@@ -307,6 +331,7 @@ describe('useListboxNavigation', () => {
       
       expect(composable.activeIndex.value['test-context']).toBeUndefined()
       expect(mockGetOptionSelector).not.toHaveBeenCalled()
+      expect(nextTick).not.toHaveBeenCalled()
     })
   })
 
