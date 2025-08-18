@@ -113,7 +113,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
    * Focus the trigger button that controls this listbox
    */
   const focusTrigger = (triggerSelector: string) => {
-    const button = containerRef.value?.querySelector(triggerSelector) as HTMLElement
+    const button = containerRef.value?.querySelector<HTMLElement>(triggerSelector)
     button?.focus()
   }
   

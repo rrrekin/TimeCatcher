@@ -44,7 +44,7 @@
                 class="dropdown-trigger" 
                 @click="handleInlineDropdownToggle(record.id, record.category_name)"
                 :aria-expanded="!!showInlineDropdown[record.id]"
-                :aria-controls="`dropdown-menu-${record.id}`"
+                :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
                 aria-haspopup="listbox"
               >
                 <span class="dropdown-value">{{ record.category_name }}</span>
@@ -54,7 +54,7 @@
                 v-if="showInlineDropdown[record.id]" 
                 class="dropdown-menu"
                 role="listbox"
-                :id="`dropdown-menu-${record.id}`"
+                :id="`${componentId}-dropdown-menu-${record.id}`"
                 @keydown="handleDropdownKeydown($event, record.id)"
                 tabindex="-1"
               >
@@ -319,7 +319,7 @@ const categoriesRef = computed(() => props.categories)
 // Validation for add task form
 const isAddTaskValid = computed(() => {
   return !!(
-    props.newTask.categoryId && // Category must be selected
+    props.newTask.categoryId != null && // Category must be selected
     props.newTask.name.trim() && // Task name must not be empty/whitespace
     props.newTask.time.trim()    // Time must not be empty/whitespace
   )
@@ -342,7 +342,7 @@ const inlineListbox = useListboxNavigation({
     }
   },
   getOptionSelector: (recordId: string | number, optionIndex: number) => 
-    `#dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
+    `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
 })
 
 // Form dropdown navigation composable  
@@ -396,7 +396,7 @@ const handleCategorySelection = async (recordId: number, categoryName: string) =
 
 // Focus management helpers for trigger buttons
 const focusTriggerButton = (recordId: number) => {
-  const button = taskTableRef.value?.querySelector(`[aria-controls="dropdown-menu-${recordId}"]`) as HTMLElement
+  const button = taskTableRef.value?.querySelector<HTMLElement>(`[aria-controls="${componentId}-dropdown-menu-${recordId}"]`)
   button?.focus()
 }
 
@@ -420,7 +420,7 @@ const handleFormCategorySelection = async (category: Category) => {
 
 // Form dropdown trigger focus helper
 const focusFormTriggerButton = () => {
-  const button = taskTableRef.value?.querySelector(`[aria-controls="${formDropdownMenuId}"]`) as HTMLElement
+  const button = taskTableRef.value?.querySelector<HTMLButtonElement>(`[aria-controls="${formDropdownMenuId}"]`)
   button?.focus()
 }
 
