@@ -148,12 +148,12 @@
               <div
                   v-for="(category, index) in categories"
                   :key="category.id ?? `form-cat-${category.name}-${index}`"
-                  :id="`${componentId}-form-option-${index}`"
                   class="dropdown-item"
                   role="option"
                   :class="{ selected: newTask.categoryId === category.id }"
                   :aria-selected="newTask.categoryId === category.id"
                   :tabindex="formListbox.getActiveIndex('form') === index ? '0' : '-1'"
+                  :data-option-index="index"
                   @click="handleFormCategorySelection(category)"
               >
                 {{ category.name }}
@@ -296,7 +296,7 @@ const props = defineProps({
     required: true
   },
   isSpecial: {
-    type: Function as PropType<(taskType: TaskType | undefined) => boolean>,
+    type: Function as PropType<(taskType: TaskType) => boolean>,
     required: true
   }
 })
@@ -362,7 +362,7 @@ const formListbox = useListboxNavigation({
     focusFormTriggerButton()
   },
   getOptionSelector: (contextId: string | number, optionIndex: number) => 
-    `#${componentId}-form-option-${optionIndex}`
+    `[data-option-index="${optionIndex}"]`
 })
 
 // Keyboard handling for inline dropdown navigation
