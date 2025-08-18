@@ -10,7 +10,10 @@
     "build": "vue-tsc --noEmit && vite build && tsc --project tsconfig.main.json",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:linux": "npm run build && electron-builder --linux",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run"
   },
   "repository": {
     "type": "git",
@@ -27,14 +30,17 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@types/better-sqlite3": "^7.6.13",
-    "@vitejs/plugin-vue": "^6.0.0",
-    "@vue/tsconfig": "^0.7.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^3.2.4",
+    "@vue/tsconfig": "^0.8.0",
     "concurrently": "^9.2.0",
-    "electron": "^37.2.4",
+    "electron": "^37.3.0",
     "electron-builder": "^26.0.12",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.6",
-    "vue-tsc": "^3.0.4",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.2",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.0.5",
     "wait-on": "^8.0.4"
   },
   "dependencies": {

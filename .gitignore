@@ -166,3 +166,4 @@ src/**/*.js
 
 # Claude Code local settings
 .claude/
+/.mcp.json
