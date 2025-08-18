@@ -1,5 +1,5 @@
 <template>
-  <div class="task-table">
+  <div class="task-table" ref="taskTableRef">
     <table>
       <thead>
       <tr>
@@ -42,7 +42,7 @@
               <button 
                 type="button"
                 class="dropdown-trigger" 
-                @click="record.id != null && ($emit('toggleInlineDropdown', record.id), initializeActiveOption(record.id, record.category_name))"
+                @click="record.id != null && ($emit('toggleInlineDropdown', record.id), !showInlineDropdown[record.id] && initializeActiveOption(record.id, record.category_name))"
                 :aria-expanded="record.id != null && showInlineDropdown[record.id]"
                 :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : undefined"
                 aria-haspopup="listbox"
@@ -55,8 +55,8 @@
                 class="dropdown-menu"
                 role="listbox"
                 :id="`dropdown-menu-${record.id}`"
-                :aria-activedescendant="activeOptionId[record.id!] || undefined"
-                @keydown="handleDropdownKeydown($event, record.id!)"
+                :aria-activedescendant="activeOptionId[record.id] || undefined"
+                @keydown="handleDropdownKeydown($event, record.id)"
                 tabindex="-1"
               >
                 <div
@@ -67,10 +67,10 @@
                     role="option"
                     :class="{ selected: record.category_name === category.name }"
                     :aria-selected="record.category_name === category.name"
-                    :tabindex="(activeOptionIndex[record.id!] ?? 0) === index ? '0' : '-1'"
-                    :data-record-id="record.id!"
+                    :tabindex="(activeOptionIndex[record.id] ?? 0) === index ? '0' : '-1'"
+                    :data-record-id="record.id"
                     :data-index="index"
-                    @click="handleCategorySelection(record.id!, category.name)"
+                    @click="handleCategorySelection(record.id, category.name)"
                 >
                   {{ category.name }}
                 </div>
@@ -81,8 +81,8 @@
             <input
                 type="text"
                 :value="record.task_name"
-                @blur="$emit('handleBlur', record.id!, 'task_name', $event)"
-                @keydown.enter="$emit('handleEnter', record.id!, 'task_name', $event)"
+                @blur="$emit('handleBlur', record.id, 'task_name', $event)"
+                @keydown.enter="$emit('handleEnter', record.id, 'task_name', $event)"
                 class="editable-cell editable-input"
                 placeholder="Task name"
             />
@@ -93,8 +93,8 @@
               type="time"
               step="60"
               :value="convertToTimeInput(record.start_time)"
-              @blur="$emit('handleBlur', record.id!, 'start_time', $event)"
-              @keydown.enter="$emit('handleEnter', record.id!, 'start_time', $event)"
+              @blur="$emit('handleBlur', record.id, 'start_time', $event)"
+              @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               class="editable-cell time-input"
           />
         </td>
@@ -178,9 +178,10 @@
                 :value="newTask.time"
                 @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
                 @keydown.enter="$emit('addTask')"
+                :aria-describedby="!newTask.time ? `time-hint-${componentId}` : undefined"
                 class="editable-cell time-input"
             />
-            <span v-if="!newTask.time" class="current-time-hint">{{ getCurrentTime() }}</span>
+            <span v-if="!newTask.time" class="current-time-hint" :id="`time-hint-${componentId}`">{{ getCurrentTime() }}</span>
           </div>
         </td>
         <td class="duration-cell">-</td>
@@ -215,14 +216,24 @@ import { type PropType, ref, nextTick } from 'vue'
 import type { TaskRecord, Category, TaskType } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
+// TaskRecord with required id for TaskList component
+type TaskRecordWithId = TaskRecord & { id: number }
+
 // Generate unique component instance ID for ARIA references
-const componentId = `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const componentId = (typeof globalThis !== 'undefined' && 
+                    globalThis.crypto && 
+                    typeof globalThis.crypto.randomUUID === 'function')
+  ? `tasklist-${globalThis.crypto.randomUUID()}`
+  : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 const formDropdownMenuId = `form-dropdown-menu-${componentId}`
+
+// Template ref for component root element
+const taskTableRef = ref<HTMLElement>()
 
 // Props
 const props = defineProps({
   taskRecords: {
-    type: Array as PropType<TaskRecord[]>,
+    type: Array as PropType<TaskRecordWithId[]>,
     required: true
   },
   categories: {
@@ -362,12 +373,12 @@ const handleCategorySelection = async (recordId: number, categoryName: string) =
 
 // Focus management helpers
 const focusOption = (recordId: number, optionIndex: number) => {
-  const option = document.querySelector(`#dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`) as HTMLElement
+  const option = taskTableRef.value?.querySelector(`#dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`) as HTMLElement
   option?.focus()
 }
 
 const focusTriggerButton = (recordId: number) => {
-  const button = document.querySelector(`[aria-controls="dropdown-menu-${recordId}"]`) as HTMLElement
+  const button = taskTableRef.value?.querySelector(`[aria-controls="dropdown-menu-${recordId}"]`) as HTMLElement
   button?.focus()
 }
 
@@ -429,12 +440,12 @@ const handleFormCategorySelection = async (category: Category) => {
 
 // Form dropdown focus management helper
 const focusFormOption = (optionIndex: number) => {
-  const option = document.getElementById(`form-option-${optionIndex}`) as HTMLElement
+  const option = taskTableRef.value?.querySelector(`#form-option-${optionIndex}`) as HTMLElement
   option?.focus()
 }
 
 const focusFormTriggerButton = () => {
-  const button = document.querySelector(`[aria-controls="${formDropdownMenuId}"]`) as HTMLElement
+  const button = taskTableRef.value?.querySelector(`[aria-controls="${formDropdownMenuId}"]`) as HTMLElement
   button?.focus()
 }
 
@@ -524,12 +535,25 @@ tr:last-child td {
   border: 2px solid var(--border-color);
   border-top: 2px solid var(--primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* Animation only when motion is not reduced */
+@media (prefers-reduced-motion: no-preference) {
+  .loading-spinner {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}
+
+/* Static fallback for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: none;
+  }
 }
 
 /* Special task row styles */
