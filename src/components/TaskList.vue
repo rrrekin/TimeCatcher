@@ -147,7 +147,7 @@
               <div
                   v-for="(category, index) in categories"
                   :key="category.id ?? `form-cat-${category.name}-${index}`"
-                  :id="`form-option-${index}`"
+                  :id="`${componentId}-form-option-${index}`"
                   class="dropdown-item"
                   role="option"
                   :class="{ selected: newTask.categoryId === category.id }"
@@ -393,7 +393,7 @@ const handleFormDropdownKeydown = async (event: KeyboardEvent) => {
       event.preventDefault()
       const nextIndex = Math.min(currentIndex + 1, props.categories.length - 1)
       formActiveOptionIndex.value = nextIndex
-      formActiveOptionId.value = `form-option-${nextIndex}`
+      formActiveOptionId.value = `${componentId}-form-option-${nextIndex}`
       await nextTick()
       focusFormOption(nextIndex)
       break
@@ -402,7 +402,7 @@ const handleFormDropdownKeydown = async (event: KeyboardEvent) => {
       event.preventDefault()
       const prevIndex = Math.max(currentIndex - 1, 0)
       formActiveOptionIndex.value = prevIndex
-      formActiveOptionId.value = `form-option-${prevIndex}`
+      formActiveOptionId.value = `${componentId}-form-option-${prevIndex}`
       await nextTick()
       focusFormOption(prevIndex)
       break
@@ -440,7 +440,7 @@ const handleFormCategorySelection = async (category: Category) => {
 
 // Form dropdown focus management helper
 const focusFormOption = (optionIndex: number) => {
-  const option = taskTableRef.value?.querySelector(`#form-option-${optionIndex}`) as HTMLElement
+  const option = taskTableRef.value?.querySelector(`#${componentId}-form-option-${optionIndex}`) as HTMLElement
   option?.focus()
 }
 
@@ -454,7 +454,7 @@ const initializeFormActiveOption = async () => {
   const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
   const resolvedIndex = Math.max(0, selectedIndex)
   formActiveOptionIndex.value = resolvedIndex
-  formActiveOptionId.value = `form-option-${resolvedIndex}`
+  formActiveOptionId.value = `${componentId}-form-option-${resolvedIndex}`
   
   // Wait for DOM update to ensure dropdown menu is rendered
   await nextTick()
