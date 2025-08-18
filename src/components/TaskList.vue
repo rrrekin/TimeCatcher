@@ -24,7 +24,7 @@
           No tasks recorded for {{ displayDate }}
         </td>
       </tr>
-      <tr v-else v-for="(record, index) in taskRecords" :key="record.id" 
+      <tr v-else v-for="record in taskRecords" :key="record.id" 
           :class="{ 
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === 'pause',
@@ -42,6 +42,7 @@
               <button 
                 type="button"
                 class="dropdown-trigger" 
+                :id="`${componentId}-dropdown-trigger-${record.id}`"
                 @click="handleInlineDropdownToggle(record.id, record.category_name)"
                 :aria-expanded="!!showInlineDropdown[record.id]"
                 :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
@@ -55,6 +56,7 @@
                 class="dropdown-menu"
                 role="listbox"
                 :id="`${componentId}-dropdown-menu-${record.id}`"
+                :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
                 @keydown="handleDropdownKeydown($event, record.id)"
                 tabindex="-1"
               >
@@ -125,6 +127,7 @@
             <button 
               type="button"
               class="dropdown-trigger" 
+              :id="formDropdownTriggerId"
               @click="handleFormDropdownToggle"
               :aria-expanded="showFormCategoryDropdown"
               :aria-controls="formDropdownMenuId"
@@ -138,6 +141,7 @@
               class="dropdown-menu"
               role="listbox"
               :id="formDropdownMenuId"
+              :aria-labelledby="formDropdownTriggerId"
               @keydown="handleFormDropdownKeydown"
               tabindex="-1"
             >
@@ -231,6 +235,7 @@ const componentId = (typeof globalThis !== 'undefined' &&
   ? `tasklist-${globalThis.crypto.randomUUID()}`
   : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 const formDropdownMenuId = `form-dropdown-menu-${componentId}`
+const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
@@ -317,10 +322,10 @@ const categoriesRef = computed(() => props.categories)
 
 // Validation for add task form
 const isAddTaskValid = computed(() => {
-  return !!(
+  return (
     props.newTask.categoryId != null && // Category must be selected
-    props.newTask.name.trim() && // Task name must not be empty/whitespace
-    props.newTask.time.trim()    // Time must not be empty/whitespace
+    props.newTask.name.trim().length > 0 && // Task name must not be empty/whitespace
+    props.newTask.time.trim().length > 0    // Time must not be empty/whitespace
   )
 })
 
