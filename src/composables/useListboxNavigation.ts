@@ -23,6 +23,17 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
    * Handle keyboard navigation for listbox
    */
   const handleKeydown = async (event: KeyboardEvent, contextId: string | number) => {
+    // Handle closing keys first (work regardless of items list state)
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      event.preventDefault()
+      if (event.key === 'Tab') {
+        event.stopPropagation()
+      }
+      onClose(contextId)
+      return
+    }
+    
+    // Early return for navigation keys when no items available
     if (!items.value.length) return
     
     const currentIndex = getActiveIndex(contextId)
@@ -73,17 +84,6 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         }
         break
       }
-        
-      case 'Escape':
-        event.preventDefault()
-        onClose(contextId)
-        break
-        
-      case 'Tab':
-        event.preventDefault()
-        event.stopPropagation()
-        onClose(contextId)
-        break
     }
   }
   
