@@ -427,9 +427,9 @@ const handleFormCategorySelection = async (category: Category) => {
   focusFormTriggerButton()
 }
 
-// Form dropdown focus management helpers
+// Form dropdown focus management helper
 const focusFormOption = (optionIndex: number) => {
-  const option = document.querySelector(`#form-option-${optionIndex}`) as HTMLElement
+  const option = document.getElementById(`form-option-${optionIndex}`) as HTMLElement
   option?.focus()
 }
 
@@ -448,14 +448,8 @@ const initializeFormActiveOption = async () => {
   // Wait for DOM update to ensure dropdown menu is rendered
   await nextTick()
   
-  // Focus the active option in the dropdown
-  try {
-    const activeOption = document.querySelector(`#form-option-${resolvedIndex}`) as HTMLElement
-    activeOption?.focus()
-  } catch (error) {
-    // Silently handle cases where the element is not found or focus fails
-    console.debug('Could not focus form dropdown option:', error)
-  }
+  // Focus the active option using the helper
+  focusFormOption(resolvedIndex)
 }
 
 // Initialize active option when dropdown opens
