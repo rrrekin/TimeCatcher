@@ -46,6 +46,24 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         break
       }
         
+      case 'Home': {
+        event.preventDefault()
+        const targetIndex = 0
+        activeIndex.value[contextId] = targetIndex
+        await nextTick()
+        focusOption(contextId, targetIndex)
+        break
+      }
+        
+      case 'End': {
+        event.preventDefault()
+        const targetIndex = items.value.length - 1
+        activeIndex.value[contextId] = targetIndex
+        await nextTick()
+        focusOption(contextId, targetIndex)
+        break
+      }
+        
       case 'Enter':
       case ' ': {
         event.preventDefault()
@@ -68,7 +86,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
    */
   const focusOption = (contextId: string | number, optionIndex: number) => {
     const selector = getOptionSelector(contextId, optionIndex)
-    const option = containerRef.value?.querySelector(selector) as HTMLElement
+    const option = containerRef.value?.querySelector<HTMLElement>(selector)
     option?.focus()
   }
   

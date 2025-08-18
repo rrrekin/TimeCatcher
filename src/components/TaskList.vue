@@ -42,7 +42,7 @@
               <button 
                 type="button"
                 class="dropdown-trigger" 
-                @click="$emit('toggleInlineDropdown', record.id), !showInlineDropdown[record.id] && initializeActiveOption(record.id, record.category_name)"
+                @click="handleInlineDropdownToggle(record.id, record.category_name)"
                 :aria-expanded="!!showInlineDropdown[record.id]"
                 :aria-controls="`dropdown-menu-${record.id}`"
                 aria-haspopup="listbox"
@@ -184,7 +184,14 @@
         </td>
         <td class="duration-cell">-</td>
         <td class="actions-cell">
-          <button class="action-btn add-btn" @click="$emit('addTask')" title="Add new task" aria-label="Add task">
+          <button 
+            class="action-btn add-btn" 
+            @click="handleAddTask" 
+            :disabled="!isAddTaskValid"
+            :aria-disabled="!isAddTaskValid"
+            :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
+            :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
+          >
             ✓
           </button>
         </td>
@@ -309,6 +316,15 @@ const emit = defineEmits<{
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
 
+// Validation for add task form
+const isAddTaskValid = computed(() => {
+  return !!(
+    props.newTask.categoryId && // Category must be selected
+    props.newTask.name.trim() && // Task name must not be empty/whitespace
+    props.newTask.time.trim()    // Time must not be empty/whitespace
+  )
+})
+
 // Inline dropdown navigation composable
 const inlineListbox = useListboxNavigation({
   containerRef: taskTableRef,
@@ -348,6 +364,21 @@ const formListbox = useListboxNavigation({
 // Keyboard handling for inline dropdown navigation
 const handleDropdownKeydown = (event: KeyboardEvent, recordId: number) => {
   inlineListbox.handleKeydown(event, recordId)
+}
+
+// Handle inline dropdown toggle with proper timing
+const handleInlineDropdownToggle = async (recordId: number, categoryName: string) => {
+  // Capture pre-toggle state to determine if dropdown will open
+  const willOpen = !props.showInlineDropdown[recordId]
+  
+  // Emit the toggle
+  emit('toggleInlineDropdown', recordId)
+  
+  // If opening, wait for DOM update then initialize active option
+  if (willOpen) {
+    await nextTick()
+    initializeActiveOption(recordId, categoryName)
+  }
 }
 
 // Unified category selection handler
@@ -400,6 +431,11 @@ const handleFormDropdownToggle = async () => {
   
   // 2. Only initialize when opening (showFormCategoryDropdown was false before toggle)
   if (!props.showFormCategoryDropdown) {
+    // Guard against empty/loading categories
+    if (!props.categories || props.categories.length === 0) {
+      return
+    }
+    
     await nextTick()
     initializeFormActiveOption()
   }
@@ -409,6 +445,14 @@ const handleFormDropdownToggle = async () => {
 const initializeFormActiveOption = () => {
   const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
   formListbox.initializeActiveOption('form', selectedIndex)
+}
+
+// Guarded add task handler
+const handleAddTask = () => {
+  // Only emit addTask if form is valid
+  if (isAddTaskValid.value) {
+    emit('addTask')
+  }
 }
 
 // Initialize active option when dropdown opens
