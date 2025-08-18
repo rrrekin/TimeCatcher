@@ -61,7 +61,6 @@
                 <div
                     v-for="(category, index) in categories"
                     :key="category.id ?? `inline-cat-${category.name}-${index}`"
-                    :id="`dropdown-option-${record.id}-${index}`"
                     class="dropdown-item"
                     role="option"
                     :class="{ selected: record.category_name === category.name }"
@@ -163,7 +162,7 @@
               type="text"
               :value="newTask.name"
               @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
-              @keydown.enter="$emit('addTask')"
+              @keydown.enter.prevent="onAddTaskEnter"
               class="editable-cell add-task-input"
               placeholder="Enter task name..."
           />
@@ -175,7 +174,7 @@
                 step="60"
                 :value="newTask.time"
                 @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
-                @keydown.enter="$emit('addTask')"
+                @keydown.enter.prevent="onAddTaskEnter"
                 :aria-describedby="!newTask.time ? `time-hint-${componentId}` : undefined"
                 class="editable-cell time-input"
             />
@@ -452,6 +451,14 @@ const initializeFormActiveOption = () => {
 
 // Guarded add task handler
 const handleAddTask = () => {
+  // Only emit addTask if form is valid
+  if (isAddTaskValid.value) {
+    emit('addTask')
+  }
+}
+
+// Guarded Enter key handler for add task form
+const onAddTaskEnter = () => {
   // Only emit addTask if form is valid
   if (isAddTaskValid.value) {
     emit('addTask')
