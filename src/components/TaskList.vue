@@ -38,20 +38,20 @@
         <template v-else>
           <td>
             <div class="custom-dropdown table-dropdown"
-                 :class="{ open: record.id != null && showInlineDropdown[record.id] }">
+                 :class="{ open: showInlineDropdown[record.id] }">
               <button 
                 type="button"
                 class="dropdown-trigger" 
-                @click="record.id != null && ($emit('toggleInlineDropdown', record.id), !showInlineDropdown[record.id] && initializeActiveOption(record.id, record.category_name))"
-                :aria-expanded="!!(record.id != null && showInlineDropdown[record.id])"
-                :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : null"
+                @click="$emit('toggleInlineDropdown', record.id), !showInlineDropdown[record.id] && initializeActiveOption(record.id, record.category_name)"
+                :aria-expanded="!!showInlineDropdown[record.id]"
+                :aria-controls="`dropdown-menu-${record.id}`"
                 aria-haspopup="listbox"
               >
                 <span class="dropdown-value">{{ record.category_name }}</span>
                 <span class="dropdown-arrow">▼</span>
               </button>
               <div 
-                v-if="record.id != null && showInlineDropdown[record.id]" 
+                v-if="showInlineDropdown[record.id]" 
                 class="dropdown-menu"
                 role="listbox"
                 :id="`dropdown-menu-${record.id}`"

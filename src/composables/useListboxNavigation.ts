@@ -25,7 +25,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
   const handleKeydown = async (event: KeyboardEvent, contextId: string | number) => {
     if (!items.value.length) return
     
-    const currentIndex = activeIndex.value[contextId] ?? 0
+    const currentIndex = getActiveIndex(contextId)
     
     switch (event.key) {
       case 'ArrowDown': {
@@ -76,6 +76,11 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
    * Initialize active option when listbox opens
    */
   const initializeActiveOption = async (contextId: string | number, selectedIndex: number = 0) => {
+    // Early return if there are no items to avoid setting invalid index
+    if (!items.value.length) {
+      return
+    }
+    
     const resolvedIndex = Math.max(0, Math.min(selectedIndex, items.value.length - 1))
     activeIndex.value[contextId] = resolvedIndex
     
