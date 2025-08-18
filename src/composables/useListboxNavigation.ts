@@ -78,6 +78,12 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         event.preventDefault()
         onClose(contextId)
         break
+        
+      case 'Tab':
+        event.preventDefault()
+        event.stopPropagation()
+        onClose(contextId)
+        break
     }
   }
   

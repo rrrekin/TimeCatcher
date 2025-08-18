@@ -1,13 +1,13 @@
 <template>
   <div class="task-table" ref="taskTableRef">
-    <table>
+    <table aria-label="Task records">
       <thead>
       <tr>
-        <th>Category</th>
-        <th>Task</th>
-        <th>Start time</th>
-        <th>Duration</th>
-        <th>Actions</th>
+        <th scope="col">Category</th>
+        <th scope="col">Task</th>
+        <th scope="col">Start time</th>
+        <th scope="col">Duration</th>
+        <th scope="col">Actions</th>
       </tr>
       </thead>
       <tbody>
@@ -83,6 +83,7 @@
                 :value="record.task_name"
                 @blur="$emit('handleBlur', record.id, 'task_name', $event)"
                 @keydown.enter="$emit('handleEnter', record.id, 'task_name', $event)"
+                @keydown="handleEscapeCancel($event, record.task_name)"
                 class="editable-cell editable-input"
                 placeholder="Task name"
             />
@@ -95,6 +96,7 @@
               :value="convertToTimeInput(record.start_time)"
               @blur="$emit('handleBlur', record.id, 'start_time', $event)"
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
+              @keydown.esc="handleTimeEscapeCancel($event, record)"
               class="editable-cell time-input"
           />
         </td>
@@ -204,10 +206,11 @@
 
     <!-- Special task buttons -->
     <div class="special-task-buttons">
-      <button class="special-task-btn pause-btn" @click="$emit('addPauseTask')">
+      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">
         ⏸ Pause
       </button>
       <button 
+        type="button"
         class="special-task-btn end-btn" 
         @click="$emit('addEndTask')"
         :disabled="hasEndTaskForSelectedDate"
@@ -476,6 +479,24 @@ const initializeActiveOption = (recordId: number, selectedCategoryName: string) 
   const selectedIndex = props.categories.findIndex(cat => cat.name === selectedCategoryName)
   const index = selectedIndex === -1 ? 0 : selectedIndex
   inlineListbox.initializeActiveOption(recordId, index)
+}
+
+// Handle Escape key to cancel inline editing and revert changes
+const handleEscapeCancel = (event: KeyboardEvent, originalValue: string) => {
+  if (event.key === 'Escape') {
+    const target = event.target as HTMLInputElement
+    target.value = originalValue
+    target.blur()
+  }
+}
+
+// Handle Escape key to cancel time input editing and revert to original time
+const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) => {
+  if (event.key === 'Escape') {
+    const target = event.target as HTMLInputElement
+    target.value = props.convertToTimeInput(record.start_time)
+    target.blur()
+  }
 }
 </script>
 
