@@ -43,8 +43,8 @@
                 type="button"
                 class="dropdown-trigger" 
                 @click="record.id != null && ($emit('toggleInlineDropdown', record.id), !showInlineDropdown[record.id] && initializeActiveOption(record.id, record.category_name))"
-                :aria-expanded="record.id != null && showInlineDropdown[record.id]"
-                :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : undefined"
+                :aria-expanded="!!(record.id != null && showInlineDropdown[record.id])"
+                :aria-controls="record.id != null ? `dropdown-menu-${record.id}` : null"
                 aria-haspopup="listbox"
               >
                 <span class="dropdown-value">{{ record.category_name }}</span>

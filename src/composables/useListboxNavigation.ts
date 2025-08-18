@@ -28,30 +28,33 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     const currentIndex = activeIndex.value[contextId] ?? 0
     
     switch (event.key) {
-      case 'ArrowDown':
+      case 'ArrowDown': {
         event.preventDefault()
         const nextIndex = Math.min(currentIndex + 1, items.value.length - 1)
         activeIndex.value[contextId] = nextIndex
         await nextTick()
         focusOption(contextId, nextIndex)
         break
+      }
         
-      case 'ArrowUp':
+      case 'ArrowUp': {
         event.preventDefault()
         const prevIndex = Math.max(currentIndex - 1, 0)
         activeIndex.value[contextId] = prevIndex
         await nextTick()
         focusOption(contextId, prevIndex)
         break
+      }
         
       case 'Enter':
-      case ' ':
+      case ' ': {
         event.preventDefault()
         const selectedItem = items.value[currentIndex]
         if (selectedItem) {
           onSelect(selectedItem, currentIndex, contextId)
         }
         break
+      }
         
       case 'Escape':
         event.preventDefault()
@@ -93,9 +96,19 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
   
   /**
    * Get current active index for a specific context
+   * Returns -1 when the target list is empty, otherwise clamps to valid range
    */
   const getActiveIndex = (contextId: string | number): number => {
-    return activeIndex.value[contextId] ?? 0
+    // Return -1 if items array is empty
+    if (!items.value.length) {
+      return -1
+    }
+    
+    // Get the current active index or default to 0
+    const currentIndex = activeIndex.value[contextId] ?? 0
+    
+    // Clamp to valid range [0, items.length - 1]
+    return Math.max(0, Math.min(currentIndex, items.value.length - 1))
   }
   
   return {
