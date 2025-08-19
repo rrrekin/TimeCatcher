@@ -143,7 +143,10 @@ describe('TaskList Component', () => {
     })
 
     it('should emit toggleInlineDropdown when dropdown trigger is clicked', async () => {
-      const dropdownTrigger = wrapper.find('.dropdown-trigger')
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => 
+        !row.classes().includes('add-task-row')
+      )[0]
+      const dropdownTrigger = firstTaskRow.find('.dropdown-trigger')
       await dropdownTrigger.trigger('click')
       
       expect(wrapper.emitted('toggleInlineDropdown')).toBeTruthy()
@@ -194,7 +197,7 @@ describe('TaskList Component', () => {
       
       const dropdownMenu = wrapper.find('[role="listbox"]')
       const personalOption = dropdownMenu.findAll('[role="option"]')[1]
-      
+      expect(personalOption?.exists()).toBe(true)
       await personalOption?.trigger('click')
       
       expect(wrapper.emitted('selectInlineCategory')).toBeTruthy()
@@ -327,6 +330,13 @@ describe('TaskList Component', () => {
       const endBtn = wrapper.find('.end-btn')
       expect(endBtn.attributes('disabled')).toBeDefined()
       expect(endBtn.attributes('aria-disabled')).toBe('true')
+    })
+
+    it('should NOT emit addEndTask when end button is disabled', async () => {
+        await wrapper.setProps({ hasEndTaskForSelectedDate: true })
+        const endBtn = wrapper.find('.end-btn')
+        await endBtn.trigger('click')
+        expect(wrapper.emitted('addEndTask')).toBeFalsy()
     })
   })
 

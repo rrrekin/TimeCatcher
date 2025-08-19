@@ -534,8 +534,8 @@ When implementing keyboard navigation for dropdowns:
 - Provide required options: `containerRef`, `items`, `onSelect`, `onClose`, `getOptionSelector`
 - The composable handles: Arrow navigation, Home/End keys, Enter/Space selection, Escape/Tab closing
 - Focus management is handled by the composable; roles/ARIA attributes remain the component's responsibility (see ARIA Requirements below)
-- Supports multiple dropdown contexts on the same page with contextId parameter
-- Closing keys (Escape/Tab) work even when items list is empty
+- Supports multiple dropdown contexts on the same page with the contextId parameter
+- Closing keys (Escape/Tab) work even when item list is empty
 
 **Example Usage**:
 
@@ -574,7 +574,11 @@ const contextId = 'my-dropdown'
 </script>
 ```
 
-**ARIA Requirements**: Use `role="listbox"` on the container element, `role="option"` on each item, and manage focus with `aria-activedescendant` on the focus owner for proper screen reader support.
+**ARIA Requirements**: Use `role="listbox"` on the container and `role="option"` on each item. Manage focus using either:
+  - `aria-activedescendant` on the focus owner (canonical Listbox pattern), or
+  - a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
+  
+Ensure `aria-selected` reflects the selection state (`true` for the active item, `false` for others).
 
 When writing tests:
 
