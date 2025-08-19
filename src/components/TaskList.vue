@@ -101,10 +101,10 @@
           />
         </td>
         <!-- Duration column (visibility based on task type) -->
-        <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell">
+        <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
           {{ calculateDuration(record) }}
         </td>
-        <td v-else class="duration-cell">-</td>
+        <td v-else class="duration-cell" data-test="task-duration">-</td>
         <td class="actions-cell">
           <button 
             v-if="record.task_type !== 'pause' && record.task_type !== 'end'" 

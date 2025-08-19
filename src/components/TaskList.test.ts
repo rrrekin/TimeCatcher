@@ -11,7 +11,7 @@ vi.mock('@/composables/useListboxNavigation', () => ({
     const mockActiveIndex = { value: mockActiveIndexValue }
     return {
       activeIndex: mockActiveIndex,
-      getActiveIndex: vi.fn((contextId: string | number) => mockActiveIndexValue[contextId] ?? 0),
+      getActiveIndex: vi.fn((contextId: string | number) => mockActiveIndexValue[contextId] ?? -1),
       handleKeydown: vi.fn(async (_event: KeyboardEvent, _contextId: string | number) => {}),
       focusOption: vi.fn((_contextId: string | number, _optionIndex: number) => {}),
       initializeActiveOption: vi.fn(async (contextId: string | number, selectedIndex: number = 0): Promise<void> => {
@@ -157,9 +157,8 @@ describe('TaskList Component', () => {
       
       expect(endTaskRow?.exists()).toBe(true)
       
-      // Get the duration cell (special tasks have different column structure)
-      const cells = endTaskRow?.findAll('td')
-      const durationCell = cells?.[2] // Duration is at index 2 for special tasks
+      // Get the duration cell using data-test attribute for stability
+      const durationCell = endTaskRow?.find('[data-test="task-duration"]')
       expect(durationCell?.text().trim()).toBe('-')
     })
   })
@@ -189,7 +188,10 @@ describe('TaskList Component', () => {
         showInlineDropdown: { 1: true }
       })
       
-      const dropdownMenu = wrapper.find('[role="listbox"]')
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => 
+        !row.classes().includes('add-task-row')
+      )[0]
+      const dropdownMenu = firstTaskRow.find('[role="listbox"]')
       expect(dropdownMenu.exists()).toBe(true)
       
       const dropdownItems = dropdownMenu.findAll('[role="option"]')
@@ -229,7 +231,7 @@ describe('TaskList Component', () => {
       const dropdownMenu = wrapper.find('[role="listbox"]')
       const personalOption = dropdownMenu.findAll('[role="option"]')[1]
       expect(personalOption?.exists()).toBe(true)
-      await personalOption?.trigger('click')
+      await personalOption.trigger('click')
       
       expect(wrapper.emitted('selectInlineCategory')).toBeTruthy()
       expect(wrapper.emitted('selectInlineCategory')?.[0]).toEqual([1, 'Personal'])
@@ -463,10 +465,18 @@ describe('TaskList Component', () => {
         !row.classes().includes('add-task-row')
       )
 
-      // Control: first row (normal task) should have replay
-      const normalTaskReplay = taskRows[0]?.find('.replay-btn')
+      // Control: normal task should have replay button (search by category name)
+      const normalTaskRow = taskRows.find(row => 
+        row.text().includes('Work') // First task's category from mockTaskRecords
+      )
+      
+      const normalTaskReplay = normalTaskRow?.find('.replay-btn')
       expect(normalTaskReplay?.exists()).toBe(true)
-      const pauseTaskRow = taskRows[2] // Third row (pause task)
+      
+      // Find pause task row by task name
+      const pauseTaskRow = taskRows.find(row => 
+        row.text().includes('Pause Task')
+      )
       const replayBtn = pauseTaskRow?.find('.replay-btn')
       
       expect(replayBtn?.exists()).toBe(false)

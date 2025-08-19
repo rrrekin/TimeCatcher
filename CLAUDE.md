@@ -545,7 +545,7 @@ When implementing keyboard navigation for dropdowns:
 import { ref, computed } from 'vue'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
-const containerRef = ref<HTMLElement>()
+const containerRef = ref<HTMLElement | null>(null)
 const items = computed(() => [
   { id: 1, name: 'Option 1' },
   { id: 2, name: 'Option 2' }
@@ -581,6 +581,8 @@ const contextId = 'my-dropdown'
 - a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
 
 Ensure `aria-selected` reflects the selection state (`true` for the active item, `false` for others).
+
+For detailed accessibility guidelines, see the [WAI-ARIA Authoring Practices Guide - Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
 
 When writing tests:
 
