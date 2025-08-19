@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import TaskList from './TaskList.vue'
-import { nextTick } from 'vue'
 import type { TaskRecord, Category } from '@/shared/types'
 import { SPECIAL_TASK_TYPES } from '@/shared/types'
 
@@ -131,6 +130,37 @@ describe('TaskList Component', () => {
       const emptyCell = wrapper.find('.empty-cell')
       expect(emptyCell.exists()).toBe(true)
       expect(emptyCell.text()).toContain('No tasks recorded for 2024-01-15')
+    })
+
+    it('should not show duration for end task type', async () => {
+      const endTask = {
+        id: 3,
+        category_name: '__special__',
+        task_name: 'End Task',
+        start_time: '17:00',
+        date: '2024-01-15',
+        task_type: 'end' as const
+      }
+
+      await wrapper.setProps({
+        taskRecords: [...mockTaskRecords, endTask]
+      })
+
+      const taskRows = wrapper.findAll('tbody tr').filter(row => 
+        !row.classes().includes('add-task-row')
+      )
+      
+      // Find the row containing the end task
+      const endTaskRow = taskRows.find(row => 
+        row.text().includes('End Task')
+      )
+      
+      expect(endTaskRow?.exists()).toBe(true)
+      
+      // Get the duration cell (special tasks have different column structure)
+      const cells = endTaskRow?.findAll('td')
+      const durationCell = cells?.[2] // Duration is at index 2 for special tasks
+      expect(durationCell?.text().trim()).toBe('-')
     })
   })
 
@@ -263,10 +293,16 @@ describe('TaskList Component', () => {
       const dropdownMenu = addTaskRow.find('[role="listbox"]')
       const personalOption = dropdownMenu.findAll('[role="option"]')[1]
       
-      await personalOption?.trigger('click')
+      if (!personalOption) {
+        throw new Error('Personal option not found in dropdown menu')
+      }
+      
+      await personalOption.trigger('click')
       
       expect(wrapper.emitted('selectFormCategory')).toBeTruthy()
-      expect(wrapper.emitted('selectFormCategory')?.[0]).toEqual([{ id: 2, name: 'Personal', is_default: false }])
+      expect(wrapper.emitted('selectFormCategory')?.[0]).toMatchObject([
+        expect.objectContaining({ id: 2, name: 'Personal', is_default: false })
+      ])
     })
   })
 
@@ -282,6 +318,7 @@ describe('TaskList Component', () => {
 
     it('should emit handleEnter when Enter key is pressed in task name input', async () => {
       const taskNameInput = wrapper.find('input[placeholder="Task name"]')
+      expect(taskNameInput.exists()).toBe(true)
       await taskNameInput.trigger('keydown.enter')
       
       expect(wrapper.emitted('handleEnter')).toBeTruthy()

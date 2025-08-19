@@ -215,6 +215,7 @@ No external store used. State is distributed across composables:
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
 - **Keyboard Navigation**: Full keyboard support for dropdowns (Arrow keys, Home/End, Enter/Space, Escape/Tab)
 - **Accessibility Support**: ARIA attributes, focus management, and screen reader compatibility
+
   - Use `role="listbox"` on the container and `role="option"` on each item
   - Manage active item focus with `aria-activedescendant` on the focus owner
   - Provide stable IDs for each option and reference them from `aria-activedescendant`
