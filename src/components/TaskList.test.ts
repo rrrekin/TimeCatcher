@@ -242,8 +242,18 @@ describe('TaskList Component', () => {
         showInlineDropdown: { 1: true }
       })
       
-      const trigger = wrapper.find('.dropdown-trigger')
-      const menu = wrapper.find('[role="listbox"]')
+      // Find the specific row with the open dropdown (task ID 1)
+      const taskRows = wrapper.findAll('tbody tr').filter(row => 
+        !row.classes().includes('add-task-row')
+      )
+      const targetRow = taskRows.find(row => 
+        row.find('[role="listbox"]').exists()
+      )
+      
+      expect(targetRow?.exists()).toBe(true)
+      
+      const trigger = targetRow.find('.dropdown-trigger')
+      const menu = targetRow.find('[role="listbox"]')
       
       expect(trigger.attributes('aria-expanded')).toBe('true')
       expect(trigger.attributes('aria-haspopup')).toBe('listbox')

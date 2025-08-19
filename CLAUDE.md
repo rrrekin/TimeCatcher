@@ -21,7 +21,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:run` - Run tests once and exit
 - `npm run test:ui` - Open Vitest UI for interactive testing
 - `npm run test:coverage` - Run tests with coverage reporting using the v8 provider
-- `npm run test -- --coverage` - Run tests with coverage reporting (alternative syntax)
 
 **Coverage Provider**: Uses @vitest/coverage-v8 for fast, accurate coverage reporting with native V8 coverage.
 
