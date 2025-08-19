@@ -15,6 +15,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Full production build (type checking + Vite build + TypeScript compilation)
 - `npm run build:win` / `npm run build:mac` / `npm run build:linux` - Platform-specific builds
 
+### Testing Commands
+
+- `npm run test` - Run tests in watch mode
+- `npm run test:run` - Run tests once and exit
+- `npm run test:ui` - Open Vitest UI for interactive testing
+- `npm run test:coverage` - Run tests with coverage reporting using the v8 provider
+
+**Coverage Provider**: Uses @vitest/coverage-v8 for fast, accurate coverage reporting with native V8 coverage.
+
 ### Important Notes
 
 - Always use `npm run dev` for development (not `npm start`)
@@ -49,6 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `useSettings.ts` - Theme and localStorage management with auto-detection
 - `useDurationCalculations.ts` - Optimized duration calculations and aggregations
 - `useAutoRefresh.ts` - Timer lifecycle management for real-time updates
+- `useListboxNavigation.ts` - Keyboard navigation and accessibility for dropdown components
 
 **Components** (`src/components/`):
 
@@ -189,6 +199,7 @@ No external store used. State is distributed across composables:
 - **useSettings**: Theme and localStorage management
 - **useDurationCalculations**: Optimized duration calculations and aggregations
 - **useAutoRefresh**: Timer lifecycle management for real-time updates
+- **useListboxNavigation**: Keyboard navigation, focus management, and accessibility for dropdown components (see [Keyboard Navigation Implementation](#keyboard-navigation))
 
 **UI State** (Component-local):
 
@@ -201,6 +212,14 @@ No external store used. State is distributed across composables:
 - **Inline Editing**: Double-click table cells to edit directly
 - **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
 - **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
+- **Keyboard Navigation**: Full keyboard support for dropdowns (Arrow keys, Home/End, Enter/Space, Escape/Tab)
+- **Accessibility Support**: ARIA attributes, focus management, and screen reader compatibility
+
+  - Use `role="listbox"` on the container and `role="option"` on each item
+  - Manage active item focus with `aria-activedescendant` on the focus owner
+  - Provide stable IDs for each option and reference them from `aria-activedescendant`
+  - Use `aria-controls` where the list interacts with other widgets
+  - Maintain clear ARIA relationships for consistent screen reader experience
 - **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
 - **Loading States**: Comprehensive loading indicators for all async operations
 - **Toast Notifications**: Success/error feedback system
@@ -357,10 +376,24 @@ Main window settings in `src/main/main.ts`:
 
 ### Testing
 
-The project uses Vitest for unit testing with the following test files:
+The project uses Vitest for comprehensive testing. For current test counts and coverage metrics, run `npm run test:coverage` to generate up-to-date reports.
 
-- **`src/utils/timeUtils.test.ts`** - Comprehensive tests for time utility functions including DST transitions, edge cases, and date validation
-- **`src/composables/useTaskRecords.test.ts`** - Unit tests for the `parseTimeInput` function covering validation, normalization, and error handling
+**Test Configuration**:
+
+- **`vitest.config.ts`** - Vitest setup with Vue plugin for component testing and coverage configuration
+- **`vite.config.ts`** - Production build settings with testing configuration removed to avoid conflicts
+- **Coverage reports** are produced in text, HTML, and LCOV formats via the v8 provider
+
+**Unit Tests** (`src/**/*.test.ts`):
+
+- **Time utilities** - Date/time parsing, formatting, and duration calculations
+- **Task record operations** - Validation, normalization, and error handling
+- **Duration calculations** - Business logic for task timing and category breakdowns
+- **Listbox navigation** - Keyboard accessibility and focus management
+
+**Component Tests** (`src/**/*.spec.ts` or component-specific `.test.ts`):
+
+- **Vue components** via @vue/test-utils covering user interactions and component behavior
 
 **Test Patterns**:
 
@@ -368,6 +401,14 @@ The project uses Vitest for unit testing with the following test files:
 - **Per-test isolation**: Create fresh composable instances in `beforeEach` to prevent test contamination
 - **Regex error matching**: Use regex patterns (e.g., `/^Time must be in/`) instead of exact strings for error message assertions to improve test resilience
 - **Mock management**: Use Vitest fake timers (`vi.useFakeTimers()`, `vi.setSystemTime()`) for reliable date/time testing
+- **Component mocking**: Mock complex dependencies (composables, utilities) for focused component testing
+- **Vue Test Utils integration**: Full component rendering with props, events, and DOM interactions
+
+**Test Workflow**:
+
+- **For CI**: Prefer `npm run test:run` with coverage to avoid watch-mode flakiness
+- **Locally**: Use `npm run test:ui` during development and `npm run test:coverage` before committing
+- **UI and coverage**: Can be combined in separate runs for comprehensive development workflow
 
 ## Key Files to Understand
 
@@ -383,6 +424,11 @@ The project uses Vitest for unit testing with the following test files:
 1. **`src/shared/types.ts`** - Type definitions with runtime constants and UI configuration
 1. **`package.json`** - Build scripts and dependency management
 
+### Configuration Files
+
+1. **`vite.config.ts`** - Vite configuration for production builds
+1. **`vitest.config.ts`** - Dedicated Vitest configuration for testing with Vue component support
+
 ### Business Logic (Composables)
 
 1. **`src/composables/useCategories.ts`** - Category management logic
@@ -390,6 +436,7 @@ The project uses Vitest for unit testing with the following test files:
 1. **`src/composables/useSettings.ts`** - Settings and theme management
 1. **`src/composables/useDurationCalculations.ts`** - Duration calculation engine
 1. **`src/composables/useAutoRefresh.ts`** - Real-time update management
+1. **`src/composables/useListboxNavigation.ts`** - Keyboard navigation and accessibility for dropdowns
 
 ### UI Components
 
@@ -406,7 +453,11 @@ The project uses Vitest for unit testing with the following test files:
 
 ### Test Files
 
-1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions
+1. **`src/utils/timeUtils.test.ts`** - Comprehensive unit tests for time utilities
+1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions  
+1. **`src/composables/useDurationCalculations.test.ts`** - Unit tests for duration calculation logic
+1. **`src/composables/useListboxNavigation.test.ts`** - Unit tests for keyboard navigation composable
+1. **`src/components/TaskList.test.ts`** - Component tests for TaskList Vue component
 
 ## Common Development Tasks
 
@@ -474,6 +525,72 @@ When adding new settings:
 - Add validation in the composable's initialization
 - Include appropriate UI controls in `SetupModal.vue` component
 - Pass new settings via props/events between `App.vue` and `SetupModal.vue`
+
+### Keyboard Navigation Implementation {#keyboard-navigation}
+
+When implementing keyboard navigation for dropdowns:
+
+- Use `useListboxNavigation` composable for consistent keyboard navigation behavior
+- Provide required options: `containerRef`, `items`, `onSelect`, `onClose`, `getOptionSelector`
+- The composable handles: Arrow navigation, Home/End keys, Enter/Space selection, Escape/Tab closing
+- Focus management is handled by the composable; roles/ARIA attributes remain the component's responsibility (see ARIA Requirements below)
+- Supports multiple dropdown contexts on the same page with the contextId parameter
+- Closing keys (Escape/Tab) work even when item list is empty
+
+**Example Usage**:
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useListboxNavigation } from '@/composables/useListboxNavigation'
+
+const containerRef = ref<HTMLElement | null>(null)
+const items = computed(() => [
+  { id: 1, name: 'Option 1' },
+  { id: 2, name: 'Option 2' }
+])
+
+const getOptionSelector = (contextId: string | number, optionIndex: number) => 
+  `[data-context="${contextId}"][data-option="${optionIndex}"]`
+
+const onSelect = (item: any, index: number, contextId?: string | number) => {
+  console.log('Selected:', item, 'at index:', index, 'context:', contextId)
+}
+
+const onClose = (contextId?: string | number) => {
+  console.log('Closing dropdown for context:', contextId)
+}
+
+const { handleKeydown, initializeActiveOption } = useListboxNavigation({
+  containerRef,
+  items,
+  onSelect,
+  onClose,
+  getOptionSelector
+})
+
+// Optional: Use contextId for multiple dropdowns
+const contextId = 'my-dropdown'
+</script>
+```
+
+**ARIA Requirements**: Use `role="listbox"` on the container and `role="option"` on each item. Manage focus using either:
+
+- `aria-activedescendant` on the focus owner (canonical Listbox pattern), or
+- a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
+
+Ensure `aria-selected` reflects the selection state (`true` for the active item, `false` for others).
+
+For detailed accessibility guidelines, see the [WAI-ARIA Authoring Practices Guide - Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
+
+When writing tests:
+
+- **Unit tests**: Create test files with `.test.ts` extension alongside source files
+- **Component tests**: Use `@vue/test-utils` for Vue component testing with full DOM rendering
+- **Coverage**: Run `npm run test:coverage` to generate coverage reports
+- **Mocking**: Mock complex dependencies (composables, utilities) for focused testing
+- **Isolation**: Use fresh instances in `beforeEach` to prevent test contamination
+- **Accessibility**: Test ARIA attributes, keyboard navigation, and focus management
 
 ## Refactored Architecture Benefits
 

@@ -175,7 +175,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
         minutes: Math.round(rawMinutes),
         percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0
       }))
-      .sort((a, b) => b.minutes - a.minutes)
+      .sort((a, b) => b.minutes - a.minutes || a.categoryName.localeCompare(b.categoryName))
   }
 
   return {
