@@ -3,6 +3,7 @@ import { mount, VueWrapper } from '@vue/test-utils'
 import TaskList from './TaskList.vue'
 import { nextTick } from 'vue'
 import type { TaskRecord, Category } from '@/shared/types'
+import { SPECIAL_TASK_TYPES } from '@/shared/types'
 
 // Mock the composables
 vi.mock('@/composables/useListboxNavigation', () => ({
@@ -86,7 +87,7 @@ describe('TaskList Component', () => {
         convertToTimeInput: vi.fn((time) => time),
         getCurrentTime: vi.fn(() => '10:30'),
         getSelectedCategoryName: vi.fn(() => 'Work'),
-        isSpecial: vi.fn((taskType) => taskType !== 'normal')
+        isSpecial: vi.fn((taskType) => SPECIAL_TASK_TYPES.includes(taskType))
       }
     })
   })
@@ -395,7 +396,10 @@ describe('TaskList Component', () => {
     })
 
     it('should emit confirmDeleteTask when delete button is clicked', async () => {
-      const deleteBtn = wrapper.find('.delete-btn')
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row =>
+          !row.classes().includes('add-task-row')
+      )[0]
+      const deleteBtn = firstTaskRow.find('.delete-btn')
       await deleteBtn.trigger('click')
       
       expect(wrapper.emitted('confirmDeleteTask')).toBeTruthy()

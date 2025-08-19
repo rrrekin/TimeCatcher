@@ -575,9 +575,10 @@ const contextId = 'my-dropdown'
 ```
 
 **ARIA Requirements**: Use `role="listbox"` on the container and `role="option"` on each item. Manage focus using either:
-  - `aria-activedescendant` on the focus owner (canonical Listbox pattern), or
-  - a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
-  
+
+- `aria-activedescendant` on the focus owner (canonical Listbox pattern), or
+- a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
+
 Ensure `aria-selected` reflects the selection state (`true` for the active item, `false` for others).
 
 When writing tests:
