@@ -42,14 +42,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage and enforce thresholds
-        run: npm run test:coverage:check
+      - name: Run tests with coverage
+        run: mkdir -p test-results && npm run test:coverage
+
+      - name: Publish test results
+        if: ${{ always() && !cancelled() && matrix.node-version == 22 && hashFiles('test-results/junit.xml') != '' }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Enforce coverage thresholds
+        if: ${{ matrix.node-version == 22 }}
+        run: node scripts/check-coverage.js
 
       - name: Run build
         run: npm run build
 
       - name: Upload coverage to Codecov (Node.js 22 only)
-        if: ${{ matrix.node-version == '22' }}
+        if: ${{ always() && matrix.node-version == 22 && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
