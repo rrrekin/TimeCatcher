@@ -32,3 +32,5 @@ npm run dev
 
 For detailed development guidelines, see [CLAUDE.md](./CLAUDE.md).  
 For git hooks setup and troubleshooting, see [docs/GIT_HOOKS_SETUP.md](./docs/GIT_HOOKS_SETUP.md).
+
+Note for Windows users: run `npm run install-hooks` from Git Bash/WSL (for `cp`/`chmod`), or follow the manual steps in [docs/GIT_HOOKS_SETUP.md](./docs/GIT_HOOKS_SETUP.md).

@@ -16,6 +16,7 @@
   // Only check markdown files in docs/ and root directory, exclude node_modules
   "globs": [
     "*.md",
+    ".github/**/*.md",
     "docs/**/*.md",
     "!node_modules/**"
   ],
