@@ -252,6 +252,10 @@ const displayDate = computed(() => {
 })
 
 const dateTitle = computed(() => {
+  // Handle invalid dates gracefully
+  if (isNaN(selectedDate.value.getTime())) {
+    return 'Invalid Date'
+  }
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long', 
