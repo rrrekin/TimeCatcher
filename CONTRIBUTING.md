@@ -15,7 +15,7 @@ The `.claude/` directory contains local configuration files for Claude Code:
 - `.claude/settings.local.json` - Local user settings and preferences
 - Other Claude Code configuration files
 
-**⚠️ IMPORTANT:** The `.claude/` directory is **local-only** and should **never** be committed to version control or included in published packages.
+__⚠️ IMPORTANT:__ The `.claude/` directory is __local-only__ and should __never__ be committed to version control or included in published packages.
 
 This directory is automatically excluded via:
 

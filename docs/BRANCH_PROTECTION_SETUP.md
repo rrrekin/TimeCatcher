@@ -7,30 +7,30 @@ To enforce coverage requirements and prevent merging of PRs with insufficient te
 ### 1. Navigate to Repository Settings
 
 1. Go to your repository on GitHub
-2. Click on **Settings** tab
-3. Select **Branches** from the left sidebar
+2. Click on __Settings__ tab
+3. Select __Branches__ from the left sidebar
 
 ### 2. Add Branch Protection Rule
 
-1. Click **Add rule**
+1. Click __Add rule__
 2. In the "Branch name pattern" field, enter: `main`
 3. Configure the following settings:
 
 #### Required Status Checks
 
-- ✅ **Require status checks to pass before merging**
-- ✅ **Require branches to be up to date before merging**
+- ✅ __Require status checks to pass before merging__
+- ✅ __Require branches to be up to date before merging__
 - Under "Status checks that are required", add:
   - `test (20)` - for Node.js 20 tests
   - `test (22)` - for Node.js 22 tests
 
 #### Additional Protection Settings (Recommended)
 
-- ✅ **Require a pull request before merging**
-  - ✅ **Require approvals**: Set to 1 or more
-  - ✅ **Dismiss stale pull request approvals when new commits are pushed**
-  - ✅ **Require review from code owners** (if you have a CODEOWNERS file)
-- ✅ **Do not allow bypassing the above settings**
+- ✅ __Require a pull request before merging__
+  - ✅ __Require approvals__: Set to 1 or more
+  - ✅ __Dismiss stale pull request approvals when new commits are pushed__
+  - ✅ __Require review from code owners__ (if you have a CODEOWNERS file)
+- ✅ __Do not allow bypassing the above settings__
 
 Note: GitHub enforces a 100 MB hard limit on pushes; consider CI checks or Git LFS for large assets instead.
 
@@ -38,12 +38,12 @@ Note: GitHub enforces a 100 MB hard limit on pushes; consider CI checks or Git L
 
 The CI workflow now includes these coverage enforcement steps:
 
-1. **Global Coverage Reporting**: All tests run with coverage collection
-2. **Changed Files Coverage Check**: Only files modified in the PR are checked against thresholds:
-   - **Lines**: 80% minimum
-   - **Branches**: 85% minimum  
-   - **Functions**: 80% minimum
-   - **Statements**: 80% minimum
+1. __Global Coverage Reporting__: All tests run with coverage collection
+2. __Changed Files Coverage Check__: Only files modified in the PR are checked against thresholds:
+   - __Lines__: 80% minimum
+   - __Branches__: 85% minimum  
+   - __Functions__: 80% minimum
+   - __Statements__: 80% minimum
 
 ### 4. How It Works
 
@@ -71,10 +71,10 @@ node scripts/check-coverage.js
 
 The coverage check script uses a robust approach to determine which files to check:
 
-1. **Primary**: Detects changed files using `git diff` against the PR base branch
-2. **GitHub Integration**: Uses `GITHUB_BASE_REF` environment variable when available
-3. **Fallback with Fetch**: If refs are missing, fetches remote refs and retries
-4. **Final Fallback**: If git diff fails entirely, checks all tracked source files
+1. __Primary__: Detects changed files using `git diff` against the PR base branch
+2. __GitHub Integration__: Uses `GITHUB_BASE_REF` environment variable when available
+3. __Fallback with Fetch__: If refs are missing, fetches remote refs and retries
+4. __Final Fallback__: If git diff fails entirely, checks all tracked source files
 
 ### 7. Exemptions and Special Cases
 
@@ -87,29 +87,29 @@ The coverage check script uses a robust approach to determine which files to che
 
 ### 8. Troubleshooting
 
-**Issue**: Coverage check passes locally but fails in CI
+__Issue__: Coverage check passes locally but fails in CI
 
-- **Solution**: Ensure all changed files have corresponding tests
+- __Solution__: Ensure all changed files have corresponding tests
 
-**Issue**: Coverage check fails for files with no coverage data
+__Issue__: Coverage check fails for files with no coverage data
 
-- **Solution**: Add at least basic tests for new files
+- __Solution__: Add at least basic tests for new files
 
-**Issue**: Want to merge without meeting coverage (emergency)
+__Issue__: Want to merge without meeting coverage (emergency)
 
-- **Solution**: Repository admins can bypass branch protection, but this should be rare
+- __Solution__: Repository admins can bypass branch protection, but this should be rare
 
 ## Benefits
 
-✅ **Quality Assurance**: New code must be tested before merging  
-✅ **Gradual Improvement**: Only new/modified code needs to meet standards  
-✅ **Developer Feedback**: Clear feedback on which files need more tests  
-✅ **Automated Enforcement**: No manual review needed for coverage  
-✅ **Flexible**: Easy to adjust thresholds as project matures  
+✅ __Quality Assurance__: New code must be tested before merging  
+✅ __Gradual Improvement__: Only new/modified code needs to meet standards  
+✅ __Developer Feedback__: Clear feedback on which files need more tests  
+✅ __Automated Enforcement__: No manual review needed for coverage  
+✅ __Flexible__: Easy to adjust thresholds as project matures  
 
 ## Configuration Files
 
-- **Coverage thresholds**: `scripts/check-coverage.js`
-- **CI workflow**: `.github/workflows/ci.yml`
-- **Vitest config**: `vitest.config.ts`
-- **NPM scripts**: `package.json`
+- __Coverage thresholds__: `scripts/check-coverage.js`
+- __CI workflow__: `.github/workflows/ci.yml`
+- __Vitest config__: `vitest.config.ts`
+- __NPM scripts__: `package.json`
