@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Full production build (type checking + Vite build + TypeScript compilation)
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once and exit
-- `npm run test:coverage` - Run tests with coverage reporting using v8 provider
+- `npm run test:coverage` - Run tests with coverage reporting using V8 provider
 - `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
 
 ### CI/CD Pipeline
@@ -16,12 +16,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **GitHub Actions Workflow** (`.github/workflows/ci.yml`):
 
 - Runs on pull requests and pushes to main branch
-- Tests on Node.js 18 and 20
+- Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
-- **Coverage enforcement**: Checks changed files meet thresholds (80% lines, 85% branches, 75% functions)
-- Uploads coverage reports to Codecov
+- Uploads coverage reports to Codecov from the latest LTS job
 
 **Coverage Requirements for PRs**:
+
 - Only changed files are checked (not entire codebase)
 - Lines: 80% minimum coverage
 - Branches: 85% minimum coverage  
@@ -81,7 +81,8 @@ SQLite with clean schema. Key features:
 CREATE TABLE categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT UNIQUE NOT NULL,
-  is_default BOOLEAN DEFAULT FALSE
+  is_default BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE task_records (
@@ -90,8 +91,15 @@ CREATE TABLE task_records (
   task_name TEXT NOT NULL,
   start_time DATETIME NOT NULL,
   date TEXT NOT NULL,
-  task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end'))
+  task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create covering index for date filtering and start_time ordering
+CREATE INDEX idx_date_start_time ON task_records(date, start_time);
+
+-- Create unique index to enforce one end task per day
+CREATE UNIQUE INDEX idx_end_per_day ON task_records(date) WHERE task_type = 'end';
 ```
 
 ### Type System & Runtime Constants
@@ -107,7 +115,7 @@ CREATE TABLE task_records (
 ### IPC Communication
 
 Standard pattern: Frontend → Preload → Main → Database
-API methods: getCategories, addCategory, deleteCategory, updateCategory, setDefaultCategory, getTaskRecords, addTaskRecord, updateTaskRecord, deleteTaskRecord
+API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefaultCategory, setDefaultCategory, categoryExists, getTaskRecordsByDate, addTaskRecord, updateTaskRecord, deleteTaskRecord
 
 ## Component Architecture
 
