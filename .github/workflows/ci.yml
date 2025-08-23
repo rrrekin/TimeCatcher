@@ -46,9 +46,11 @@ jobs:
         run: npm run test:coverage
 
       - name: Publish test results
+        if: ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
-          path: test-results/junit.xml
+          path: ./test-results/junit.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Enforce coverage thresholds
         run: node scripts/check-coverage.js
