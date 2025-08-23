@@ -20,6 +20,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      id-token: write
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +30,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Fetch target branch
+        run: git fetch origin main:main
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -47,7 +54,7 @@ jobs:
       - name: Run build
         run: npm run build
 
-      - name: Upload coverage to Codecov (Node.js 20 only)
+      - name: Upload coverage to Codecov (Node.js 22 only)
         if: ${{ matrix.node-version == '22' }}
         uses: codecov/codecov-action@v4
         with:

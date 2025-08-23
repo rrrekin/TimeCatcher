@@ -25,7 +25,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Only changed files are checked (not entire codebase)
 - Lines: 80% minimum coverage
 - Branches: 85% minimum coverage  
-- Functions: 75% minimum coverage
+- Functions: 80% minimum coverage
+- Statements: 80% minimum coverage
 - CI fails if any changed file doesn't meet thresholds
 - Use `npm run test:coverage:check` to verify locally
 
@@ -154,9 +155,11 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 ## Design System
 
 ### Color Palette
+
 - `--verdigris: #57bdaf`, `--mantis: #59c964`, `--asparagus: #69966f`, `--emerald: #56b372`, `--aero: #1fbff0`
 
 ### Design Principles
+
 - Compact design, consistent color palette, green theme for deletions
 - Minimum window: 1050x750 pixels
 
