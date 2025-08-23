@@ -22,10 +22,16 @@
     }
   },
   "include": [
-    "src/**/*.{ts,vue}"
+    "src/vue-shims.d.ts",
+    "src/renderer/**/*.{ts,vue}",
+    "src/components/**/*.{ts,vue}",
+    "src/composables/**/*.{ts,vue}",
+    "src/utils/**/*.{ts,vue}",
+    "src/shared/**/*.{ts,vue}"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/main/**/*"
   ]
 }
