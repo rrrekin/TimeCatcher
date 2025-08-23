@@ -46,10 +46,9 @@ jobs:
         run: mkdir -p test-results && npm run test:coverage
 
       - name: Publish test results
-        if: ${{ !cancelled() && matrix.node-version == '22' }}
+        if: ${{ always() && !cancelled() && matrix.node-version == 22 && hashFiles('test-results/junit.xml') != '' }}
         uses: codecov/test-results-action@v1
         with:
-          path: ./test-results/junit.xml
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Enforce coverage thresholds
@@ -60,7 +59,7 @@ jobs:
         run: npm run build
 
       - name: Upload coverage to Codecov (Node.js 22 only)
-        if: ${{ matrix.node-version == '22' }}
+        if: ${{ matrix.node-version == '22' && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
