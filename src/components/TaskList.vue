@@ -91,13 +91,16 @@
         </template>
         <td>
           <input
-              type="time"
+              :type="record.start_time.trim() ? 'time' : 'text'"
               step="60"
               :value="convertToTimeInput(record.start_time)"
+              :placeholder="record.start_time.trim() ? '' : 'HH:MM'"
               @blur="$emit('handleBlur', record.id, 'start_time', $event)"
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
-              class="editable-cell time-input"
+              :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
+              pattern="[0-2][0-9]:[0-5][0-9]"
+              maxlength="5"
           />
         </td>
         <!-- Duration column (visibility based on task type) -->
@@ -174,30 +177,26 @@
           />
         </td>
         <td>
-          <div class="time-input-container">
-            <input
-                type="time"
-                step="60"
-                :value="newTask.time"
-                @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
-                @keydown.enter.prevent="onAddTaskEnter"
-                v-bind="!newTask.time ? { 'aria-describedby': `time-hint-${componentId}` } : {}"
-                class="editable-cell time-input"
-            />
-            <span v-if="!newTask.time" class="current-time-hint" :id="`time-hint-${componentId}`">{{ getCurrentTime() }}</span>
-          </div>
+          <input
+              type="time"
+              step="60"
+              :value="newTask.time"
+              @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
+              @keydown.enter.prevent="onAddTaskEnter"
+              :class="['editable-cell', 'time-input', { 'empty-time': !newTask.time.trim() }]"
+          />
         </td>
         <td class="duration-cell">-</td>
         <td class="actions-cell">
           <button 
-            class="action-btn add-btn" 
+            class="action-btn add-btn primary-add-btn" 
             @click="handleAddTask" 
             :disabled="!isAddTaskValid"
             :aria-disabled="!isAddTaskValid"
             :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
             :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
           >
-            ✓
+            + Add Task
           </button>
         </td>
       </tr>
@@ -325,8 +324,8 @@ const categoriesRef = computed(() => props.categories)
 const isAddTaskValid = computed(() => {
   return (
     props.newTask.categoryId != null && // Category must be selected
-    props.newTask.name.trim().length > 0 && // Task name must not be empty/whitespace
-    props.newTask.time.trim().length > 0    // Time must not be empty/whitespace
+    props.newTask.name.trim().length > 0 // Task name must not be empty/whitespace
+    // Time is optional - if empty, current time will be used
   )
 })
 
@@ -502,7 +501,6 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 /* Task table styles */
 .task-table {
   background: var(--bg-primary);
-  border-radius: 12px;
   box-shadow: 0 4px 20px var(--shadow-color);
   overflow: hidden;
   margin-bottom: 1rem;
@@ -511,22 +509,30 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
+  table-layout: fixed;
 }
+
+/* Column width controls */
+table th:nth-child(1) { width: 120px; } /* Category - fixed width for category names */
+table th:nth-child(2) { width: auto; } /* Task - flexible width for task descriptions */  
+table th:nth-child(3) { width: 80px; } /* Start time - fixed width for time format (HH:MM) */
+table th:nth-child(4) { width: 70px; } /* Duration - fixed width for duration display */
+table th:nth-child(5) { width: 90px; } /* Actions - fixed width for replay/delete buttons */
 
 th {
   background: var(--primary);
   color: white;
-  padding: 16px 12px;
-  text-align: left;
+  padding: 8px 6px;
+  text-align: center;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 td {
-  padding: 12px;
+  padding: 6px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -583,16 +589,17 @@ tr:last-child td {
 }
 
 .pause-task-row {
-  background: rgba(255, 193, 7, 0.1);
+  background: rgba(253, 203, 110, 0.1);
 }
 
 .end-task-row {
-  background: rgba(40, 167, 69, 0.1);
+  background: rgba(89, 201, 100, 0.1);
 }
 
 .special-task-cell {
   font-weight: 600;
   color: var(--text-primary);
+  text-align: center;
 }
 
 /* Input styles */
@@ -600,9 +607,10 @@ tr:last-child td {
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
   color: var(--text-primary);
+  font-size: 13px;
   transition: all 0.2s ease;
 }
 
@@ -610,11 +618,47 @@ tr:last-child td {
   outline: none;
   border-color: var(--primary);
   background: var(--bg-primary);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.2);
 }
 
 .time-input {
-  max-width: 120px;
+  width: 70px;
+  max-width: 70px;
+  font-size: 12px;
+}
+
+/* Style placeholder text to appear lighter when empty */
+.time-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Style empty time inputs to appear lighter */
+.time-input.empty-time {
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-style: normal;
+}
+
+.time-input.empty-time::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Override browser styling for empty time inputs */
+.time-input.empty-time::-webkit-datetime-edit-text,
+.time-input.empty-time::-webkit-datetime-edit-hour-field,
+.time-input.empty-time::-webkit-datetime-edit-minute-field {
+  color: var(--text-muted);
+  opacity: 0.7;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+.time-input.empty-time::-webkit-datetime-edit {
+  color: var(--text-muted);
+  opacity: 0.7;
+  text-decoration: none !important;
 }
 
 .time-input-container {
@@ -644,11 +688,12 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   background: transparent;
+  font-size: 13px;
   transition: all 0.2s ease;
 }
 
@@ -682,8 +727,9 @@ tr:last-child td {
 }
 
 .dropdown-item {
-  padding: 10px 12px;
+  padding: 6px 8px;
   cursor: pointer;
+  font-size: 13px;
   transition: background-color 0.2s ease;
 }
 
@@ -698,7 +744,7 @@ tr:last-child td {
 
 /* Action buttons */
 .actions-cell {
-  text-align: center;
+  text-align: right;
   white-space: nowrap;
 }
 
@@ -706,8 +752,8 @@ tr:last-child td {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px 8px;
-  margin: 0 2px;
+  padding: 4px 6px;
+  margin: 0 1px;
   border-radius: 4px;
   transition: all 0.2s ease;
   font-size: 14px;
@@ -730,6 +776,34 @@ tr:last-child td {
   color: var(--emerald);
 }
 
+.primary-add-btn {
+  background: linear-gradient(135deg, var(--emerald), var(--mantis));
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 80px;
+  border: 1px solid var(--emerald);
+  box-shadow: 0 2px 4px rgba(86, 179, 114, 0.3);
+  transition: all 0.2s ease;
+}
+
+.primary-add-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--mantis), var(--emerald));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(86, 179, 114, 0.4);
+}
+
+.primary-add-btn:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Add task row */
 .add-task-row {
   background: var(--bg-secondary);
@@ -746,9 +820,11 @@ tr:last-child td {
   padding: 16px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  justify-content: center;
 }
 
 .special-task-btn {
+  flex: 1;
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
@@ -759,20 +835,20 @@ tr:last-child td {
 }
 
 .pause-btn {
-  background: var(--aero);
+  background: var(--warning);
 }
 
 .pause-btn:hover {
-  background: #1a9bd1;
+  background: color-mix(in srgb, var(--warning) 80%, black 20%);
   transform: translateY(-2px);
 }
 
 .end-btn {
-  background: var(--emerald);
+  background: var(--success);
 }
 
 .end-btn:hover:not(:disabled) {
-  background: #4a9960;
+  background: color-mix(in srgb, var(--success) 80%, black 20%);
   transform: translateY(-2px);
 }
 
@@ -784,9 +860,11 @@ tr:last-child td {
 /* Duration cell specific styles */
 .duration-cell {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   text-align: right;
-  min-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

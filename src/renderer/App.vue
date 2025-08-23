@@ -470,11 +470,16 @@ const addTask = async () => {
     const dateString = toYMDLocalUtil(selectedDate.value)
     let timeString: string
 
-    try {
-      timeString = parseTimeInput(newTask.value.time)
-    } catch (timeError) {
-      showToastMessage((timeError as Error).message, 'error')
-      return
+    // Use current time if no time is specified, otherwise parse the provided time
+    if (!newTask.value.time.trim()) {
+      timeString = getCurrentTime()
+    } else {
+      try {
+        timeString = parseTimeInput(newTask.value.time)
+      } catch (timeError) {
+        showToastMessage((timeError as Error).message, 'error')
+        return
+      }
     }
 
     const taskRecord = {
@@ -933,6 +938,25 @@ const getTotalTimeTracked = (): string => {
   return formatDurationMinutes(getTotalMinutesTracked())
 }
 
+// Helper function to parse duration strings back to minutes
+const parseDurationToMinutes = (durationStr: string): number => {
+  let totalMinutes = 0
+  
+  // Match hours (e.g., "1h", "2h")
+  const hoursMatch = durationStr.match(/(\d+)h/)
+  if (hoursMatch) {
+    totalMinutes += parseInt(hoursMatch[1]) * 60
+  }
+  
+  // Match minutes (e.g., "30m", "45m")
+  const minutesMatch = durationStr.match(/(\d+)m/)
+  if (minutesMatch) {
+    totalMinutes += parseInt(minutesMatch[1])
+  }
+  
+  return totalMinutes
+}
+
 // Enhanced category breakdown for the template (includes task summaries)
 const getEnhancedCategoryBreakdown = () => {
   const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
@@ -963,7 +987,17 @@ const getEnhancedCategoryBreakdown = () => {
         firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
       })
     }
-    category.tasks.get(record.task_name).count++
+    
+    const task = category.tasks.get(record.task_name)
+    task.count++
+    
+    // Calculate duration for this specific task record and add to task total
+    const durationString = calculateDuration(record)
+    if (durationString !== '-') {
+      // Parse duration string (e.g., "1h 30m" or "45m") to minutes
+      const durationMinutes = parseDurationToMinutes(durationString)
+      task.totalMinutes += durationMinutes
+    }
   }
 
   // Use the composable's category breakdown for duration calculations
@@ -981,7 +1015,7 @@ const getEnhancedCategoryBreakdown = () => {
         .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
         .map((task: any) => ({
           ...task,
-          totalTime: `${Math.floor(task.totalMinutes / 60)}h ${task.totalMinutes % 60}m`
+          totalTime: formatDurationMinutes(task.totalMinutes)
         })) : []
     }
   })
@@ -1039,6 +1073,8 @@ const formatTime12Hour = (timeString: string): string => {
   --accent: var(--aero);
   --success: var(--mantis);
   --neutral: var(--asparagus);
+  --error: var(--asparagus);
+  --warning: var(--aero);
 
   --bg-primary: #ffffff;
   --bg-secondary: #f8fffe;
@@ -1047,6 +1083,9 @@ const formatTime12Hour = (timeString: string): string => {
   --text-muted: #7a9184;
   --border-color: #e0ede8;
   --shadow-color: rgba(87, 189, 175, 0.1);
+  --focus-shadow: rgba(87, 189, 175, 0.2);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
 }
 
 body {
@@ -1163,7 +1202,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -1182,11 +1221,11 @@ body {
 }
 
 .toast-error {
-  border-left: 4px solid #ff4757;
+  border-left: 4px solid var(--error);
 }
 
 .toast-error .toast-icon {
-  background: #ff4757;
+  background: var(--error);
   color: white;
 }
 
@@ -1252,7 +1291,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.2s ease;
+  transition: background var(--transition-fast);
 }
 
 .close-btn:hover:not(:disabled) {
@@ -1283,7 +1322,7 @@ body {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 0.9rem;
 }
 
@@ -1356,7 +1395,7 @@ body {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 0.9rem;
   background: var(--mantis);
   color: white;

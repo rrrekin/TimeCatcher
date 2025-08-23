@@ -57,7 +57,8 @@
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
-              <span class="task-time">{{ task.totalTime }}</span>
+              <span class="task-time-rounded">{{ formatTaskTime(task.totalTime) }}</span>
+              <span class="task-time-actual">{{ task.totalTime }}</span>
             </li>
           </ul>
         </div>
@@ -115,6 +116,31 @@ const getStatusText = () => {
   }
   
   return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
+}
+
+// Format task time to show rounded to nearest 5 minutes
+const formatTaskTime = (timeString: string): string => {
+  // Parse the time string to extract minutes
+  // Expected formats: "1h 30m", "45m", "2h", etc.
+  const hourMatch = timeString.match(/(\d+)h/)
+  const minuteMatch = timeString.match(/(\d+)m/)
+  
+  let totalMinutes = 0
+  if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60
+  if (minuteMatch) totalMinutes += parseInt(minuteMatch[1])
+  
+  // Round to nearest 5 minutes
+  const roundedMinutes = Math.round(totalMinutes / 5) * 5
+  
+  // Format back to string
+  if (roundedMinutes === 0) return '0m'
+  
+  const hours = Math.floor(roundedMinutes / 60)
+  const minutes = roundedMinutes % 60
+  
+  if (hours === 0) return `${minutes}m`
+  if (minutes === 0) return `${hours}h`
+  return `${hours}h ${minutes}m`
 }
 </script>
 
@@ -265,7 +291,7 @@ const getStatusText = () => {
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   gap: 12px;
   align-items: center;
   padding: 8px 12px;
@@ -290,12 +316,22 @@ const getStatusText = () => {
   text-align: center;
 }
 
-.task-time {
+.task-time-rounded {
   color: var(--text-secondary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-size: 12px;
   font-weight: 500;
-  min-width: 60px;
+  min-width: 50px;
+  text-align: right;
+}
+
+.task-time-actual {
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.8;
+  min-width: 50px;
   text-align: right;
 }
 </style>
