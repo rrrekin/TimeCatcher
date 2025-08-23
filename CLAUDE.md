@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
-- Uploads coverage reports to Codecov from the latest LTS job
+- Uploads coverage reports to Codecov from the Node.js 22 job
 
 **Coverage Requirements for PRs**:
 
@@ -97,10 +97,10 @@ CREATE TABLE task_records (
 );
 
 -- Create covering index for date filtering and start_time ordering
-CREATE INDEX idx_date_start_time ON task_records(date, start_time);
+CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time);
 
 -- Create unique index to enforce one end task per day
-CREATE UNIQUE INDEX idx_end_per_day ON task_records(date) WHERE task_type = 'end';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end';
 ```
 
 ### Type System & Runtime Constants

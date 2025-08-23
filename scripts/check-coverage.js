@@ -65,9 +65,10 @@ function getChangedFiles() {
     console.log(`Fallback: checking all ${sourceFiles.length} tracked source files`);
     return sourceFiles;
   } catch (error) {
-    console.error(`Failed to get any files: ${error.message}`);
-    console.log('No files to check, coverage check will pass');
-    return [];
+    console.error(`❌ FATAL: Failed to enumerate source files for coverage check`);
+    console.error(`Git ls-files failed: ${error.message}`);
+    console.error('Cannot proceed with coverage validation without file list');
+    process.exit(1);
   }
 }
 
@@ -130,13 +131,13 @@ function parseLcovFile() {
       } else if (currentFile && line.startsWith('FNF:')) {
         files[currentFile].functions.found = parseInt(line.substring(4));
       }
-      
-      // In V8 coverage, statements coverage is the same as lines coverage
-      if (currentFile && files[currentFile]) {
-        files[currentFile].statements.hit = files[currentFile].lines.hit;
-        files[currentFile].statements.found = files[currentFile].lines.found;
-      }
     });
+    
+    // In V8 coverage, statements coverage is the same as lines coverage
+    if (currentFile && files[currentFile]) {
+      files[currentFile].statements.hit = files[currentFile].lines.hit;
+      files[currentFile].statements.found = files[currentFile].lines.found;
+    }
   });
   
   return files;

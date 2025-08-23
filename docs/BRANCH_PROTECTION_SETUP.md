@@ -18,16 +18,17 @@ To enforce coverage requirements and prevent merging of PRs with insufficient te
 - ✅ **Require status checks to pass before merging**
 - ✅ **Require branches to be up to date before merging**
 - Under "Status checks that are required", add:
-  - `test (18)` - for Node.js 18 tests
   - `test (20)` - for Node.js 20 tests
+  - `test (22)` - for Node.js 22 tests
 
 #### Additional Protection Settings (Recommended)
 - ✅ **Require a pull request before merging**
   - ✅ **Require approvals**: Set to 1 or more
   - ✅ **Dismiss stale pull request approvals when new commits are pushed**
   - ✅ **Require review from code owners** (if you have a CODEOWNERS file)
-- ✅ **Restrict pushes that create files larger than 100 MB**
 - ✅ **Do not allow bypassing the above settings**
+
+Note: GitHub enforces a 100 MB hard limit on pushes; consider CI checks or Git LFS for large assets instead.
 
 ### 3. Coverage Enforcement Details
 
@@ -101,7 +102,7 @@ The coverage check script uses a robust approach to determine which files to che
 
 ## Configuration Files
 
-- **Coverage thresholds**: `scripts/check-coverage.js` (lines 7-12)
+- **Coverage thresholds**: `scripts/check-coverage.js`
 - **CI workflow**: `.github/workflows/ci.yml`
 - **Vitest config**: `vitest.config.ts`
 - **NPM scripts**: `package.json`
