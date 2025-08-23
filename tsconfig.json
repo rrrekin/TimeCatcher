@@ -22,10 +22,23 @@
     }
   },
   "include": [
-    "src/**/*.{ts,vue}"
+    "src/vue-shims.d.ts",
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.vue",
+    "src/components/**/*.ts",
+    "src/components/**/*.vue",
+    "src/composables/**/*.ts",
+    "src/composables/**/*.vue",
+    "src/utils/**/*.ts",
+    "src/utils/**/*.vue",
+    "src/shared/**/*.ts",
+    "src/shared/**/*.vue"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "src/main/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }

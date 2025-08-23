@@ -1,5 +1,5 @@
 import { ref, computed, type Ref } from 'vue'
-import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType, SpecialTaskType } from '@/shared/types'
+import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType, SpecialTaskType, TaskRecordWithId } from '@/shared/types'
 import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES } from '@/shared/types'
 import { toYMDLocal } from '@/utils/dateUtils'
 
@@ -7,7 +7,7 @@ import { toYMDLocal } from '@/utils/dateUtils'
 const DUPLICATE_END_TASK_MSG = 'An end task already exists for this day. Only one end task is allowed per day.'
 
 export function useTaskRecords(selectedDate: Ref<Date>) {
-  const taskRecords: Ref<TaskRecord[]> = ref([])
+  const taskRecords: Ref<TaskRecordWithId[]> = ref([])
   const isLoadingTasks = ref(false)
 
   // Helper functions

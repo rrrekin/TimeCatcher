@@ -126,7 +126,7 @@
 
 <script setup lang="ts">
 import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType} from '../shared/types'
+import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType, type TaskRecordWithId} from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
 import { useSettings } from '@/composables/useSettings'
@@ -230,7 +230,7 @@ const isSettingDefault = ref(false)
 
 // Delete task modal
 const showDeleteModal = ref(false)
-const taskToDelete = ref<TaskRecord | null>(null)
+const taskToDelete = ref<TaskRecordWithId | null>(null)
 const isDeletingTask = ref(false)
 
 // Custom dropdown state
@@ -248,7 +248,7 @@ const formattedDate = computed(() => {
 })
 
 const displayDate = computed(() => {
-  return formattedDate.value.split(',')[0]
+  return formattedDate.value.split(',')[0] || formattedDate.value
 })
 
 const dateTitle = computed(() => {
@@ -627,7 +627,7 @@ const hideToast = () => {
 }
 
 // Task action functions
-const replayTask = async (record: TaskRecord) => {
+const replayTask = async (record: TaskRecordWithId) => {
   try {
     if (!window.electronAPI) {
       showToastMessage('API not available. Please restart the application.', 'error')
@@ -825,7 +825,7 @@ const convertToTimeInput = (timeString: string): string => {
 
 
 // Delete task functions
-const confirmDeleteTask = (record: TaskRecord) => {
+const confirmDeleteTask = (record: TaskRecordWithId) => {
   taskToDelete.value = record
   showDeleteModal.value = true
 }

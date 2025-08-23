@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import TaskList from './TaskList.vue'
 import type { TaskRecord, Category } from '@/shared/types'
@@ -89,6 +89,13 @@ describe('TaskList Component', () => {
         isSpecial: vi.fn((taskType) => SPECIAL_TASK_TYPES.includes(taskType))
       }
     })
+  })
+
+  afterEach(() => {
+    if (wrapper && wrapper.unmount) {
+      wrapper.unmount()
+    }
+    wrapper = null
   })
 
   describe('Table Structure', () => {

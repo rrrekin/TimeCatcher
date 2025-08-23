@@ -4,25 +4,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Development Workflow
-
-- `npm run dev` - Start development environment (runs Vite dev server + Electron concurrently)
-- `npm run dev:vite` - Run Vite dev server only (port 5173)
-- `npm run dev:electron` - Compile TypeScript and launch Electron only
-
-### Build Commands
-
+- `npm run dev` - Start development environment (Vite + Electron)
 - `npm run build` - Full production build (type checking + Vite build + TypeScript compilation)
-- `npm run build:win` / `npm run build:mac` / `npm run build:linux` - Platform-specific builds
-
-### Testing Commands
-
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once and exit
-- `npm run test:ui` - Open Vitest UI for interactive testing
-- `npm run test:coverage` - Run tests with coverage reporting using the v8 provider
+- `npm run test:coverage` - Run tests with coverage reporting using V8 provider
+- `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
 
-**Coverage Provider**: Uses @vitest/coverage-v8 for fast, accurate coverage reporting with native V8 coverage.
+### CI/CD Pipeline
+
+**GitHub Actions Workflow** (`.github/workflows/ci.yml`):
+
+- Runs on pull requests and pushes to main branch
+- Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
+- Executes `npm run test:coverage` and `npm run build`
+- Uploads coverage reports to Codecov from the Node.js 22 job
+
+**Coverage Requirements for PRs**:
+
+- Only changed files are checked (not entire codebase)
+- Lines: 80% minimum coverage
+- Branches: 85% minimum coverage  
+- Functions: 80% minimum coverage
+- Statements: 80% minimum coverage
+- CI fails if any changed file doesn't meet thresholds
+- Use `npm run test:coverage:check` to verify locally
 
 ### Important Notes
 
@@ -34,68 +40,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Electron Multi-Process Architecture
 
-**Main Process** (`src/main/`):
+**Main Process** (`src/main/`): Application entry, window management, database service, IPC handlers
 
-- `main.ts` - Application entry, window management, IPC handlers
-- `database.ts` - SQLite service using better-sqlite3
-- `preload.ts` - Secure IPC bridge via contextBridge
+**Renderer Process** (`src/renderer/`): Vue 3 + TypeScript frontend with composable-first architecture
 
-**Renderer Process** (`src/renderer/`):
+**Shared** (`src/shared/`): TypeScript interfaces and runtime constants
 
-- Vue 3 + TypeScript frontend
-- Modular component architecture with Composition API
-- Business logic extracted into reusable composables
-- No external state management (uses reactive refs)
-
-**Shared** (`src/shared/`):
-
-- `types.ts` - TypeScript interfaces, runtime constants, and type-safe API definitions
+### Key Components
 
 **Composables** (`src/composables/`):
 
-- `useCategories.ts` - Category CRUD operations and state management
-- `useTaskRecords.ts` - Task management, validation, and database operations
-- `useSettings.ts` - Theme and localStorage management with auto-detection
-- `useDurationCalculations.ts` - Optimized duration calculations and aggregations
-- `useAutoRefresh.ts` - Timer lifecycle management for real-time updates
-- `useListboxNavigation.ts` - Keyboard navigation and accessibility for dropdown components
+- `useCategories.ts` - Category CRUD operations
+- `useTaskRecords.ts` - Task management and validation
+- `useSettings.ts` - Theme and localStorage management
+- `useDurationCalculations.ts` - Duration calculations and aggregations
+- `useAutoRefresh.ts` - Real-time updates for today's tasks
+- `useListboxNavigation.ts` - Keyboard navigation for dropdowns
 
 **Components** (`src/components/`):
 
-- `DateNavigation.vue` - Date picker, navigation controls, and settings button
-- `TaskList.vue` - Complete task table with inline editing and special task buttons
+- `TaskList.vue` - Task table with inline editing
 - `DailyReport.vue` - Report visualization with category breakdowns
-- `SetupModal.vue` - Settings modal for theme, categories, and target work hours
+- `DateNavigation.vue` - Date controls and settings
+- `SetupModal.vue` - Settings modal
 
 **Utilities** (`src/utils/`):
 
-- `timeUtils.ts` - Time parsing, formatting, and duration calculation helpers
-- `dateUtils.ts` - Local date operations and timezone-safe date handling
+- `timeUtils.ts` - Time parsing, formatting, and duration helpers
+- `dateUtils.ts` - Date operations and timezone handling
 
 ### Database Architecture
 
-Uses SQLite with clean table initialization. Key patterns:
+SQLite with clean schema. Key features:
 
-- **Historical Data Preservation**: Tasks store `category_name` directly (not foreign key)
-- **Simple Schema**: Clean table creation without migrations (pre-release version)
-- **Default Category Protection**: Cannot delete category marked as default
-- **Special Task Support**: Tasks can be marked as 'normal', 'pause', or 'end' types
-- **Daily End Task Constraint**: Only one 'end' task allowed per day (enforced by unique index)
-- **Immutable Task Types**: Task type cannot be changed after creation (enforced by TypeScript)
-
-Database schema:
+- Historical data preservation (tasks store `category_name` directly)
+- Task types: 'normal', 'pause', 'end' (immutable after creation)
+- One 'end' task per day constraint
+- Default category protection
 
 ```sql
--- Categories for current category management
-CREATE TABLE IF NOT EXISTS categories (
+CREATE TABLE categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT UNIQUE NOT NULL,
   is_default BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)
+);
 
--- Task records preserve historical category names and support task types
-CREATE TABLE IF NOT EXISTS task_records (
+CREATE TABLE task_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   category_name TEXT NOT NULL,
   task_name TEXT NOT NULL,
@@ -103,542 +94,129 @@ CREATE TABLE IF NOT EXISTS task_records (
   date TEXT NOT NULL,
   task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)
+);
 
--- Covering index for date filtering and start_time ordering
+-- Create covering index for date filtering and start_time ordering
 CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time);
 
--- Unique index to enforce one end task per day
+-- Create unique index to enforce one end task per day
 CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end';
 ```
-
-### IPC Communication Pattern
-
-All database operations follow the pattern:
-
-1. Frontend calls `window.electronAPI.methodName()`
-2. Preload script routes to `ipcRenderer.invoke('db:method-name')`
-3. Main process handles via `ipcMain.handle('db:method-name')`
-4. Database service performs operation
-
-API methods: getCategories, addCategory, deleteCategory, updateCategory, setDefaultCategory, getDefaultCategory, addTaskRecord, getTaskRecordsByDate, updateTaskRecord, deleteTaskRecord
 
 ### Type System & Runtime Constants
 
 **Task Type Management**:
 
-- `TASK_TYPES` - Runtime constant array `['normal', 'pause', 'end']` for validation and UI generation
-- `TaskType` - Derived type alias using `typeof TASK_TYPES[number]` to eliminate duplication
-- `SpecialTaskType` - Derived as `Exclude<TaskType, 'normal'>` to stay synchronized
-- `SPECIAL_TASK_TYPES` - Runtime array `['pause', 'end']` for special task handling
-
-**Duration Display Configuration**:
-
-- `DURATION_VISIBLE_BY_TASK_TYPE` - Centralized mapping controlling which task types show duration:
-  - `normal: true` - Regular tasks show calculated duration
-  - `pause: true` - Pause tasks show calculated duration  
-  - `end: false` - End tasks hide duration (no meaningful duration)
-
-**Immutable Task Types**:
-
+- `TASK_TYPES` - Runtime constant `['normal', 'pause', 'end']`
+- `SPECIAL_TASK_TYPES` - Runtime constant `['pause', 'end']`
+- `DURATION_VISIBLE_BY_TASK_TYPE` - Controls duration display per task type
 - `TaskRecordInsert` - Allows setting task_type during creation
-- `TaskRecordUpdate` - Excludes task_type to prevent modification after creation
-- Type safety enforced throughout IPC chain (preload → main → database)
+- `TaskRecordUpdate` - Excludes immutable task_type
 
-### TypeScript Configuration
+### IPC Communication
 
-Two separate tsconfig files:
-
-- `tsconfig.json` - Frontend (Vue, ESNext modules, bundler resolution)
-- `tsconfig.main.json` - Main process (CommonJS modules, Node.js compatibility)
-
-### Security Model
-
-- Context isolation enabled
-- Node integration disabled in renderer
-- Limited API surface via preload script
-- All IPC communication uses invoke/handle pattern
+Standard pattern: Frontend → Preload → Main → Database
+API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefaultCategory, setDefaultCategory, categoryExists, getTaskRecordsByDate, addTaskRecord, updateTaskRecord, deleteTaskRecord
 
 ## Component Architecture
 
-### Vue 3 Patterns Used
+### Vue 3 Patterns
 
 - Composition API with `<script setup>`
-- Reactive state management via `ref()` and `computed()`
-- Watchers for side effects (e.g., date changes reload data)
-- Single-file components with scoped styles
-- Business logic extracted into reusable composables
-- Component communication via props/events pattern
+- Reactive state via `ref()` and `computed()`
+- Business logic in composables, UI logic in components
+- Props/events communication pattern
 
-### Modular Architecture Design
+### Key UI Features
 
-The application follows a **composable-first architecture** where business logic is separated from UI components:
-
-**Composables Layer** (Business Logic):
-
-- Encapsulate reactive state and logic
-- Provide clean APIs for components to use
-- Handle all database operations and side effects
-- Maintain separation of concerns
-
-**Component Layer** (UI Logic):
-
-- Focus solely on presentation and user interaction
-- Communicate with parent via props (down) and events (up)
-- Use composables for business logic needs
-- Maintain single responsibility principle
-
-### State Management Approach
-
-No external store used. State is distributed across composables:
-
-**Core State Composables**:
-
-- **useCategories**: Category CRUD operations and reactive state
-- **useTaskRecords**: Task management, validation, and database operations  
-- **useSettings**: Theme and localStorage management
-- **useDurationCalculations**: Optimized duration calculations and aggregations
-- **useAutoRefresh**: Timer lifecycle management for real-time updates
-- **useListboxNavigation**: Keyboard navigation, focus management, and accessibility for dropdown components (see [Keyboard Navigation Implementation](#keyboard-navigation))
-
-**UI State** (Component-local):
-
-- Loading states, modals, form visibility
-- Component interaction states (dropdowns, editing modes)
-- Temporary form data and validation states
-
-### Key UI Patterns
-
-- **Inline Editing**: Double-click table cells to edit directly
-- **Inline Task Entry**: Always-visible add task form as last table row with Enter key support
-- **Custom Dropdowns**: Styled category selectors for both inline editing and task creation
-- **Keyboard Navigation**: Full keyboard support for dropdowns (Arrow keys, Home/End, Enter/Space, Escape/Tab)
-- **Accessibility Support**: ARIA attributes, focus management, and screen reader compatibility
-
-  - Use `role="listbox"` on the container and `role="option"` on each item
-  - Manage active item focus with `aria-activedescendant` on the focus owner
-  - Provide stable IDs for each option and reference them from `aria-activedescendant`
-  - Use `aria-controls` where the list interacts with other widgets
-  - Maintain clear ARIA relationships for consistent screen reader experience
-- **Special Task Buttons**: Dedicated "Pause" and "End" buttons for quick task entry
-- **Loading States**: Comprehensive loading indicators for all async operations
-- **Toast Notifications**: Success/error feedback system
-- **Modal Management**: Setup modal for categories, theme, and target work hours settings
-- **Date Navigation**: Previous/next day buttons, today button, date picker
-- **Report Visualization**: Daily summaries with category breakdowns and task summarization
+- Inline editing (double-click table cells)
+- Keyboard navigation for dropdowns
+- Special task buttons ("Pause", "End")
+- Auto-refresh for today's tasks (15-second interval)
+- ARIA accessibility support
 
 ## Report Component
 
 ### Daily Report Features
 
-The Daily Report provides comprehensive analysis of standard tasks only:
+- Smart duration calculation using ALL records as boundaries
+- Task summarization with occurrence counts
+- Category breakdown with progress bars
+- Status indicators: ⚠️ (missing end task), 😊 (target reached)
+- Configurable target work hours (default: 8)
 
-- **Smart Duration Calculation**: Uses ALL records (including special tasks) as time boundaries for accurate standard task durations
-- **Task Summarization**: Groups tasks with identical names, showing occurrence count (e.g., "3x") and combined duration
-- **Task Ordering**: Tasks within each category are ordered by first occurrence time
-- **Category Breakdown**: Shows time distribution across categories with progress bars and percentages
-- **Status Indicators**: Visual feedback with emojis:
-  - **⚠️** Warning emoji when day lacks an "End" task (not finalized)
-  - **😊** Happy face emoji when reaching configured target work hours
-- **Configurable Target**: Target work hours setting in Setup (default: 8 hours, range: 1-24 hours)
+### Duration Calculation Logic
 
-### Report Calculation Logic
-
-Duration calculation correctly handles mixed task types with special logic for the last task of each day:
-
-```typescript
-// Uses ALL records for boundaries, aggregates only standard tasks
-const allSortedRecords = taskRecords.filter(record => record.start_time)
-    .sort((a, b) => parseTimeString(a.start_time) - parseTimeString(b.start_time))
-
-// For each standard task, calculate duration
-for (const standardRecord of standardRecords) {
-  const currentIndex = allSortedRecords.findIndex(record => record.id === standardRecord.id)
-  
-  // If NOT the last task, use next task as boundary
-  if (currentIndex < allSortedRecords.length - 1) {
-    const nextRecord = allSortedRecords[currentIndex + 1]
-    // Calculate duration using any next task as boundary
-  } else {
-    // Last task duration logic based on date context:
-    // - Past days: duration until midnight (end of day)
-    // - Today: duration until current time (0 if start time is future)
-    // - Future days: duration is always 0
-  }
-}
-```
-
-**Duration Rounding Policy**: To prevent 1-minute mismatches between individual task durations and report totals, all duration calculations use a consistent rounding strategy:
-
-1. **Parse time with seconds precision**: `parseTimeString()` converts time to fractional minutes (includes seconds/60)
-2. **Floor individual task minutes**: Each task's duration is floored to whole minutes before display/summation  
-3. **Sum floored values**: Report totals sum the individual floored minutes rather than flooring the final sum
-4. **Consistent application**: `calculateDuration()`, `getTotalMinutesTracked()`, and `getCategoryBreakdown()` all use `Math.floor()` per-task before aggregation
-
-This policy is fully implemented in the `useDurationCalculations` composable — all three functions apply `Math.floor()` to individual task durations before summing or display, ensuring report totals exactly match the sum of individual task durations in the left panel.
-
-### Auto-Refresh Functionality
-
-For today's tasks, the application automatically refreshes duration calculations every 15 seconds:
-
-- **Auto-refresh Scope**: Only active when viewing today's date
-- **Refresh Interval**: 15 seconds for real-time duration updates
-- **Consistency**: Both task list and daily report refresh simultaneously
-- **Lifecycle Management**: Auto-refresh starts/stops when switching dates, properly cleaned up on component unmount
-
-The auto-refresh ensures that ongoing tasks show current duration without requiring manual page refresh.
-
-### Report Styling
-
-- **Gradient Text Effects**: Section headers use CSS gradient backgrounds with text clipping
-- **Emoji Styling**: Status emojis have dedicated `.status-emoji` class to override gradient effects
-- **Responsive Layout**: Category sections with collapsible task summaries
-- **Progress Indicators**: Visual progress bars for category time distribution
+- Uses all records for time boundaries, aggregates only standard tasks
+- Last task duration based on date context (past: until midnight, today: until current time, future: zero)
+- Consistent rounding: `Math.floor()` per-task before aggregation
+- Auto-refresh for real-time updates when viewing today
 
 ## Design System
 
-### Color Palette (CSS Custom Properties)
+### Color Palette
 
-- `--verdigris: #57bdaf`
-- `--mantis: #59c964`
-- `--asparagus: #69966f`
-- `--emerald: #56b372`
-- `--aero: #1fbff0`
+- `--verdigris: #57bdaf`, `--mantis: #59c964`, `--asparagus: #69966f`, `--emerald: #56b372`, `--aero: #1fbff0`
 
 ### Design Principles
 
-- **Compact Design**: All components must be space-efficient
-- **Consistent Color Palette**: Always use defined app colors, never external colors
-- **Green Theme**: Delete operations use green instead of traditional red
-- **Minimal Window Size**: 1050x750 pixels minimum to ensure UI usability
+- Compact design, consistent color palette, green theme for deletions
+- Minimum window: 1050x750 pixels
 
 ## Settings & Configuration
 
-### Setup Modal
+**Setup Modal**: Theme settings, target work hours, category management
+**Persistence**: localStorage for theme and target hours
+**Window**: 1200x800 default, 1050x750 minimum, context isolation enabled
 
-The setup modal (⚙️ gear icon) provides centralized configuration:
+## Testing
 
-- **Theme Settings**: Light, Dark, or Auto (follows system preference)
-- **Target Work Hours**: Configurable daily target (1-24 hours, 0.5 increments, default: 8)
-- **Category Management**: Add, edit, delete, and set default categories
+Uses Vitest with @vitest/coverage-v8. Test types:
 
-### Persistent Settings
-
-Settings are stored in localStorage with automatic restoration:
-
-```typescript
-// Theme preference
-localStorage.setItem('theme', currentTheme.value)
-
-// Target work hours
-localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
-
-// Loaded on app startup with validation
-const savedTargetHours = localStorage.getItem('targetWorkHours')
-if (savedTargetHours) {
-  const hours = parseFloat(savedTargetHours)
-  if (!isNaN(hours) && hours > 0 && hours <= 24) {
-    targetWorkHours.value = hours
-  }
-}
-```
-
-### Window Configuration
-
-Main window settings in `src/main/main.ts`:
-
-- **Default Size**: 1200x800 pixels
-- **Minimum Size**: 1050x750 pixels (prevents UI breaking)
-- **Security**: Context isolation enabled, node integration disabled
-
-## Development Patterns
-
-### Error Handling
-
-- Comprehensive try-catch in all IPC handlers
-- User-friendly error messages via toast system
-- Graceful fallbacks when API unavailable
-- Automatic data reload on error for state consistency
-
-### Data Validation
-
-- Category name uniqueness enforced at database level
-- Input sanitization with trim() and existence checks
-- Default category protection (cannot delete default)
-- Time format validation for task start times
-
-### Form Interaction Patterns
-
-- Enter key submits forms
-- Escape key cancels editing
-- Auto-focus on form inputs
-- Blur events save inline edits
-
-### Testing
-
-The project uses Vitest for comprehensive testing. For current test counts and coverage metrics, run `npm run test:coverage` to generate up-to-date reports.
-
-**Test Configuration**:
-
-- **`vitest.config.ts`** - Vitest setup with Vue plugin for component testing and coverage configuration
-- **`vite.config.ts`** - Production build settings with testing configuration removed to avoid conflicts
-- **Coverage reports** are produced in text, HTML, and LCOV formats via the v8 provider
-
-**Unit Tests** (`src/**/*.test.ts`):
-
-- **Time utilities** - Date/time parsing, formatting, and duration calculations
-- **Task record operations** - Validation, normalization, and error handling
-- **Duration calculations** - Business logic for task timing and category breakdowns
-- **Listbox navigation** - Keyboard accessibility and focus management
-
-**Component Tests** (`src/**/*.spec.ts` or component-specific `.test.ts`):
-
-- **Vue components** via @vue/test-utils covering user interactions and component behavior
+- Unit tests (`*.test.ts`) for utilities and composables
+- Component tests for Vue components via @vue/test-utils
+- Coverage reports in text, HTML, and LCOV formats
 
 **Test Patterns**:
 
-- **Parameterized tests**: Use `it.each()` for table-driven testing to reduce duplication
-- **Per-test isolation**: Create fresh composable instances in `beforeEach` to prevent test contamination
-- **Regex error matching**: Use regex patterns (e.g., `/^Time must be in/`) instead of exact strings for error message assertions to improve test resilience
-- **Mock management**: Use Vitest fake timers (`vi.useFakeTimers()`, `vi.setSystemTime()`) for reliable date/time testing
-- **Component mocking**: Mock complex dependencies (composables, utilities) for focused component testing
-- **Vue Test Utils integration**: Full component rendering with props, events, and DOM interactions
-
-**Test Workflow**:
-
-- **For CI**: Prefer `npm run test:run` with coverage to avoid watch-mode flakiness
-- **Locally**: Use `npm run test:ui` during development and `npm run test:coverage` before committing
-- **UI and coverage**: Can be combined in separate runs for comprehensive development workflow
-
-## Key Files to Understand
-
-### Core Application Files
-
-1. **`src/renderer/App.vue`** - Main UI orchestrator (1,341 lines, ~47% reduction from original)
-   - Imports and coordinates all components and composables
-   - Handles application-level state and lifecycle
-   - Manages IPC communication and error handling
-
-1. **`src/main/database.ts`** - Database service layer with all CRUD operations
-1. **`src/main/main.ts`** - Electron main process with IPC handlers
-1. **`src/shared/types.ts`** - Type definitions with runtime constants and UI configuration
-1. **`package.json`** - Build scripts and dependency management
-
-### Configuration Files
-
-1. **`vite.config.ts`** - Vite configuration for production builds
-1. **`vitest.config.ts`** - Dedicated Vitest configuration for testing with Vue component support
-
-### Business Logic (Composables)
-
-1. **`src/composables/useCategories.ts`** - Category management logic
-1. **`src/composables/useTaskRecords.ts`** - Task operations and validation
-1. **`src/composables/useSettings.ts`** - Settings and theme management
-1. **`src/composables/useDurationCalculations.ts`** - Duration calculation engine
-1. **`src/composables/useAutoRefresh.ts`** - Real-time update management
-1. **`src/composables/useListboxNavigation.ts`** - Keyboard navigation and accessibility for dropdowns
-
-### UI Components
-
-1. **`src/components/TaskList.vue`** - Task table with inline editing
-1. **`src/components/DailyReport.vue`** - Report visualization
-1. **`src/components/DateNavigation.vue`** - Date controls and settings
-1. **`src/components/SetupModal.vue`** - Configuration modal
-
-### Utility Modules
-
-1. **`src/utils/timeUtils.ts`** - Time parsing and formatting utilities
-1. **`src/utils/timeUtils.test.ts`** - Comprehensive unit tests for time utilities
-1. **`src/utils/dateUtils.ts`** - Date operations and timezone handling
-
-### Test Files
-
-1. **`src/utils/timeUtils.test.ts`** - Comprehensive unit tests for time utilities
-1. **`src/composables/useTaskRecords.test.ts`** - Unit tests for task record composable functions  
-1. **`src/composables/useDurationCalculations.test.ts`** - Unit tests for duration calculation logic
-1. **`src/composables/useListboxNavigation.test.ts`** - Unit tests for keyboard navigation composable
-1. **`src/components/TaskList.test.ts`** - Component tests for TaskList Vue component
+- Parameterized tests with `it.each()`
+- Fresh instances in `beforeEach` for isolation
+- Vitest fake timers for date/time testing
+- Mock complex dependencies for focused testing
 
 ## Common Development Tasks
 
-When adding new database operations:
+**Database Operations**: Add to DatabaseService → IPC handler → preload → types → composable
 
-1. Add method to DatabaseService (`src/main/database.ts`)
-2. Add IPC handler in main process (`src/main/main.ts`)
-3. Expose method in preload script (`src/main/preload.ts`)
-4. Add TypeScript type to ElectronAPI interface (`src/shared/types.ts`)
-5. Add method to appropriate composable (e.g., `useCategories`, `useTaskRecords`)
-6. Use composable method in Vue components
+**Task Types**: Use `TASK_TYPES` for validation, `SPECIAL_TASK_TYPES` for logic, `DURATION_VISIBLE_BY_TASK_TYPE` for display
 
-When working with task types:
+**UI Features**: Create components → use composables → follow props/events → add error handling
 
-- Use `TASK_TYPES` constant for runtime validation, loops, or UI generation
-- Use `SPECIAL_TASK_TYPES` constant for special task logic and guards
-- Use `DURATION_VISIBLE_BY_TASK_TYPE[taskType]` for duration display decisions  
-- Use `TaskRecordInsert` for creation operations (includes task_type)
-- Use `TaskRecordUpdate` for modification operations (excludes immutable task_type)
+**Auto-refresh**: Use `useAutoRefresh` composable, only active for today's date
 
-When adding new UI features:
+**Duration Logic**: Centralized in `useDurationCalculations`, use ALL records for boundaries
 
-- **Create new components** for significant UI sections (follow existing component patterns)
-- **Use composables** for business logic (don't put business logic in components)
-- **Follow props/events pattern** for component communication
-- Use CSS custom properties for colors
-- Add loading states for async operations  
-- Include error handling with toast notifications
-- Maintain compact design philosophy
-- Keep components focused on single responsibilities
+**Keyboard Navigation**: Use `useListboxNavigation` composable with ARIA support
 
-When working with auto-refresh functionality:
+**Settings**: Add to `useSettings` composable → localStorage persistence → UI controls in SetupModal
 
-- Auto-refresh logic is encapsulated in `useAutoRefresh` composable
-- Auto-refresh only activates when viewing today's date (`isToday(selectedDate.value)`)
-- Use `startAutoRefresh()` and `stopAutoRefresh()` from the composable
-- The composable handles interval cleanup automatically
-- Trigger reactivity updates with `taskRecords.value = [...taskRecords.value]`
-- Auto-refresh affects both task list durations and daily report calculations
+## Key Files
 
-**Midnight Rollover Behavior**: When users keep the app open past midnight, the auto-refresh interval will naturally stop updating because the `isToday(selectedDate.value)` guard prevents updates once today becomes yesterday. To handle midnight transitions properly, consider calling `stopAutoRefresh()` at midnight or re-evaluating `isToday()` and restarting via `startAutoRefresh()` when appropriate. Always ensure `onUnmounted` cleanup is still required for proper resource management. This prevents lingering timers and ensures daily report calculations switch correctly at midnight.
+**Core**: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
 
-When working with report calculations:
+**Config**: `vite.config.ts`, `vitest.config.ts`
 
-- **All duration logic** is centralized in `useDurationCalculations` composable
-- Use ALL records for duration boundaries, not just standard tasks
-- Ensure report totals match left panel task durations
-- Consider special tasks (pause, end) as valid time endpoints
-- Use `getTotalMinutesTracked()` from the composable for comparing against target work hours
-- Apply `.status-emoji` class to emojis in gradient text contexts  
-- The `getLastTaskEndTime(taskDate: string, taskStartTime: number): number` helper in `timeUtils.ts` provides date-aware last task logic:
-  - **Contract**: Returns end time in minutes for the last task based on date context
-  - **Past days**: Returns 1440 (midnight) for any start time
-  - **Today**: Returns current time in minutes, or start time if start is in future
-  - **Future days**: Returns start time (creating zero duration)
-  - **DRY principle**: This helper is used by all three duration functions to prevent logic duplication
-  - **Testing**: Manual test available in `test-helper.js` covering past/today/future edge cases
-  - **Time zone note**: Returns end times in minutes based on local calendar day; date-only strings must be persisted/compared in local time (e.g., "YYYY-MM-DD derived from local getters") to avoid UTC off-by-one-day errors
+**Composables**: `src/composables/use*.ts` files
 
-When adding new settings:
+**Components**: `src/components/*.vue` files
 
-- Add reactive state variables to `useSettings` composable for current and temporary values
-- Update the composable's initialization logic for saved values
-- Update the composable's save logic to persist to localStorage  
-- Add validation in the composable's initialization
-- Include appropriate UI controls in `SetupModal.vue` component
-- Pass new settings via props/events between `App.vue` and `SetupModal.vue`
+**Utils**: `src/utils/timeUtils.ts`, `src/utils/dateUtils.ts`
 
-### Keyboard Navigation Implementation {#keyboard-navigation}
+**Tests**: `src/**/*.test.ts` files
 
-When implementing keyboard navigation for dropdowns:
+## Key Recommendations
 
-- Use `useListboxNavigation` composable for consistent keyboard navigation behavior
-- Provide required options: `containerRef`, `items`, `onSelect`, `onClose`, `getOptionSelector`
-- The composable handles: Arrow navigation, Home/End keys, Enter/Space selection, Escape/Tab closing
-- Focus management is handled by the composable; roles/ARIA attributes remain the component's responsibility (see ARIA Requirements below)
-- Supports multiple dropdown contexts on the same page with the contextId parameter
-- Closing keys (Escape/Tab) work even when item list is empty
+Always consider use of sequential thinking and memory-timecatcher MCPs, especially when working with complex code.
+Use other MCPs if this can be useful for a specific task or step.
 
-**Example Usage**:
-
-```vue
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useListboxNavigation } from '@/composables/useListboxNavigation'
-
-const containerRef = ref<HTMLElement | null>(null)
-const items = computed(() => [
-  { id: 1, name: 'Option 1' },
-  { id: 2, name: 'Option 2' }
-])
-
-const getOptionSelector = (contextId: string | number, optionIndex: number) => 
-  `[data-context="${contextId}"][data-option="${optionIndex}"]`
-
-const onSelect = (item: any, index: number, contextId?: string | number) => {
-  console.log('Selected:', item, 'at index:', index, 'context:', contextId)
-}
-
-const onClose = (contextId?: string | number) => {
-  console.log('Closing dropdown for context:', contextId)
-}
-
-const { handleKeydown, initializeActiveOption } = useListboxNavigation({
-  containerRef,
-  items,
-  onSelect,
-  onClose,
-  getOptionSelector
-})
-
-// Optional: Use contextId for multiple dropdowns
-const contextId = 'my-dropdown'
-</script>
-```
-
-**ARIA Requirements**: Use `role="listbox"` on the container and `role="option"` on each item. Manage focus using either:
-
-- `aria-activedescendant` on the focus owner (canonical Listbox pattern), or
-- a roving tabindex on options (set `tabindex="0"` on the active option and `tabindex="-1"` on others), which is the approach implemented in TaskList.vue.
-
-Ensure `aria-selected` reflects the selection state (`true` for the active item, `false` for others).
-
-For detailed accessibility guidelines, see the [WAI-ARIA Authoring Practices Guide - Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/).
-
-When writing tests:
-
-- **Unit tests**: Create test files with `.test.ts` extension alongside source files
-- **Component tests**: Use `@vue/test-utils` for Vue component testing with full DOM rendering
-- **Coverage**: Run `npm run test:coverage` to generate coverage reports
-- **Mocking**: Mock complex dependencies (composables, utilities) for focused testing
-- **Isolation**: Use fresh instances in `beforeEach` to prevent test contamination
-- **Accessibility**: Test ARIA attributes, keyboard navigation, and focus management
-
-## Refactored Architecture Benefits
-
-### File Size Reduction
-
-The application underwent a major refactoring that reduced the main component file size by 47%:
-
-- **Before**: `App.vue` was 3,430 lines (monolithic component)
-- **After**: `App.vue` is 1,341 lines (orchestrator component)
-- **Extracted**: 2,089 lines moved to focused composables and components
-
-### Improved Maintainability
-
-**Separation of Concerns**:
-
-- **Business Logic**: Extracted to 5 composables with single responsibilities
-- **UI Components**: Split into 4 focused components with clear interfaces
-- **Utilities**: Common functions moved to 2 utility modules
-- **Type Safety**: Maintained throughout all extracted modules
-
-**Benefits Achieved**:
-
-- **Better Readability**: Each file has a clear, single purpose
-- **Enhanced Testability**: Business logic isolated in composables can be unit tested
-- **Improved Reusability**: Composables can be shared across components
-- **Easier Debugging**: Smaller, focused files are easier to understand and modify
-- **Performance**: Optimized with computed properties and efficient state management
-
-### Architecture Patterns
-
-**Composable-First Design**:
-
-- All business logic encapsulated in reusable composables
-- Components focus solely on presentation and user interaction
-- Clear APIs between composables and components
-- Reactive state management without external stores
-
-**Component Communication**:
-
-- **Props Down**: Parent passes data to children via props
-- **Events Up**: Children emit events to notify parents of changes
-- **No Direct DOM Manipulation**: Vue's reactive system handles all updates
-- **Type-Safe Interfaces**: Full TypeScript support for props and events
-
-## Markdown Formatting Notes
-
-When editing markdown files, always ensure proper markdown formatting:
-
-- **List Spacing**: Always include blank lines before and after list blocks to avoid MD032 violations
-- **Consistent Indentation**: Use consistent spacing for nested list items
-- **Line Endings**: File must end with a single newline character
+Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
