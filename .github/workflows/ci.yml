@@ -42,8 +42,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests with coverage and enforce thresholds
-        run: npm run test:coverage:check
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Publish test results
+        uses: codecov/test-results-action@v1
+        with:
+          path: test-results/junit.xml
+
+      - name: Enforce coverage thresholds
+        run: node scripts/check-coverage.js
 
       - name: Run build
         run: npm run build
