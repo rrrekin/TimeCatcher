@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test` - Run tests in watch mode
 - `npm run test:run` - Run tests once and exit
 - `npm run test:coverage` - Run tests with coverage reporting using v8 provider
+- `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
 
 ### CI/CD Pipeline
 
@@ -17,7 +18,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 18 and 20
 - Executes `npm run test:coverage` and `npm run build`
+- **Coverage enforcement**: Checks changed files meet thresholds (80% lines, 85% branches, 75% functions)
 - Uploads coverage reports to Codecov
+
+**Coverage Requirements for PRs**:
+- Only changed files are checked (not entire codebase)
+- Lines: 80% minimum coverage
+- Branches: 85% minimum coverage  
+- Functions: 75% minimum coverage
+- CI fails if any changed file doesn't meet thresholds
+- Use `npm run test:coverage:check` to verify locally
 
 ### Important Notes
 

@@ -20,7 +20,8 @@ export default defineConfig({
         '**/*.spec.js',
         'src/main/**', // Exclude Electron main process files
         'coverage/**'
-      ]
+      ],
+      // Global thresholds removed - using per-file check in scripts/check-coverage.js
     }
   },
   resolve: {

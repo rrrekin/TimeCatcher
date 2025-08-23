@@ -30,6 +30,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
       
+      - name: Check coverage for changed files
+        run: node scripts/check-coverage.js
+      
       - name: Run build
         run: npm run build
       
