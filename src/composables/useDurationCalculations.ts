@@ -3,10 +3,10 @@ import type { TaskRecord } from '@/shared/types'
 import { parseTimeString, formatDurationMinutes, getLastTaskEndTime } from '@/utils/timeUtils'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 
-export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
+export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T[]>) {
   // Precomputed parsed times for performance (computed once per render/refresh)
   const timeByRecord = computed(() => {
-    const timeMap = new Map<TaskRecord, number | null>()
+    const timeMap = new Map<T, number | null>()
     for (const record of taskRecords.value) {
       timeMap.set(record, parseTimeString(record.start_time))
     }
@@ -34,7 +34,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
   // Precomputed map for O(1) lookups (computed once per refresh)
   const nextRecordByRecord = computed(() => {
     const records = sortedTaskRecords.value
-    const nextRecordMap = new Map<TaskRecord, TaskRecord | null>()
+    const nextRecordMap = new Map<T, T | null>()
     
     records.forEach((record, index) => {
       nextRecordMap.set(record, index < records.length - 1 ? records[index + 1]! : null)
@@ -48,7 +48,7 @@ export function useDurationCalculations(taskRecords: Ref<TaskRecord[]>) {
    * @param currentRecord - The task record to calculate duration for
    * @returns Formatted duration string or '-' if invalid
    */
-  const calculateDuration = (currentRecord: TaskRecord): string => {
+  const calculateDuration = (currentRecord: T): string => {
     if (!DURATION_VISIBLE_BY_TASK_TYPE[currentRecord.task_type]) {
       return '-'
     }

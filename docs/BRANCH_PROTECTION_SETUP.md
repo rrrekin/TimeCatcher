@@ -5,16 +5,19 @@ To enforce coverage requirements and prevent merging of PRs with insufficient te
 ## Steps to Enable Branch Protection
 
 ### 1. Navigate to Repository Settings
+
 1. Go to your repository on GitHub
 2. Click on **Settings** tab
 3. Select **Branches** from the left sidebar
 
 ### 2. Add Branch Protection Rule
+
 1. Click **Add rule**
 2. In the "Branch name pattern" field, enter: `main`
 3. Configure the following settings:
 
 #### Required Status Checks
+
 - ✅ **Require status checks to pass before merging**
 - ✅ **Require branches to be up to date before merging**
 - Under "Status checks that are required", add:
@@ -22,6 +25,7 @@ To enforce coverage requirements and prevent merging of PRs with insufficient te
   - `test (22)` - for Node.js 22 tests
 
 #### Additional Protection Settings (Recommended)
+
 - ✅ **Require a pull request before merging**
   - ✅ **Require approvals**: Set to 1 or more
   - ✅ **Dismiss stale pull request approvals when new commits are pushed**
@@ -84,12 +88,15 @@ The coverage check script uses a robust approach to determine which files to che
 ### 8. Troubleshooting
 
 **Issue**: Coverage check passes locally but fails in CI
+
 - **Solution**: Ensure all changed files have corresponding tests
 
 **Issue**: Coverage check fails for files with no coverage data
+
 - **Solution**: Add at least basic tests for new files
 
 **Issue**: Want to merge without meeting coverage (emergency)
+
 - **Solution**: Repository admins can bypass branch protection, but this should be rare
 
 ## Benefits

@@ -225,12 +225,9 @@
 
 <script setup lang="ts">
 import { type PropType, ref, nextTick, computed } from 'vue'
-import type { TaskRecord, Category, TaskType } from '@/shared/types'
+import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
-
-// TaskRecord with required id for TaskList component
-type TaskRecordWithId = TaskRecord & { id: number }
 
 // Generate unique component instance ID for ARIA references
 const componentId = (typeof globalThis !== 'undefined' && 
@@ -284,7 +281,7 @@ const props = defineProps({
   },
   // Function props
   calculateDuration: {
-    type: Function as PropType<(record: TaskRecord) => string>,
+    type: Function as PropType<(record: TaskRecordWithId) => string>,
     required: true
   },
   convertToTimeInput: {

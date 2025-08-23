@@ -33,6 +33,9 @@ export interface TaskRecord {
   created_at?: string
 }
 
+// TaskRecord with required id for records loaded from DB/UI lists
+export type TaskRecordWithId = TaskRecord & { id: number }
+
 export type TaskRecordInsert = Omit<TaskRecord, 'id' | 'created_at'>
 export type TaskRecordUpdate = Partial<Omit<TaskRecord, 'id' | 'created_at' | 'task_type'>>
 
@@ -45,7 +48,7 @@ export interface ElectronAPI {
   setDefaultCategory: (id: number) => Promise<void>
   getDefaultCategory: () => Promise<Category | null>
   addTaskRecord: (record: TaskRecordInsert) => Promise<TaskRecord>
-  getTaskRecordsByDate: (date: string) => Promise<TaskRecord[]>
+  getTaskRecordsByDate: (date: string) => Promise<TaskRecordWithId[]>
   updateTaskRecord: (id: number, record: TaskRecordUpdate) => Promise<void>
   deleteTaskRecord: (id: number) => Promise<void>
   debugAll?: () => Promise<any>
