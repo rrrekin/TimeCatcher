@@ -1,0 +1,49 @@
+#!/bin/sh
+
+# Pre-commit hook to format markdown files
+# This script is shared in the repository and can be installed via: npm run install-hooks
+
+# Get list of staged markdown files
+staged_md_files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' | grep -v node_modules || true)
+
+if [ -z "$staged_md_files" ]; then
+  # No markdown files staged, exit successfully
+  exit 0
+fi
+
+echo "🔍 Checking markdown files for formatting issues..."
+
+# Check if markdownlint-cli2 is available
+if ! npm list markdownlint-cli2 >/dev/null 2>&1; then
+  echo "⚠️  markdownlint-cli2 not found. Run 'npm install' to install dependencies."
+  echo "⚠️  Skipping markdown formatting check."
+  exit 0
+fi
+
+# Run markdownlint-cli2 on staged files only
+echo "📝 Running markdownlint on staged files: $staged_md_files"
+
+# Create temporary file list for staged files
+temp_file=$(mktemp)
+echo "$staged_md_files" | tr ' ' '\n' > "$temp_file"
+
+# Run markdownlint with fix on the specific files
+if npx markdownlint-cli2 --config .markdownlint-cli2.jsonc $(cat "$temp_file"); then
+  echo "✅ Markdown formatting complete"
+  
+  # Add any fixed files back to the staging area
+  for file in $staged_md_files; do
+    if [ -f "$file" ]; then
+      git add "$file"
+    fi
+  done
+  
+  # Clean up
+  rm -f "$temp_file"
+  exit 0
+else
+  echo "❌ Markdown formatting failed"
+  echo "💡 Fix the issues above or run 'npm run format:md' to auto-fix what's possible"
+  rm -f "$temp_file"
+  exit 1
+fi

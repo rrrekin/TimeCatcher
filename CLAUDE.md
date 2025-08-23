@@ -10,6 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:run` - Run tests once and exit
 - `npm run test:coverage` - Run tests with coverage reporting using V8 provider
 - `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
+- `npm run lint:md` - Check markdown formatting issues
+- `npm run format:md` - Auto-fix markdown formatting issues
+- `npm run install-hooks` - Install git hooks for automatic markdown formatting
 
 ### CI/CD Pipeline
 
@@ -199,6 +202,8 @@ __Duration Logic__: Centralized in `useDurationCalculations`, use ALL records fo
 __Keyboard Navigation__: Use `useListboxNavigation` composable with ARIA support
 
 __Settings__: Add to `useSettings` composable → localStorage persistence → UI controls in SetupModal
+
+__Git Hooks__: Run `npm run install-hooks` after cloning to enable automatic markdown formatting on commits
 
 ## Key Files
 
