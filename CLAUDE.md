@@ -10,17 +10,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:run` - Run tests once and exit
 - `npm run test:coverage` - Run tests with coverage reporting using V8 provider
 - `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
+- `npm run lint:md` - Check markdown formatting issues
+- `npm run format:md` - Auto-fix markdown formatting issues
+- `npm run install-hooks` - Install git hooks for automatic markdown formatting
 
 ### CI/CD Pipeline
 
-**GitHub Actions Workflow** (`.github/workflows/ci.yml`):
+__GitHub Actions Workflow__ (`.github/workflows/ci.yml`):
 
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
 - Uploads coverage reports to Codecov from the Node.js 22 job
 
-**Coverage Requirements for PRs**:
+__Coverage Requirements for PRs__:
 
 - Only changed files are checked (not entire codebase)
 - Lines: 80% minimum coverage
@@ -40,15 +43,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Electron Multi-Process Architecture
 
-**Main Process** (`src/main/`): Application entry, window management, database service, IPC handlers
+__Main Process__ (`src/main/`): Application entry, window management, database service, IPC handlers
 
-**Renderer Process** (`src/renderer/`): Vue 3 + TypeScript frontend with composable-first architecture
+__Renderer Process__ (`src/renderer/`): Vue 3 + TypeScript frontend with composable-first architecture
 
-**Shared** (`src/shared/`): TypeScript interfaces and runtime constants
+__Shared__ (`src/shared/`): TypeScript interfaces and runtime constants
 
 ### Key Components
 
-**Composables** (`src/composables/`):
+__Composables__ (`src/composables/`):
 
 - `useCategories.ts` - Category CRUD operations
 - `useTaskRecords.ts` - Task management and validation
@@ -57,14 +60,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `useAutoRefresh.ts` - Real-time updates for today's tasks
 - `useListboxNavigation.ts` - Keyboard navigation for dropdowns
 
-**Components** (`src/components/`):
+__Components__ (`src/components/`):
 
 - `TaskList.vue` - Task table with inline editing
 - `DailyReport.vue` - Report visualization with category breakdowns
 - `DateNavigation.vue` - Date controls and settings
 - `SetupModal.vue` - Settings modal
 
-**Utilities** (`src/utils/`):
+__Utilities__ (`src/utils/`):
 
 - `timeUtils.ts` - Time parsing, formatting, and duration helpers
 - `dateUtils.ts` - Date operations and timezone handling
@@ -105,7 +108,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE ta
 
 ### Type System & Runtime Constants
 
-**Task Type Management**:
+__Task Type Management__:
 
 - `TASK_TYPES` - Runtime constant `['normal', 'pause', 'end']`
 - `SPECIAL_TASK_TYPES` - Runtime constant `['pause', 'end']`
@@ -165,9 +168,9 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 
 ## Settings & Configuration
 
-**Setup Modal**: Theme settings, target work hours, category management
-**Persistence**: localStorage for theme and target hours
-**Window**: 1200x800 default, 1050x750 minimum, context isolation enabled
+__Setup Modal__: Theme settings, target work hours, category management
+__Persistence__: localStorage for theme and target hours
+__Window__: 1200x800 default, 1050x750 minimum, context isolation enabled
 
 ## Testing
 
@@ -177,7 +180,7 @@ Uses Vitest with @vitest/coverage-v8. Test types:
 - Component tests for Vue components via @vue/test-utils
 - Coverage reports in text, HTML, and LCOV formats
 
-**Test Patterns**:
+__Test Patterns__:
 
 - Parameterized tests with `it.each()`
 - Fresh instances in `beforeEach` for isolation
@@ -186,33 +189,35 @@ Uses Vitest with @vitest/coverage-v8. Test types:
 
 ## Common Development Tasks
 
-**Database Operations**: Add to DatabaseService → IPC handler → preload → types → composable
+__Database Operations__: Add to DatabaseService → IPC handler → preload → types → composable
 
-**Task Types**: Use `TASK_TYPES` for validation, `SPECIAL_TASK_TYPES` for logic, `DURATION_VISIBLE_BY_TASK_TYPE` for display
+__Task Types__: Use `TASK_TYPES` for validation, `SPECIAL_TASK_TYPES` for logic, `DURATION_VISIBLE_BY_TASK_TYPE` for display
 
-**UI Features**: Create components → use composables → follow props/events → add error handling
+__UI Features__: Create components → use composables → follow props/events → add error handling
 
-**Auto-refresh**: Use `useAutoRefresh` composable, only active for today's date
+__Auto-refresh__: Use `useAutoRefresh` composable, only active for today's date
 
-**Duration Logic**: Centralized in `useDurationCalculations`, use ALL records for boundaries
+__Duration Logic__: Centralized in `useDurationCalculations`, use ALL records for boundaries
 
-**Keyboard Navigation**: Use `useListboxNavigation` composable with ARIA support
+__Keyboard Navigation__: Use `useListboxNavigation` composable with ARIA support
 
-**Settings**: Add to `useSettings` composable → localStorage persistence → UI controls in SetupModal
+__Settings__: Add to `useSettings` composable → localStorage persistence → UI controls in SetupModal
+
+__Git Hooks__: Run `npm run install-hooks` after cloning to enable automatic markdown formatting on commits
 
 ## Key Files
 
-**Core**: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
+__Core__: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
 
-**Config**: `vite.config.ts`, `vitest.config.ts`
+__Config__: `vite.config.ts`, `vitest.config.ts`
 
-**Composables**: `src/composables/use*.ts` files
+__Composables__: `src/composables/use*.ts` files
 
-**Components**: `src/components/*.vue` files
+__Components__: `src/components/*.vue` files
 
-**Utils**: `src/utils/timeUtils.ts`, `src/utils/dateUtils.ts`
+__Utils__: `src/utils/timeUtils.ts`, `src/utils/dateUtils.ts`
 
-**Tests**: `src/**/*.test.ts` files
+__Tests__: `src/**/*.test.ts` files
 
 ## Key Recommendations
 

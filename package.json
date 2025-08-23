@@ -15,7 +15,10 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:check": "npm run test:coverage && node scripts/check-coverage.js"
+    "test:coverage:check": "npm run test:coverage && node scripts/check-coverage.js",
+    "lint:md": "markdownlint-cli2",
+    "format:md": "markdownlint-cli2 --fix",
+    "install-hooks": "cp scripts/git-hooks/* .git/hooks/ && chmod +x .git/hooks/*"
   },
   "repository": {
     "type": "git",
@@ -41,6 +44,7 @@
     "electron": "^37.3.0",
     "electron-builder": "^26.0.12",
     "jsdom": "^26.1.0",
+    "markdownlint-cli2": "^0.18.1",
     "typescript": "^5.9.2",
     "vite": "^7.1.2",
     "vitest": "^3.2.4",

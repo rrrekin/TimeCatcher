@@ -1,4 +1,5 @@
 # TimeCatcher
+
 Task &amp; time tracking desktop app
 
 ---
@@ -13,3 +14,23 @@ Work In Progress
 ![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
 ![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
 ![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)
+
+## Development Setup
+
+After cloning the repository:
+
+```bash
+# Install dependencies
+npm install
+
+# Set up git hooks for automatic markdown formatting
+npm run install-hooks
+
+# Start development server
+npm run dev
+```
+
+For detailed development guidelines, see [CLAUDE.md](./CLAUDE.md).  
+For git hooks setup and troubleshooting, see [docs/GIT_HOOKS_SETUP.md](./docs/GIT_HOOKS_SETUP.md).
+
+Note for Windows users: run `npm run install-hooks` from Git Bash/WSL (for `cp`/`chmod`), or follow the manual steps in [docs/GIT_HOOKS_SETUP.md](./docs/GIT_HOOKS_SETUP.md).
