@@ -52,14 +52,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Enforce coverage thresholds
-        if: ${{ matrix.node-version == '22' }}
+        if: ${{ matrix.node-version == 22 }}
         run: node scripts/check-coverage.js
 
       - name: Run build
         run: npm run build
 
       - name: Upload coverage to Codecov (Node.js 22 only)
-        if: ${{ matrix.node-version == '22' && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+        if: ${{ always() && matrix.node-version == 22 && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info

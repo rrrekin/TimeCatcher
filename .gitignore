@@ -168,4 +168,4 @@ src/**/*.js
 .claude/
 /.mcp.json
 
-/test-results/junit.xml
+/test-results/
