@@ -181,7 +181,7 @@
                 :value="newTask.time"
                 @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
                 @keydown.enter.prevent="onAddTaskEnter"
-                :aria-describedby="!newTask.time ? `time-hint-${componentId}` : undefined"
+                v-bind="!newTask.time ? { 'aria-describedby': `time-hint-${componentId}` } : {}"
                 class="editable-cell time-input"
             />
             <span v-if="!newTask.time" class="current-time-hint" :id="`time-hint-${componentId}`">{{ getCurrentTime() }}</span>

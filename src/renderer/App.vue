@@ -13,7 +13,7 @@
     <div class="layout">
       <div class="task-table-pane">
         <TaskList
-          :task-records="taskRecords"
+          :task-records="taskRecords as any"
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
           :display-date="displayDate"
@@ -248,7 +248,7 @@ const formattedDate = computed(() => {
 })
 
 const displayDate = computed(() => {
-  return formattedDate.value.split(',')[0]
+  return formattedDate.value.split(',')[0] || formattedDate.value
 })
 
 const dateTitle = computed(() => {
