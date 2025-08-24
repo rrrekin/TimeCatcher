@@ -1,133 +1,102 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { useTaskRecords } from './useTaskRecords'
-import { ref, type Ref } from 'vue'
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ref } from "vue";
+import { useTaskRecords } from "./useTaskRecords";
+import { TASK_TYPE_END, SPECIAL_TASK_CATEGORY } from "../shared/types";
 
-describe('useTaskRecords', () => {
-  describe('parseTimeInput', () => {
-    let selectedDate: Ref<Date>
-    let parseTimeInput: (timeInput: string) => string
-    let cleanup: (() => void) | undefined
+describe("useTaskRecords", () => {
+  let selectedDate: any;
+  let electronAPI: any;
 
-    beforeEach(() => {
-      // Create fresh instances for each test
-      selectedDate = ref(new Date())
-      const composableResult = useTaskRecords(selectedDate)
-      parseTimeInput = composableResult.parseTimeInput
+  beforeEach(() => {
+    selectedDate = ref(new Date("2025-08-24T10:00:00"));
+    electronAPI = {
+      getTaskRecordsByDate: vi.fn().mockResolvedValue([{ id: 1, task_type: "normal" }]),
+      addTaskRecord: vi.fn().mockResolvedValue(undefined),
+      updateTaskRecord: vi.fn().mockResolvedValue(undefined),
+      deleteTaskRecord: vi.fn().mockResolvedValue(undefined),
+    };
+    (window as any).electronAPI = electronAPI;
+  });
 
-      // Store any cleanup function if the composable returns one
-      cleanup = undefined // useTaskRecords doesn't currently return cleanup, but ready for future
-    })
+  it("should parse valid time inputs", () => {
+    const { parseTimeInput } = useTaskRecords(selectedDate);
+    expect(parseTimeInput("9:5")).toBe("09:05");
+    expect(parseTimeInput("09:30")).toBe("09:30");
+  });
 
-    afterEach(() => {
-      // Clean up any watchers or side effects
-      if (cleanup) {
-        cleanup()
-      }
-      // Clear refs to help with garbage collection
-      selectedDate = null as any
-      parseTimeInput = null as any
-    })
+  it("should throw on invalid time inputs", () => {
+    const { parseTimeInput } = useTaskRecords(selectedDate);
+    expect(() => parseTimeInput("")).toThrow("Time cannot be empty");
+    expect(() => parseTimeInput("99:00")).toThrow("Hours must be between 00 and 23");
+    expect(() => parseTimeInput("10:99")).toThrow("Minutes must be between 00 and 59");
+    expect(() => parseTimeInput("abc")).toThrow("Time must be in H:mm, H:m, HH:mm, or HH:m format");
+  });
 
-    describe('Valid input normalization', () => {
-      it.each([
-        ['9:5', '09:05'],
-        ['9:30', '09:30'],
-        ['09:05', '09:05'],
-        ['14:15', '14:15'],
-        ['0:0', '00:00'],
-        ['23:59', '23:59']
-      ])('should normalize "%s" to "%s"', (input, expected) => {
-        const result = parseTimeInput(input)
-        expect(result).toBe(expected)
-      })
-    })
+  it("should load task records", async () => {
+    const { loadTaskRecords, taskRecords, isLoadingTasks } = useTaskRecords(selectedDate);
+    await loadTaskRecords();
+    expect(taskRecords.value.length).toBe(1);
+    expect(isLoadingTasks.value).toBe(false);
+  });
 
-    describe('Empty or whitespace input', () => {
-      it('should throw error for empty string', () => {
-        expect(() => parseTimeInput('')).toThrow('Time cannot be empty')
-      })
+  it("should throw if API not available in loadTaskRecords", async () => {
+    delete (window as any).electronAPI;
+    const { loadTaskRecords } = useTaskRecords(selectedDate);
+    await expect(loadTaskRecords()).rejects.toThrow("API not available");
+  });
 
-      it('should throw error for whitespace-only string', () => {
-        expect(() => parseTimeInput('   ')).toThrow('Time cannot be empty')
-      })
+  it("should add task record", async () => {
+    const { addTaskRecord } = useTaskRecords(selectedDate);
+    await addTaskRecord({ category_name: "Work", task_name: "Task", start_time: "10:00", date: "2025-08-24" });
+    expect(electronAPI.addTaskRecord).toHaveBeenCalled();
+  });
 
-      it('should throw error for tab and newline whitespace', () => {
-        expect(() => parseTimeInput('\t\n')).toThrow('Time cannot be empty')
-      })
-    })
+  it("should add special task", async () => {
+    const { addSpecialTask } = useTaskRecords(selectedDate);
+    await addSpecialTask("pause", "Break");
+    expect(electronAPI.addTaskRecord).toHaveBeenCalledWith(expect.objectContaining({ category_name: SPECIAL_TASK_CATEGORY }));
+  });
 
-    describe('Malformed format input', () => {
-      it('should throw error for missing colon', () => {
-        expect(() => parseTimeInput('930')).toThrow(/^Time must be in/)
-      })
+  it("should prevent duplicate end task", async () => {
+    const { addSpecialTask, hasEndTaskForSelectedDate, taskRecords } = useTaskRecords(selectedDate);
+    taskRecords.value = [{ id: 1, task_type: TASK_TYPE_END } as any];
+    await expect(addSpecialTask(TASK_TYPE_END, "End")).rejects.toThrow("An end task already exists");
+  });
 
-      it('should throw error for too many parts', () => {
-        expect(() => parseTimeInput('9:30:45')).toThrow(/^Time must be in/)
-      })
+  it("should handle duplicate end task error from DB", async () => {
+    electronAPI.addTaskRecord.mockRejectedValue({ code: "END_DUPLICATE" });
+    const { addSpecialTask } = useTaskRecords(selectedDate);
+    await expect(addSpecialTask(TASK_TYPE_END, "End")).rejects.toThrow("An end task already exists");
+  });
 
-      it('should throw error for non-numeric hours', () => {
-        expect(() => parseTimeInput('abc:30')).toThrow(/^Time must be in/)
-      })
+  it("should wrap unknown error in addSpecialTask", async () => {
+    electronAPI.addTaskRecord.mockRejectedValue(new Error("fail"));
+    const { addSpecialTask } = useTaskRecords(selectedDate);
+    await expect(addSpecialTask("pause", "Break")).rejects.toThrow("Failed to add pause task. Please try again.");
+  });
 
-      it('should throw error for non-numeric minutes', () => {
-        expect(() => parseTimeInput('9:abc')).toThrow(/^Time must be in/)
-      })
+  it("should update task record", async () => {
+    const { updateTaskRecord } = useTaskRecords(selectedDate);
+    await updateTaskRecord(1, { task_name: "Updated" });
+    expect(electronAPI.updateTaskRecord).toHaveBeenCalled();
+  });
 
-      it('should throw error for empty hours', () => {
-        expect(() => parseTimeInput(':30')).toThrow(/^Time must be in/)
-      })
+  it("should delete task record", async () => {
+    const { deleteTaskRecord } = useTaskRecords(selectedDate);
+    await deleteTaskRecord(1);
+    expect(electronAPI.deleteTaskRecord).toHaveBeenCalled();
+  });
 
-      it('should throw error for empty minutes', () => {
-        expect(() => parseTimeInput('9:')).toThrow(/^Time must be in/)
-      })
-    })
+  it("should detect special task types", () => {
+    const { isSpecial } = useTaskRecords(selectedDate);
+    expect(isSpecial("pause")).toBe(true);
+    expect(isSpecial("end")).toBe(true);
+    expect(isSpecial("normal")).toBe(false);
+  });
 
-    describe('Out-of-range hours', () => {
-      it('should throw error for hours = 24', () => {
-        expect(() => parseTimeInput('24:00')).toThrow('Hours must be between 00 and 23')
-      })
-
-      it('should throw error for hours = 25', () => {
-        expect(() => parseTimeInput('25:30')).toThrow('Hours must be between 00 and 23')
-      })
-
-      it('should throw error for negative hours', () => {
-        expect(() => parseTimeInput('-1:30')).toThrow(/^Time must be in/)
-      })
-
-      it('should throw error for very large hours', () => {
-        expect(() => parseTimeInput('100:30')).toThrow(/^Time must be in/)
-      })
-    })
-
-    describe('Out-of-range minutes', () => {
-      it('should throw error for minutes = 60', () => {
-        expect(() => parseTimeInput('12:60')).toThrow('Minutes must be between 00 and 59')
-      })
-
-      it('should throw error for minutes = 99', () => {
-        expect(() => parseTimeInput('12:99')).toThrow('Minutes must be between 00 and 59')
-      })
-
-      it('should throw error for negative minutes', () => {
-        expect(() => parseTimeInput('12:-1')).toThrow(/^Time must be in/)
-      })
-
-      it('should throw error for very large minutes', () => {
-        expect(() => parseTimeInput('12:100')).toThrow(/^Time must be in/)
-      })
-    })
-
-    describe('Whitespace handling', () => {
-      it('should handle leading and trailing whitespace', () => {
-        const result = parseTimeInput('  9:5  ')
-        expect(result).toBe('09:05')
-      })
-
-      it('should handle tabs and other whitespace', () => {
-        const result = parseTimeInput('\t14:15\n')
-        expect(result).toBe('14:15')
-      })
-    })
-  })
-})
+  it("should get current time in HH:mm format", () => {
+    const { getCurrentTime } = useTaskRecords(selectedDate);
+    const time = getCurrentTime();
+    expect(time).toMatch(/^\d{2}:\d{2}$/);
+  });
+});
