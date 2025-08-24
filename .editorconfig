@@ -1,0 +1,57 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# TypeScript and JavaScript files
+[*.{ts,js}]
+indent_size = 2
+max_line_length = 120
+
+# Vue Single File Components
+[*.vue]
+indent_size = 2
+max_line_length = 120
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = 120
+
+# Configuration files
+[*.{jsonc,json5}]
+indent_size = 2
+
+# Shell scripts
+[*.sh]
+indent_size = 2
+
+# HTML files
+[*.html]
+indent_size = 2
+
+# CSS and SCSS files
+[*.{css,scss,sass}]
+indent_size = 2
+
+# Lock files and generated files should not be modified
+[{package-lock.json,yarn.lock,pnpm-lock.yaml}]
+insert_final_newline = unset
+trim_trailing_whitespace = unset

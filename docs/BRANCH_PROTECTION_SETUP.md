@@ -42,7 +42,7 @@ The CI workflow now includes these coverage enforcement steps:
 2. __Changed Files Coverage Check__: Only files modified in the PR are checked against thresholds:
    - __Lines__: 80% minimum
    - __Branches__: 85% minimum  
-   - __Functions__: 80% minimum
+   - __Functions__: 75% minimum
    - __Statements__: 80% minimum
 
 ### 4. How It Works

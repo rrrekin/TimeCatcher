@@ -209,7 +209,7 @@ __Git Hooks__: Run `npm run install-hooks` after cloning to enable automatic mar
 
 __Core__: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
 
-__Config__: `vite.config.ts`, `vitest.config.ts`
+__Config__: `vite.config.ts`, `vitest.config.ts`, `.editorconfig`
 
 __Composables__: `src/composables/use*.ts` files
 
