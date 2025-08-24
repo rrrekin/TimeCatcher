@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
   actions: read
 
 jobs:
@@ -36,7 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
 
       - name: Configure Git
         run: |
@@ -49,26 +49,36 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
+          # Enable strict shell error handling
+          set -euo pipefail
+          IFS=$'\n\t'
+          
+          # Set up cleanup trap to restore shell state
+          cleanup() {
+            shopt -u nocasematch 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          
           echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
 
           # Enable case-insensitive pattern matching
           shopt -s nocasematch
 
-          # Determine bump type from PR title
+          # Determine bump type from PR title with anchored, grouped patterns
           # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
-          if [[ "$PR_TITLE" =~ \[(major)\]|major:|breaking\ change|!:|\w+!: ]]; then
-            echo "bump_type=major" >> $GITHUB_OUTPUT
+          if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
+            BUMP_TYPE="major"
             echo "🚀 Detected MAJOR version bump from PR title"
-          elif [[ "$PR_TITLE" =~ \[(minor)\]|minor: ]]; then
-            echo "bump_type=minor" >> $GITHUB_OUTPUT
+          elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
+            BUMP_TYPE="minor"
             echo "📈 Detected MINOR version bump from PR title"
           else
-            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            BUMP_TYPE="patch"
             echo "🔧 Default PATCH version bump"
           fi
 
-          # Restore shopt state
-          shopt -u nocasematch
+          # Export bump type to GitHub output
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
 
       - name: Bump version
         env:
@@ -110,13 +120,23 @@ jobs:
         run: |
           echo "📤 Pushing version bump commit..."
 
-          # Pull latest changes from origin main with fast-forward-only to ensure we're up-to-date
-          echo "🔄 Pulling latest changes from origin/main (fast-forward-only)..."
-          git pull --ff-only origin main
+          # Fetch latest changes from origin to get current state
+          echo "🔄 Fetching latest changes from origin..."
+          git fetch origin
 
-          # Push the current HEAD to main explicitly
-          echo "⬆️ Pushing current HEAD to main..."
-          git push origin HEAD:main
+          # Rebase our bump commit onto the latest origin/main
+          echo "🔀 Rebasing bump commit onto latest origin/main..."
+          if ! git rebase origin/main; then
+            echo "❌ Rebase failed - likely due to conflicts"
+            echo "This suggests origin/main has conflicting changes since PR merge"
+            git rebase --abort
+            echo "Manual intervention may be required"
+            exit 1
+          fi
+
+          # Push using force-with-lease for safety (only if remote hasn't changed since fetch)
+          echo "⬆️ Pushing rebased commit with force-with-lease..."
+          git push origin HEAD:main --force-with-lease
 
           echo "✅ Successfully pushed version ${{ steps.version-info.outputs.new_version }}"
 
