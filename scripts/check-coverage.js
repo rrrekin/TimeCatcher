@@ -9,7 +9,7 @@ const THRESHOLDS = {
   lines: 80,
   branches: 85,
   functions: 75,
-  statements: 80,
+  statements: 80
 }
 
 function getChangedFiles() {
@@ -117,7 +117,7 @@ function parseLcovFile() {
           lines: { hit: 0, found: 0 },
           branches: { hit: 0, found: 0 },
           functions: { hit: 0, found: 0 },
-          statements: { hit: 0, found: 0 },
+          statements: { hit: 0, found: 0 }
         }
       } else if (currentFile && line.startsWith('LH:')) {
         files[currentFile].lines.hit = parseInt(line.substring(3))
@@ -197,7 +197,7 @@ function checkCoverage() {
         functions: null,
         statements: null,
         passed: false,
-        reason: 'No coverage data',
+        reason: 'No coverage data'
       })
       allPassed = false
       return
@@ -251,7 +251,7 @@ function checkCoverage() {
       branches: branchesCoverage,
       functions: functionsCoverage,
       statements: statementsCoverage,
-      passed: filePassed,
+      passed: filePassed
     })
 
     if (!filePassed) {

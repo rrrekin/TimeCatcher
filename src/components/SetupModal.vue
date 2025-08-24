@@ -151,52 +151,52 @@ import type { Category } from '@/shared/types'
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    required: true,
+    required: true
   },
   tempTheme: {
     type: String as PropType<'light' | 'dark' | 'auto'>,
-    required: true,
+    required: true
   },
   tempTargetWorkHours: {
     type: Number,
-    required: true,
+    required: true
   },
   categories: {
     type: Array as PropType<Category[]>,
-    required: true,
+    required: true
   },
   isLoadingCategories: {
     type: Boolean,
-    required: true,
+    required: true
   },
   isAddingCategory: {
     type: Boolean,
-    required: true,
+    required: true
   },
   isUpdatingCategory: {
     type: Boolean,
-    required: true,
+    required: true
   },
   isDeletingCategory: {
     type: Boolean,
-    required: true,
+    required: true
   },
   isSettingDefault: {
     type: Boolean,
-    required: true,
+    required: true
   },
   editingCategoryId: {
     type: Number as PropType<number | null>,
-    required: true,
+    required: true
   },
   editingCategoryName: {
     type: String,
-    required: true,
+    required: true
   },
   newCategoryName: {
     type: String,
-    required: true,
-  },
+    required: true
+  }
 })
 
 // Emits

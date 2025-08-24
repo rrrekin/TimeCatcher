@@ -9,7 +9,7 @@ import * as timeUtils from '@/utils/timeUtils'
 // Mock all the composables
 const mockCategories = [
   { id: 1, name: 'Work', is_default: true },
-  { id: 2, name: 'Personal', is_default: false },
+  { id: 2, name: 'Personal', is_default: false }
 ]
 
 const mockTaskRecords = [
@@ -19,8 +19,8 @@ const mockTaskRecords = [
     task_name: 'Test Task',
     start_time: '09:00',
     date: '2024-01-15',
-    task_type: 'normal',
-  },
+    task_type: 'normal'
+  }
 ]
 
 // Mock useCategories composable
@@ -42,8 +42,8 @@ vi.mock('@/composables/useCategories', () => ({
     deleteCategory: mockDeleteCategory,
     setDefaultCategory: mockSetDefaultCategory,
     getDefaultCategory: mockGetDefaultCategory,
-    categoryExists: mockCategoryExists,
-  }),
+    categoryExists: mockCategoryExists
+  })
 }))
 
 // Additional coverage tests for App.vue
@@ -141,7 +141,7 @@ describe('App Component - Coverage Extensions', () => {
     vm.taskRecords = []
     expect(vm.getEnhancedCategoryBreakdown).toEqual([])
     vm.taskRecords = [
-      { task_type: 'normal', category_name: 'Work', task_name: 'T', date: '2020-01-01', start_time: '10:00' },
+      { task_type: 'normal', category_name: 'Work', task_name: 'T', date: '2020-01-01', start_time: '10:00' }
     ]
     vm.calculateDuration = vi.fn().mockReturnValue('-')
     const result = vm.getEnhancedCategoryBreakdown
@@ -183,8 +183,8 @@ vi.mock('@/composables/useTaskRecords', () => ({
     addTaskRecord: mockAddTaskRecord,
     addSpecialTask: mockAddSpecialTask,
     updateTaskRecord: mockUpdateTaskRecord,
-    deleteTaskRecord: mockDeleteTaskRecord,
-  }),
+    deleteTaskRecord: mockDeleteTaskRecord
+  })
 }))
 
 // Mock useSettings composable
@@ -200,8 +200,8 @@ vi.mock('@/composables/useSettings', () => ({
     tempTargetWorkHours: { value: 8 },
     applyTheme: mockApplyTheme,
     saveSettings: mockSaveSettings,
-    initializeTempSettings: mockInitializeTempSettings,
-  }),
+    initializeTempSettings: mockInitializeTempSettings
+  })
 }))
 
 // Mock useDurationCalculations composable
@@ -214,8 +214,8 @@ vi.mock('@/composables/useDurationCalculations', () => ({
     sortedTaskRecords: { value: mockTaskRecords },
     calculateDuration: mockCalculateDuration,
     getTotalMinutesTracked: mockGetTotalMinutesTracked,
-    getCategoryBreakdown: mockGetCategoryBreakdown,
-  }),
+    getCategoryBreakdown: mockGetCategoryBreakdown
+  })
 }))
 
 // Mock useAutoRefresh composable
@@ -227,8 +227,8 @@ vi.mock('@/composables/useAutoRefresh', () => ({
   useAutoRefresh: () => ({
     startAutoRefresh: mockStartAutoRefresh,
     stopAutoRefresh: mockStopAutoRefresh,
-    restartAutoRefresh: mockRestartAutoRefresh,
-  }),
+    restartAutoRefresh: mockRestartAutoRefresh
+  })
 }))
 
 // Mock utility functions
@@ -240,13 +240,13 @@ vi.mock('@/utils/dateUtils', () => ({
       return 'invalid-date'
     }
     return date.toISOString().split('T')[0]
-  }),
+  })
 }))
 
 vi.mock('@/utils/timeUtils', () => ({
   formatDurationMinutes: vi.fn((minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60}m`),
   parseTimeString: vi.fn(() => 600), // 10:00 in minutes
-  getLastTaskEndTime: vi.fn(() => 720), // 12:00 in minutes (2 hours after start)
+  getLastTaskEndTime: vi.fn(() => 720) // 12:00 in minutes (2 hours after start)
 }))
 
 // Mock child components
@@ -255,8 +255,8 @@ vi.mock('@/components/DateNavigation.vue', () => ({
     name: 'DateNavigation',
     template: '<div data-testid="date-navigation"></div>',
     props: ['formattedDate', 'dateInputValue'],
-    emits: ['goToPreviousDay', 'goToToday', 'goToNextDay', 'updateDate', 'openSetup'],
-  },
+    emits: ['goToPreviousDay', 'goToToday', 'goToNextDay', 'updateDate', 'openSetup']
+  }
 }))
 
 vi.mock('@/components/TaskList.vue', () => ({
@@ -276,7 +276,7 @@ vi.mock('@/components/TaskList.vue', () => ({
       'convertToTimeInput',
       'getCurrentTime',
       'getSelectedCategoryName',
-      'isSpecial',
+      'isSpecial'
     ],
     emits: [
       'toggleInlineDropdown',
@@ -290,9 +290,9 @@ vi.mock('@/components/TaskList.vue', () => ({
       'updateNewTask',
       'addTask',
       'addPauseTask',
-      'addEndTask',
-    ],
-  },
+      'addEndTask'
+    ]
+  }
 }))
 
 vi.mock('@/components/DailyReport.vue', () => ({
@@ -306,9 +306,9 @@ vi.mock('@/components/DailyReport.vue', () => ({
       'targetWorkHours',
       'totalTimeTracked',
       'totalMinutesTracked',
-      'categoryBreakdown',
-    ],
-  },
+      'categoryBreakdown'
+    ]
+  }
 }))
 
 vi.mock('@/components/SetupModal.vue', () => ({
@@ -327,7 +327,7 @@ vi.mock('@/components/SetupModal.vue', () => ({
       'isSettingDefault',
       'editingCategoryId',
       'editingCategoryName',
-      'newCategoryName',
+      'newCategoryName'
     ],
     emits: [
       'close',
@@ -343,16 +343,16 @@ vi.mock('@/components/SetupModal.vue', () => ({
       'updateNewCategoryName',
       'addCategory',
       'cancelAddingCategory',
-      'startAddingCategory',
-    ],
-  },
+      'startAddingCategory'
+    ]
+  }
 }))
 
 // Mock global window objects
 global.window.electronAPI = {
   updateTaskRecord: vi.fn(),
   addTaskRecord: vi.fn(),
-  deleteTaskRecord: vi.fn(),
+  deleteTaskRecord: vi.fn()
 } as any
 
 global.window.matchMedia = vi.fn(() => ({
@@ -363,7 +363,7 @@ global.window.matchMedia = vi.fn(() => ({
   removeEventListener: vi.fn(),
   addListener: vi.fn(),
   removeListener: vi.fn(),
-  dispatchEvent: vi.fn(),
+  dispatchEvent: vi.fn()
 }))
 
 describe('App Component', () => {
@@ -379,9 +379,9 @@ describe('App Component', () => {
           DateNavigation: { template: '<div data-testid="date-navigation"></div>' },
           TaskList: { template: '<div data-testid="task-list"></div>' },
           DailyReport: { template: '<div data-testid="daily-report"></div>' },
-          SetupModal: { template: '<div data-testid="setup-modal"></div>' },
-        },
-      },
+          SetupModal: { template: '<div data-testid="setup-modal"></div>' }
+        }
+      }
     })
   })
 
@@ -693,7 +693,7 @@ describe('App Component', () => {
       global.window.electronAPI = {
         updateTaskRecord: vi.fn(),
         addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn(),
+        deleteTaskRecord: vi.fn()
       } as any
     })
 
@@ -704,7 +704,7 @@ describe('App Component', () => {
       vm.newTask = {
         categoryId: 1,
         name: 'New Task',
-        time: '10:00',
+        time: '10:00'
       }
 
       await vm.addTask()
@@ -715,7 +715,7 @@ describe('App Component', () => {
         task_name: 'New Task',
         start_time: '10:00',
         date: expect.any(String),
-        task_type: 'normal',
+        task_type: 'normal'
       })
     })
 
@@ -727,7 +727,7 @@ describe('App Component', () => {
       vm.newTask = {
         categoryId: 1,
         name: 'New Task',
-        time: '',
+        time: ''
       }
 
       await vm.addTask()
@@ -735,7 +735,7 @@ describe('App Component', () => {
       expect(mockGetCurrentTime).toHaveBeenCalled()
       expect(mockAddTaskRecord).toHaveBeenCalledWith(
         expect.objectContaining({
-          start_time: '11:30',
+          start_time: '11:30'
         })
       )
     })
@@ -745,7 +745,7 @@ describe('App Component', () => {
       vm.newTask = {
         categoryId: null,
         name: '',
-        time: '',
+        time: ''
       }
 
       await vm.addTask()
@@ -794,7 +794,7 @@ describe('App Component', () => {
         task_name: 'Original Task',
         start_time: '09:00',
         date: '2024-01-15',
-        task_type: 'normal',
+        task_type: 'normal'
       }
 
       await vm.replayTask(record)
@@ -804,7 +804,7 @@ describe('App Component', () => {
         task_name: 'Original Task',
         start_time: '12:00',
         date: expect.any(String),
-        task_type: 'normal',
+        task_type: 'normal'
       })
     })
 
@@ -816,7 +816,7 @@ describe('App Component', () => {
         task_name: 'Pause',
         start_time: '09:00',
         date: '2024-01-15',
-        task_type: 'pause',
+        task_type: 'pause'
       }
 
       await vm.replayTask(record)
@@ -1026,7 +1026,7 @@ describe('App Component', () => {
       global.window.electronAPI = {
         updateTaskRecord: mockUpdateTaskRecord,
         addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn(),
+        deleteTaskRecord: vi.fn()
       } as any
     })
 
@@ -1035,14 +1035,14 @@ describe('App Component', () => {
 
       const vm = wrapper.vm as any
       const mockEvent = {
-        target: { value: 'Updated Task Name' },
+        target: { value: 'Updated Task Name' }
       } as any
 
       // Create a proper HTMLInputElement mock
       const inputElement = document.createElement('input')
       inputElement.value = 'Updated Task Name'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
@@ -1058,7 +1058,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = '10:30'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'start_time', mockInputEvent)
@@ -1074,7 +1074,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = 'Enter Task'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleEnter(1, 'task_name', mockInputEvent)
@@ -1096,7 +1096,7 @@ describe('App Component', () => {
       // ensure value reflects selected option in jsdom
       selectElement.value = 'Personal'
       const mockSelectEvent = {
-        target: selectElement,
+        target: selectElement
       } as any
 
       await vm.handleCategoryChange(1, mockSelectEvent)
@@ -1107,7 +1107,7 @@ describe('App Component', () => {
     it('should handle invalid record ID in blur', async () => {
       const vm = wrapper.vm as any
       const mockEvent = {
-        target: { value: 'test' },
+        target: { value: 'test' }
       } as any
 
       await vm.handleBlur(undefined, 'task_name', mockEvent)
@@ -1118,7 +1118,7 @@ describe('App Component', () => {
     it('should handle non-input element in blur', async () => {
       const vm = wrapper.vm as any
       const mockEvent = {
-        target: {}, // Not an HTMLInputElement
+        target: {} // Not an HTMLInputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockEvent)
@@ -1136,7 +1136,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = 'Updated Task'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
@@ -1159,7 +1159,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = 'Updated Task'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
@@ -1178,7 +1178,7 @@ describe('App Component', () => {
       const selectElement = document.createElement('select')
       selectElement.value = '' // Empty category name
       const mockSelectEvent = {
-        target: selectElement,
+        target: selectElement
       } as any
 
       await vm.handleCategoryChange(1, mockSelectEvent)
@@ -1193,7 +1193,7 @@ describe('App Component', () => {
       // Create a non-select element mock
       const nonSelectElement = document.createElement('div')
       const mockEvent = {
-        target: nonSelectElement,
+        target: nonSelectElement
       } as any
 
       await vm.handleCategoryChange(1, mockEvent)
@@ -1214,7 +1214,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = 'invalid-time'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'start_time', mockInputEvent)
@@ -1253,7 +1253,7 @@ describe('App Component', () => {
       const updatedTask = {
         categoryId: 2,
         name: 'Updated Task',
-        time: '14:00',
+        time: '14:00'
       }
 
       vm.updateNewTask(updatedTask)
@@ -1299,7 +1299,7 @@ describe('App Component', () => {
       vm.showInlineDropdown[1] = true
 
       const mockEvent = {
-        target: document.body,
+        target: document.body
       } as any
 
       vm.handleClickOutside(mockEvent)
@@ -1317,7 +1317,7 @@ describe('App Component', () => {
       document.body.appendChild(dropdownElement)
 
       const mockEvent = {
-        target: dropdownElement,
+        target: dropdownElement
       } as any
 
       vm.handleClickOutside(mockEvent)
@@ -1465,7 +1465,7 @@ describe('App Component', () => {
       vm.newTask = {
         categoryId: 1,
         name: 'Test Task',
-        time: '10:00',
+        time: '10:00'
       }
 
       await vm.addTask()
@@ -1483,7 +1483,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = 'Updated Task'
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
@@ -1506,7 +1506,7 @@ describe('App Component', () => {
         task_name: 'Test Task',
         start_time: '09:00',
         date: '2024-01-15',
-        task_type: 'normal',
+        task_type: 'normal'
       }
 
       await vm.replayTask(record)
@@ -1525,7 +1525,7 @@ describe('App Component', () => {
       vm.newTask = {
         categoryId: 1,
         name: 'Test Task',
-        time: 'invalid-time',
+        time: 'invalid-time'
       }
 
       await vm.addTask()
@@ -1691,20 +1691,20 @@ describe('App Component', () => {
         {
           categoryName: 'Work',
           minutes: 120, // 2 hours
-          percentage: 60,
+          percentage: 60
         },
         {
           categoryName: 'Meeting',
           minutes: 80, // 1 hour 20 minutes
-          percentage: 40,
-        },
+          percentage: 40
+        }
       ])
 
       // Mock taskRecords with tasks that will create task summaries
       const mockRecords = [
         { id: 1, start_time: '09:00', task_name: 'Task 1', category_name: 'Work', task_type: 'normal' },
         { id: 2, start_time: '10:00', task_name: 'Task 2', category_name: 'Work', task_type: 'normal' },
-        { id: 3, start_time: '11:00', task_name: 'Meeting 1', category_name: 'Meeting', task_type: 'normal' },
+        { id: 3, start_time: '11:00', task_name: 'Meeting 1', category_name: 'Meeting', task_type: 'normal' }
       ]
 
       // Mock the taskRecords reactive property by directly setting it
@@ -1735,7 +1735,7 @@ describe('App Component', () => {
         { id: 1, start_time: '14:30', task_name: 'Afternoon task', category_name: 'Work', task_type: 'normal' },
         { id: 2, start_time: '09:15', task_name: 'Morning task', category_name: 'Work', task_type: 'normal' },
         { id: 3, start_time: '12:45', task_name: 'Lunch task', category_name: 'Personal', task_type: 'normal' },
-        { id: 4, start_time: '08:00', task_name: 'Early task', category_name: 'Work', task_type: 'normal' },
+        { id: 4, start_time: '08:00', task_name: 'Early task', category_name: 'Work', task_type: 'normal' }
       ]
 
       // Mock the taskRecords reactive property by directly setting it
@@ -1774,7 +1774,7 @@ describe('App Component', () => {
         { id: 2, start_time: '10:30', task_name: 'Complex Task 2', category_name: 'Development', task_type: 'normal' },
         { id: 3, start_time: '13:15', task_name: 'Complex Task 3', category_name: 'Testing', task_type: 'normal' },
         { id: 4, start_time: '', task_name: 'Empty Time Task', category_name: 'Other', task_type: 'normal' }, // This should be filtered out
-        { id: 5, start_time: '07:30', task_name: 'Early Task', category_name: 'Development', task_type: 'normal' },
+        { id: 5, start_time: '07:30', task_name: 'Early Task', category_name: 'Development', task_type: 'normal' }
       ]
 
       // Mock the taskRecords reactive property by directly setting it
@@ -1783,7 +1783,7 @@ describe('App Component', () => {
       // Mock getCategoryBreakdown with multiple categories and substantial minutes
       mockGetCategoryBreakdown.mockReturnValue([
         { categoryName: 'Development', minutes: 180, percentage: 75 } as unknown as never,
-        { categoryName: 'Testing', minutes: 60, percentage: 25 } as unknown as never,
+        { categoryName: 'Testing', minutes: 60, percentage: 25 } as unknown as never
       ])
 
       // Test both functions to ensure full coverage
@@ -1873,7 +1873,7 @@ describe('App Component', () => {
       const inputElement = document.createElement('input')
       inputElement.value = ''
       const mockInputEvent = {
-        target: inputElement,
+        target: inputElement
       } as any
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
@@ -1904,7 +1904,7 @@ describe('App Component', () => {
 
       // Mock task records with a single task
       const mockRecords = [
-        { id: 1, start_time: '09:00', task_name: 'Test Task', category_name: 'Work', task_type: 'normal' },
+        { id: 1, start_time: '09:00', task_name: 'Test Task', category_name: 'Work', task_type: 'normal' }
       ]
       vm.taskRecords.value = mockRecords
 
@@ -1945,7 +1945,7 @@ describe('App Component', () => {
       vm.showInlineDropdown = {
         1: true, // This should be closed when toggling record 3
         2: false, // This remains false
-        3: false, // This is the one we're toggling to open
+        3: false // This is the one we're toggling to open
       }
 
       // Toggle record ID 3's dropdown

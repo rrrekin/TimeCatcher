@@ -12,7 +12,7 @@ export const SPECIAL_TASK_CATEGORY = '__special__' as const
 export const DURATION_VISIBLE_BY_TASK_TYPE: Record<TaskType, boolean> = {
   normal: true,
   pause: true,
-  end: false,
+  end: false
 } as const
 
 export interface DatabaseError extends Error {

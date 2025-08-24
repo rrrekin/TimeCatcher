@@ -7,7 +7,7 @@ vi.mock('vue', async () => {
   const actual = await vi.importActual('vue')
   return {
     ...actual,
-    nextTick: vi.fn().mockResolvedValue(undefined),
+    nextTick: vi.fn().mockResolvedValue(undefined)
   }
 })
 
@@ -49,7 +49,7 @@ describe('useListboxNavigation', () => {
     containerRef = ref(mockContainer)
     itemsRef = ref([
       { id: 1, name: 'Item 1' },
-      { id: 2, name: 'Item 2' },
+      { id: 2, name: 'Item 2' }
     ])
 
     mockOnSelect = vi.fn()
@@ -64,7 +64,7 @@ describe('useListboxNavigation', () => {
       items: itemsRef,
       onSelect: mockOnSelect,
       onClose: mockOnClose,
-      getOptionSelector: mockGetOptionSelector,
+      getOptionSelector: mockGetOptionSelector
     })
   })
 
@@ -108,7 +108,7 @@ describe('useListboxNavigation', () => {
       mockEvent = {
         key: '',
         preventDefault: vi.fn(),
-        stopPropagation: vi.fn(),
+        stopPropagation: vi.fn()
       } as unknown as KeyboardEvent
     })
 

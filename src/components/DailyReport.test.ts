@@ -13,29 +13,29 @@ describe('DailyReport Component', () => {
       task_name: 'Development',
       start_time: '09:00',
       date: '2024-01-15',
-      task_type: 'normal',
+      task_type: 'normal'
     },
     {
       category_name: 'Work',
       task_name: 'Meeting',
       start_time: '10:30',
       date: '2024-01-15',
-      task_type: 'normal',
+      task_type: 'normal'
     },
     {
       category_name: 'Personal',
       task_name: 'Exercise',
       start_time: '14:00',
       date: '2024-01-15',
-      task_type: 'normal',
+      task_type: 'normal'
     },
     {
       category_name: '__special__',
       task_name: '⏸ Pause',
       start_time: '12:00',
       date: '2024-01-15',
-      task_type: 'pause',
-    },
+      task_type: 'pause'
+    }
   ]
 
   const mockCategoryBreakdown = [
@@ -46,16 +46,16 @@ describe('DailyReport Component', () => {
       percentage: 70,
       taskSummaries: [
         { name: 'Development', count: 1, totalTime: '2h 15m' },
-        { name: 'Meeting', count: 1, totalTime: '1h 15m' },
-      ],
+        { name: 'Meeting', count: 1, totalTime: '1h 15m' }
+      ]
     },
     {
       name: 'Personal',
       taskCount: 1,
       totalTime: '1h 30m',
       percentage: 30,
-      taskSummaries: [{ name: 'Exercise', count: 1, totalTime: '1h 30m' }],
-    },
+      taskSummaries: [{ name: 'Exercise', count: 1, totalTime: '1h 30m' }]
+    }
   ]
 
   beforeEach(() => {
@@ -67,8 +67,8 @@ describe('DailyReport Component', () => {
         targetWorkHours: 8,
         totalTimeTracked: '5h 0m',
         totalMinutesTracked: 300,
-        categoryBreakdown: mockCategoryBreakdown,
-      },
+        categoryBreakdown: mockCategoryBreakdown
+      }
     })
   })
 
@@ -94,7 +94,7 @@ describe('DailyReport Component', () => {
     it('should display empty state when no standard tasks exist', async () => {
       await wrapper.setProps({
         taskRecords: [mockTaskRecords[3]], // Only pause task
-        categoryBreakdown: [],
+        categoryBreakdown: []
       })
 
       const emptyReport = wrapper.find('.empty-report')
@@ -107,7 +107,7 @@ describe('DailyReport Component', () => {
     it('should show success emoji when target work hours reached', async () => {
       await wrapper.setProps({
         totalMinutesTracked: 480, // 8 hours
-        targetWorkHours: 8,
+        targetWorkHours: 8
       })
 
       const successEmoji = wrapper.find('.status-emoji[title="Target reached"]')
@@ -117,7 +117,7 @@ describe('DailyReport Component', () => {
 
     it('should show warning emoji when end task is missing', async () => {
       await wrapper.setProps({
-        hasEndTaskForSelectedDate: false,
+        hasEndTaskForSelectedDate: false
       })
 
       const warningEmoji = wrapper.find('.status-emoji[title="Missing end task"]')
@@ -127,7 +127,7 @@ describe('DailyReport Component', () => {
 
     it('should show day not finalized message when end task missing', async () => {
       await wrapper.setProps({
-        hasEndTaskForSelectedDate: false,
+        hasEndTaskForSelectedDate: false
       })
 
       const dateText = wrapper.find('p')
@@ -269,7 +269,7 @@ describe('DailyReport Component', () => {
       await wrapper.setProps({
         hasEndTaskForSelectedDate: true,
         totalMinutesTracked: 480, // 8 hours
-        targetWorkHours: 8,
+        targetWorkHours: 8
       })
 
       const vm = wrapper.vm as any
@@ -282,7 +282,7 @@ describe('DailyReport Component', () => {
       await wrapper.setProps({
         hasEndTaskForSelectedDate: false,
         totalMinutesTracked: 300, // 5 hours
-        targetWorkHours: 8,
+        targetWorkHours: 8
       })
 
       const vm = wrapper.vm as any
@@ -295,7 +295,7 @@ describe('DailyReport Component', () => {
       await wrapper.setProps({
         hasEndTaskForSelectedDate: false,
         totalMinutesTracked: 480, // 8 hours
-        targetWorkHours: 8,
+        targetWorkHours: 8
       })
 
       const vm = wrapper.vm as any
@@ -308,7 +308,7 @@ describe('DailyReport Component', () => {
       await wrapper.setProps({
         hasEndTaskForSelectedDate: true,
         totalMinutesTracked: 300, // 5 hours
-        targetWorkHours: 8,
+        targetWorkHours: 8
       })
 
       const vm = wrapper.vm as any

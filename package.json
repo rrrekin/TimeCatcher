@@ -63,15 +63,14 @@
     "vue": "^3.5.18"
   },
   "build": {
-    "appId": "com.example.timecatcher",
+    "appId": "eu.rrrekin.timecatcher",
     "productName": "TimeCatcher",
     "directories": {
       "output": "dist/packages"
     },
     "files": [
       "dist/main/**/*",
-      "dist/renderer/**/*",
-      "node_modules/**/*"
+      "dist/renderer/**/*"
     ],
     "extraResources": [],
     "mac": {

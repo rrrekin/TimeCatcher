@@ -30,8 +30,8 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, 'preload.js'),
-    },
+      preload: join(__dirname, 'preload.js')
+    }
   })
 
   if (isDevelopment) {
@@ -195,7 +195,7 @@ if (isDevelopment) {
     try {
       return {
         categories: dbService.getAllCategories(),
-        taskRecords: dbService.db.prepare('SELECT * FROM task_records').all(),
+        taskRecords: dbService.db.prepare('SELECT * FROM task_records').all()
       }
     } catch (error) {
       console.error('Failed to debug database:', error)

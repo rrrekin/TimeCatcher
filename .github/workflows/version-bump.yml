@@ -7,13 +7,15 @@ name: Version Bump
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
   actions: read
 
 jobs:
   version-bump:
     # Only run when PR is merged (not just closed)
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.head.ref, 'version-bump-') &&
+      github.event.pull_request.user.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -123,25 +125,25 @@ jobs:
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
         run: |
           echo "📤 Creating version bump branch and PR..."
-          
-          # Create and switch to version bump branch
+
+          # Create and switch to version bump branch (idempotent)
           BRANCH_NAME="version-bump-$NEW_VERSION"
-          git checkout -b "$BRANCH_NAME"
-          
-          # Push the branch
-          git push origin "$BRANCH_NAME"
-          
+          git checkout -B "$BRANCH_NAME"
+
+          # Push the branch with force-with-lease and set upstream
+          git push --force-with-lease --set-upstream origin "$BRANCH_NAME"
+
           # Create PR with auto-merge
           gh pr create \
             --title "chore: bump $BUMP_TYPE version to $NEW_VERSION" \
             --body "Automated version bump from merged PR #${{ github.event.pull_request.number }}" \
             --base main \
             --head "$BRANCH_NAME"
-          
+
           # Enable auto-merge if available
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          gh pr merge "$PR_NUMBER" --auto --squash || echo "Auto-merge not available, manual merge required"
-          
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || echo "Auto-merge not available, manual merge required"
+
           echo "✅ Created PR for version $NEW_VERSION"
 
       - name: Summary

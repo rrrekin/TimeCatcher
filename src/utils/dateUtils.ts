@@ -40,6 +40,6 @@ export const formatDateString = (dateString: string, locale?: string): string =>
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
   })
 }

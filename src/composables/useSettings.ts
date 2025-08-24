@@ -154,6 +154,6 @@ export function useSettings() {
     applyTheme,
     loadSettings,
     saveSettings,
-    initializeTempSettings,
+    initializeTempSettings
   }
 }
