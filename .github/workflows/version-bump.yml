@@ -15,6 +15,11 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    
+    # Prevent concurrent version bumps to avoid conflicts
+    concurrency:
+      group: version-bump-main
+      cancel-in-progress: false
 
     steps:
       - name: Checkout code
@@ -22,6 +27,8 @@ jobs:
         with:
           # Fetch full history for proper git operations
           fetch-depth: 0
+          # Use the base branch
+          ref: main
           # Use GitHub token with write permissions
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -42,11 +49,14 @@ jobs:
           PR_TITLE="${{ github.event.pull_request.title }}"
           echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
 
+          # Enable case-insensitive pattern matching
+          shopt -s nocasematch
+
           # Determine bump type from PR title
-          if [[ "$PR_TITLE" =~ \[MAJOR\]|\[major\]|major: ]]; then
+          if [[ "$PR_TITLE" =~ \[(major)\]|major: ]]; then
             echo "bump_type=major" >> $GITHUB_OUTPUT
             echo "🚀 Detected MAJOR version bump from PR title"
-          elif [[ "$PR_TITLE" =~ \[MINOR\]|\[minor\]|minor: ]]; then
+          elif [[ "$PR_TITLE" =~ \[(minor)\]|minor: ]]; then
             echo "bump_type=minor" >> $GITHUB_OUTPUT
             echo "📈 Detected MINOR version bump from PR title"
           else
@@ -54,21 +64,33 @@ jobs:
             echo "🔧 Default PATCH version bump"
           fi
 
+          # Disable case-insensitive matching to avoid side effects
+          shopt -u nocasematch
+
       - name: Bump version
         run: |
           echo "📈 Bumping ${{ steps.bump-type.outputs.bump_type }} version..."
 
-          # Create commit message that includes PR info
-          COMMIT_MSG="chore: bump ${{ steps.bump-type.outputs.bump_type }} version
+          # Create temporary commit message file to avoid shell injection
+          COMMIT_FILE=$(mktemp)
+          
+          # Write commit message to file with proper escaping
+          cat > "$COMMIT_FILE" << 'EOF'
+          chore: bump ${{ steps.bump-type.outputs.bump_type }} version
 
           Merged PR #${{ github.event.pull_request.number }}: ${{ steps.bump-type.outputs.pr_title }}
 
           🤖 Generated with [Claude Code](https://claude.ai/code)
 
-          Co-Authored-By: Claude <noreply@anthropic.com>"
+          Co-Authored-By: Claude <noreply@anthropic.com>
+          EOF
 
-          # Run version bump script
+          # Read commit message from file safely and pass to script
+          COMMIT_MSG=$(cat "$COMMIT_FILE")
           node scripts/bump-version.js ${{ steps.bump-type.outputs.bump_type }} "$COMMIT_MSG"
+          
+          # Clean up temporary file
+          rm -f "$COMMIT_FILE"
 
       - name: Get new version info
         id: version-info
@@ -81,8 +103,13 @@ jobs:
         run: |
           echo "📤 Pushing version bump commit..."
 
-          # Push the commit
-          git push origin main
+          # Pull latest changes from origin main with fast-forward-only to ensure we're up-to-date
+          echo "🔄 Pulling latest changes from origin/main (fast-forward-only)..."
+          git pull --ff-only origin main
+
+          # Push the current HEAD to main explicitly
+          echo "⬆️ Pushing current HEAD to main..."
+          git push origin HEAD:main
 
           echo "✅ Successfully pushed version ${{ steps.version-info.outputs.new_version }}"
 

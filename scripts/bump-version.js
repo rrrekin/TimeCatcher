@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { execSync } = require('child_process');
 
 // Configuration
@@ -81,6 +82,32 @@ function getMajorMinorTag(version) {
   return `${version.major}.${version.minor}`;
 }
 
+/**
+ * Creates a git commit with a message using a temporary file to avoid shell injection
+ * @param {string} message - Commit message
+ */
+function commitWithMessage(message) {
+  let tmpFile = null;
+  try {
+    // Create temporary file in system temp directory
+    tmpFile = path.join(os.tmpdir(), `commit-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
+    
+    // Write message to temporary file
+    fs.writeFileSync(tmpFile, message + '\n', 'utf-8');
+    
+    // Commit using the file
+    execGit(`commit -F "${tmpFile}"`);
+  } finally {
+    // Always clean up the temporary file
+    if (tmpFile && fs.existsSync(tmpFile)) {
+      try {
+        fs.unlinkSync(tmpFile);
+      } catch (cleanupError) {
+        console.warn(`Warning: Failed to clean up temporary file ${tmpFile}: ${cleanupError.message}`);
+      }
+    }
+  }
+}
 
 /**
  * Bumps version in package.json and creates commit
@@ -132,7 +159,7 @@ function bumpVersion(bumpType, commitMessage) {
 Co-Authored-By: Claude <noreply@anthropic.com>`;
 
   const finalMessage = commitMessage || defaultMessage;
-  execGit(`commit -m "${finalMessage}"`);
+  commitWithMessage(finalMessage);
   console.log(`✅ Created commit with version bump`);
 
   console.log(`🎉 Version bump complete: ${currentVersion.major}.${currentVersion.minor}.${currentVersion.patch} → ${newVersionString}`);

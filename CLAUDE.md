@@ -15,9 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run format` - Format all source code files with Prettier
 - `npm run format:check` - Check if code formatting is consistent with Prettier
 - `npm run install-hooks` - Install git hooks for automatic markdown and code formatting
-- `npm run version:major` - Manually bump major version
-- `npm run version:minor` - Manually bump minor version
-- `npm run version:patch` - Manually bump patch version
+
+See docs/VERSIONING.md for the full versioning workflow and npm commands.
 
 ### CI/CD Pipeline
 
@@ -240,10 +239,4 @@ Keep the CLAUDE.md context file up-to-date with the latest changes and as compac
 
 ## Versioning System
 
-TimeCatcher uses semi-automatic semantic versioning:
-
-- **Package.json**: Full semantic versions (0.20.0, 0.20.1, 0.20.2)
-- **Automatic**: PR merge triggers version bump based on title ([MAJOR], [MINOR], or patch)
-- **Manual**: Use `npm run version:major|minor|patch` for local version management
-- **Git Tags**: Created separately during manual release process
-- **Documentation**: See `docs/VERSIONING.md` for complete workflow details
+TimeCatcher uses semi-automatic semantic versioning with PR-based automatic bumps. See docs/VERSIONING.md for complete workflow details, npm commands, and release processes.
