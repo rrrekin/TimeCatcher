@@ -599,7 +599,9 @@ onMounted(async () => {
   startAutoRefresh()
 
   // Add click outside listener for custom dropdown
-  document.addEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', handleClickOutside)
+  }
 })
 
 onUnmounted(() => {
@@ -607,7 +609,9 @@ onUnmounted(() => {
   stopAutoRefresh()
   
   // Clean up click outside event listener
-  document.removeEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('click', handleClickOutside)
+  }
 
   // Clean up media query listener with fallback for older browsers
   if (mediaQueryList && mediaQueryHandler) {
