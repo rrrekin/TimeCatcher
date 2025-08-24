@@ -1,6 +1,11 @@
 export const TASK_TYPES = ['normal', 'pause', 'end'] as const
 export type TaskType = (typeof TASK_TYPES)[number]
 
+// Individual task type constants for better readability
+export const TASK_TYPE_NORMAL = TASK_TYPES[0]
+export const TASK_TYPE_PAUSE = TASK_TYPES[1]
+export const TASK_TYPE_END = TASK_TYPES[2]
+
 export type SpecialTaskType = Exclude<TaskType, 'normal'>
 export const SPECIAL_TASK_TYPES = ['pause', 'end'] as const satisfies readonly SpecialTaskType[]
 
@@ -9,7 +14,7 @@ export const SPECIAL_TASK_CATEGORY = '__special__' as const
 export const DURATION_VISIBLE_BY_TASK_TYPE: Record<TaskType, boolean> = {
   normal: true,
   pause: true,
-  end: false
+  end: false,
 } as const
 
 export interface DatabaseError extends Error {

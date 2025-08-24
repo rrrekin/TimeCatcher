@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
+import { TASK_TYPE_END } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production'
@@ -29,8 +30,8 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, 'preload.js')
-    }
+      preload: join(__dirname, 'preload.js'),
+    },
   })
 
   if (isDevelopment) {
@@ -128,7 +129,7 @@ ipcMain.handle('db:add-task-record', async (_, record: TaskRecordInsert) => {
 
     // Check if this is a duplicate end task constraint violation
     // Only detect specific UNIQUE constraint violations on the idx_end_per_day index
-    if (record.task_type === 'end' && isDuplicateEndConstraint(error)) {
+    if (record.task_type === TASK_TYPE_END && isDuplicateEndConstraint(error)) {
       const dbError: DatabaseError = new Error(
         `Failed to add task record: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
@@ -194,7 +195,7 @@ if (isDevelopment) {
     try {
       return {
         categories: dbService.getAllCategories(),
-        taskRecords: dbService.db.prepare('SELECT * FROM task_records').all()
+        taskRecords: dbService.db.prepare('SELECT * FROM task_records').all(),
       }
     } catch (error) {
       console.error('Failed to debug database:', error)

@@ -3,9 +3,9 @@
 # Pre-commit hook to format markdown files and source code
 # This script is shared in the repository and can be installed via: npm run install-hooks
 
-# Get list of staged files
-staged_md_files=$(git diff --cached --name-only --diff-filter=ACM | grep '\.md$' | grep -v node_modules || true)
-staged_src_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -v node_modules || true)
+# Get list of staged files (NUL-delimited for safe handling of filenames with spaces)
+staged_md_files=$(git diff --cached --name-only -z --diff-filter=ACM | grep -zZ '\.md$' | grep -vzZ node_modules || true)
+staged_src_files=$(git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules || true)
 
 # Check if any files need processing
 if [ -z "$staged_md_files" ] && [ -z "$staged_src_files" ]; then
@@ -25,16 +25,16 @@ if [ -n "$staged_md_files" ]; then
     # Run markdownlint-cli2 on staged files only
     echo "📝 Running markdownlint on staged files: $staged_md_files"
 
-    # Create temporary file list for staged files
+    # Create temporary file list for staged files (NUL-delimited)
     temp_file=$(mktemp)
-    echo "$staged_md_files" | tr ' ' '\n' > "$temp_file"
+    printf '%s' "$staged_md_files" > "$temp_file"
 
-    # Run markdownlint with fix on the specific files
-    if npx markdownlint-cli2 --config .markdownlint-cli2.jsonc $(cat "$temp_file"); then
+    # Run markdownlint with fix on the specific files (using NUL-delimited input)
+    if cat "$temp_file" | xargs -0 npx markdownlint-cli2 --config .markdownlint-cli2.jsonc; then
       echo "✅ Markdown formatting complete"
       
-      # Add any fixed files back to the staging area
-      for file in $staged_md_files; do
+      # Add any fixed files back to the staging area (handle NUL-delimited filenames)
+      printf '%s' "$staged_md_files" | while IFS= read -r -d '' file; do
         if [ -f "$file" ]; then
           git add "$file"
         fi
@@ -60,12 +60,12 @@ if [ -n "$staged_src_files" ]; then
   else
     echo "🎨 Running Prettier on staged files: $staged_src_files"
     
-    # Run prettier on staged files
-    if echo "$staged_src_files" | xargs npx prettier --write; then
+    # Run prettier on staged files (using NUL-delimited input for safe filename handling)
+    if printf '%s' "$staged_src_files" | xargs -0 npx prettier --write; then
       echo "✅ Code formatting complete"
       
-      # Add any formatted files back to the staging area
-      for file in $staged_src_files; do
+      # Add any formatted files back to the staging area (handle NUL-delimited filenames)
+      printf '%s' "$staged_src_files" | while IFS= read -r -d '' file; do
         if [ -f "$file" ]; then
           git add "$file"
         fi
