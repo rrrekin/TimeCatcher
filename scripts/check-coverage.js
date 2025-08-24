@@ -23,7 +23,8 @@ function getChangedFiles() {
       .filter(file => file.startsWith('src/'))
       .filter(file => file.endsWith('.ts') || file.endsWith('.vue'))
       .filter(file => !file.includes('.test.') && !file.includes('.spec.'))
-      .filter(file => !file.endsWith('.d.ts')); // Exclude TypeScript declaration files
+      .filter(file => !file.endsWith('.d.ts')) // Exclude TypeScript declaration files
+      .filter(file => !file.startsWith('src/main/')); // Exclude main process files (not covered by frontend tests)
   }
   
   function tryGitDiff(base) {

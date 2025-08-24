@@ -133,7 +133,7 @@ import { useSettings } from '@/composables/useSettings'
 import { useDurationCalculations } from '@/composables/useDurationCalculations'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { formatDateString, toYMDLocal as toYMDLocalUtil } from '@/utils/dateUtils'
-import { formatDurationMinutes, parseTimeString } from '@/utils/timeUtils'
+import { formatDurationMinutes, parseTimeString, getLastTaskEndTime } from '@/utils/timeUtils'
 import DateNavigation from '@/components/DateNavigation.vue'
 import TaskList from '@/components/TaskList.vue'
 import DailyReport from '@/components/DailyReport.vue'
@@ -1007,12 +1007,26 @@ const getEnhancedCategoryBreakdown = () => {
     const task = category.tasks.get(record.task_name)
     task.count++
     
-    // Calculate duration for this specific task record and add to task total
-    const durationString = calculateDuration(record)
-    if (durationString !== '-') {
-      // Parse duration string (e.g., "1h 30m" or "45m") to minutes
-      const durationMinutes = parseDurationToMinutes(durationString)
-      task.totalMinutes += durationMinutes
+    // Calculate duration for this specific task record using the same logic as composable
+    const currentTime = parseTimeString(record.start_time)
+    if (currentTime !== null) {
+      // Find next task to determine end time
+      const currentIndex = standardRecords.indexOf(record)
+      const nextRecord = currentIndex < standardRecords.length - 1 ? standardRecords[currentIndex + 1] : null
+      
+      let durationMinutes = 0
+      if (nextRecord) {
+        const nextTime = parseTimeString(nextRecord.start_time)
+        if (nextTime !== null && nextTime > currentTime) {
+          durationMinutes = nextTime - currentTime
+        }
+      } else {
+        // Last task - use getLastTaskEndTime like composable does
+        const endTime = getLastTaskEndTime(record.date, currentTime)
+        durationMinutes = Math.max(0, endTime - currentTime)
+      }
+      
+      task.totalMinutes += Math.round(durationMinutes)
     }
   }
 

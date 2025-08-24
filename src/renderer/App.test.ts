@@ -248,7 +248,8 @@ vi.mock('@/utils/dateUtils', () => ({
 
 vi.mock('@/utils/timeUtils', () => ({
   formatDurationMinutes: vi.fn((minutes: number) => `${Math.floor(minutes / 60)}h ${minutes % 60}m`),
-  parseTimeString: vi.fn(() => 600) // 10:00 in minutes
+  parseTimeString: vi.fn(() => 600), // 10:00 in minutes
+  getLastTaskEndTime: vi.fn(() => 720) // 12:00 in minutes (2 hours after start)
 }))
 
 // Mock child components
@@ -1870,30 +1871,27 @@ describe('App Component', () => {
       expect(vm.convertToTimeInput('23:59')).toBe('23:59') // End of day
     })
 
-    it('should handle duration calculation with dash result', () => {
+    it('should handle duration calculation with direct minute calculation', () => {
       const vm = wrapper.vm as any
       
-      // Mock calculateDuration to return '-' (no duration)
-      mockCalculateDuration.mockReturnValue('-')
-      
-      // Mock task records with a task that will have no duration
+      // Mock task records with a single task
       const mockRecords = [
-        { id: 1, start_time: '09:00', task_name: 'No Duration Task', category_name: 'Work', task_type: 'normal' }
+        { id: 1, start_time: '09:00', task_name: 'Test Task', category_name: 'Work', task_type: 'normal' }
       ]
       vm.taskRecords.value = mockRecords
       
       // Mock category breakdown
       mockGetCategoryBreakdown.mockReturnValue([
-        { categoryName: 'Work', minutes: 0, percentage: 0 } as any
+        { categoryName: 'Work', minutes: 120, percentage: 100 } as any
       ])
       
       const result = vm.getEnhancedCategoryBreakdown()
       
-      // Should handle the '-' duration gracefully
+      // Should calculate duration using direct minute calculation (consistent with composable)
       expect(Array.isArray(result)).toBe(true)
-      // The task summary should exist but with 0 minutes
-      expect(result[0].taskSummaries[0].totalMinutes).toBe(0)
-      expect(result[0].taskSummaries[0].totalTime).toBe('0h 0m')
+      // The task summary should have the calculated minutes (720 - 600 = 120 from mocked functions)
+      expect(result[0].taskSummaries[0].totalMinutes).toBe(120)
+      expect(result[0].taskSummaries[0].totalTime).toBe('2h 0m')
     })
 
     it('should test media query cleanup on component unmount', () => {
