@@ -12,7 +12,7 @@ This repository enforces **LF (`\n`) line endings** for all text files.
 
 We use a root-level [`.gitattributes`](../.gitattributes) file with:
 
-```
+```gitattributes
 * text=auto eol=lf
 ```
 

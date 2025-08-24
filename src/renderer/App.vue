@@ -567,7 +567,11 @@ watch(
     await loadTaskRecordsWrapper()
 
     // Start auto-refresh if we're viewing today
-    startAutoRefresh()
+    const todayString = toYMDLocalUtil(new Date())
+    const selectedDateString = toYMDLocalUtil(selectedDate.value)
+    if (selectedDateString === todayString) {
+      startAutoRefresh()
+    }
   },
   { immediate: false }
 )
@@ -608,7 +612,11 @@ onMounted(async () => {
   }
 
   // Start auto-refresh for today's tasks
-  startAutoRefresh()
+  const todayString = toYMDLocalUtil(new Date())
+  const selectedDateString = toYMDLocalUtil(selectedDate.value)
+  if (selectedDateString === todayString) {
+    startAutoRefresh()
+  }
 
   // Add click outside listener for custom dropdown
   if (typeof document !== 'undefined') {

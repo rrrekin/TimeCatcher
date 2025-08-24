@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
+set -euo pipefail
 
 # Pre-commit hook to format markdown files and source code
 # This script is shared in the repository and can be installed via: npm run install-hooks
@@ -7,15 +8,15 @@
 staged_md_files=()
 staged_src_files=()
 
-# Collect staged markdown files
-git diff --cached --name-only -z --diff-filter=ACM | grep -zZ '\.md$' | grep -vzZ node_modules | \
-while IFS= read -r -d '' file; do
+# Collect staged markdown files (portable across GNU/BSD grep)
+git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.md$' | grep -v node_modules | \
+while IFS= read -r file; do
   staged_md_files+=("$file")
 done
 
-# Collect staged source files
-git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | \
-while IFS= read -r -d '' file; do
+# Collect staged source files (portable across GNU/BSD grep)
+git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -v node_modules | \
+while IFS= read -r file; do
   staged_src_files+=("$file")
 done
 
@@ -51,7 +52,7 @@ if [ ${#staged_md_files[@]} -gt 0 ]; then
       # Add any fixed files back to the staging area
       for file in "${staged_md_files[@]}"; do
         if [ -f "$file" ]; then
-          git add "$file"
+          git add -- "$file"
         fi
       done
     else
@@ -72,11 +73,11 @@ if [ ${#staged_src_files[@]} -gt 0 ]; then
     echo "🎨 Running Prettier on staged source files..."
 
     # Run Prettier directly on staged source files via NUL-delimited pipeline
-    if git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | xargs -0 npx prettier --write; then
+    if git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -v node_modules | xargs npx prettier --write; then
       echo "✅ Code formatting complete"
 
       # Re-stage any formatted files
-      git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | xargs -0 git add
+      git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -v node_modules | xargs git add
     else
       echo "❌ Code formatting failed"
       echo "💡 Fix the issues above or run 'npm run format' to format all files"
