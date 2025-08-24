@@ -1,0 +1,150 @@
+name: Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+  actions: read
+
+jobs:
+  version-bump:
+    # Only run when PR is merged (not just closed)
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Prevent concurrent version bumps to avoid conflicts
+    concurrency:
+      group: version-bump-main
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for proper git operations
+          fetch-depth: 0
+          # Use the base branch
+          ref: main
+          # Use GitHub token with write permissions
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Determine version bump type
+        id: bump-type
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          # Enable strict shell error handling
+          set -euo pipefail
+          IFS=$'\n\t'
+          
+          # Set up cleanup trap to restore shell state
+          cleanup() {
+            shopt -u nocasematch 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+
+          # Enable case-insensitive pattern matching
+          shopt -s nocasematch
+
+          # Determine bump type from PR title with anchored, grouped patterns
+          # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
+          if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
+            BUMP_TYPE="major"
+            echo "🚀 Detected MAJOR version bump from PR title"
+          elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
+            BUMP_TYPE="minor"
+            echo "📈 Detected MINOR version bump from PR title"
+          else
+            BUMP_TYPE="patch"
+            echo "🔧 Default PATCH version bump"
+          fi
+
+          # Export bump type to GitHub output
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Bump version
+        env:
+          BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ steps.bump-type.outputs.pr_title }}
+        run: |
+          echo "📈 Bumping ${BUMP_TYPE} version..."
+
+          # Create temporary commit message file to avoid shell injection
+          COMMIT_FILE=$(mktemp)
+
+          # Write commit message to file with proper escaping
+          cat > "$COMMIT_FILE" << EOF
+          chore: bump ${BUMP_TYPE} version
+
+          Merged PR #${PR_NUMBER}: ${PR_TITLE}
+
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+
+          Co-Authored-By: Claude <noreply@anthropic.com>
+          EOF
+
+          # Read commit message from file safely and pass to script
+          COMMIT_MSG=$(cat "$COMMIT_FILE")
+          node scripts/bump-version.js "${BUMP_TYPE}" "$COMMIT_MSG"
+
+          # Clean up temporary file
+          rm -f "$COMMIT_FILE"
+
+      - name: Get new version info
+        id: version-info
+        run: |
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "📊 New version: $NEW_VERSION"
+
+      - name: Push changes
+        run: |
+          echo "📤 Pushing version bump commit..."
+
+          # Fetch latest changes from origin to get current state
+          echo "🔄 Fetching latest changes from origin..."
+          git fetch origin
+
+          # Rebase our bump commit onto the latest origin/main
+          echo "🔀 Rebasing bump commit onto latest origin/main..."
+          if ! git rebase origin/main; then
+            echo "❌ Rebase failed - likely due to conflicts"
+            echo "This suggests origin/main has conflicting changes since PR merge"
+            git rebase --abort
+            echo "Manual intervention may be required"
+            exit 1
+          fi
+
+          # Push using force-with-lease for safety (only if remote hasn't changed since fetch)
+          echo "⬆️ Pushing rebased commit with force-with-lease..."
+          git push origin HEAD:main --force-with-lease
+
+          echo "✅ Successfully pushed version ${{ steps.version-info.outputs.new_version }}"
+
+      - name: Summary
+        run: |
+          echo "🎉 Version bump completed!"
+          echo "   • PR: #${{ github.event.pull_request.number }}"
+          echo "   • Bump type: ${{ steps.bump-type.outputs.bump_type }}"
+          echo "   • New version: ${{ steps.version-info.outputs.new_version }}"
+          echo ""
+          echo "📝 Git tags will be created manually during release process."

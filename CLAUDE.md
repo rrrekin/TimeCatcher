@@ -16,14 +16,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run format:check` - Check if code formatting is consistent with Prettier
 - `npm run install-hooks` - Install git hooks for automatic markdown and code formatting
 
+See docs/VERSIONING.md for the full versioning workflow and npm commands.
+
 ### CI/CD Pipeline
 
-__GitHub Actions Workflow__ (`.github/workflows/ci.yml`):
+__GitHub Actions Workflows__:
 
+**CI Pipeline** (`.github/workflows/ci.yml`):
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
 - Uploads coverage reports to Codecov from the Node.js 22 job
+
+**Version Bump** (`.github/workflows/version-bump.yml`):
+- Runs automatically when PRs are merged to main
+- Analyzes PR title to determine version bump type ([MAJOR], [MINOR], or patch)
+- Updates package.json with new semantic version
+- Git tags will be created separately during manual release process
 
 __Coverage Requirements for PRs__:
 
@@ -227,3 +236,7 @@ Always consider use of sequential thinking and memory-timecatcher MCPs, especial
 Use other MCPs if this can be useful for a specific task or step.
 
 Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
+
+## Versioning System
+
+TimeCatcher uses semi-automatic semantic versioning with PR-based automatic bumps. See docs/VERSIONING.md for complete workflow details, npm commands, and release processes.
