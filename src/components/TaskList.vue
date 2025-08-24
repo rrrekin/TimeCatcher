@@ -6,7 +6,7 @@
         <col />
         <col style="width: 80px" />
         <col style="width: 70px" />
-        <col style="width: 90px" />
+        <col style="width: 99px" />
       </colgroup>
       <thead>
         <tr>

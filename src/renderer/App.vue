@@ -49,7 +49,7 @@
           :target-work-hours="targetWorkHours"
           :total-time-tracked="getTotalTimeTracked()"
           :total-minutes-tracked="getTotalMinutesTracked()"
-          :category-breakdown="getEnhancedCategoryBreakdown()"
+          :category-breakdown="getEnhancedCategoryBreakdown"
         />
       </div>
     </div>
@@ -988,26 +988,23 @@ const parseDurationToMinutes = (durationStr: string): number => {
   return totalMinutes
 }
 
-// Enhanced category breakdown for the template (includes task summaries)
-const getEnhancedCategoryBreakdown = () => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
-  if (standardRecords.length === 0) return []
+const getEnhancedCategoryBreakdown = computed(() => {
+  if (taskRecords.value.length === 0) return []
 
   const categoryMap = new Map()
 
-  // Initialize category tracking with task summaries (only for standard tasks)
-  for (const record of standardRecords) {
+  // Iterate over all task records to respect special-task boundaries
+  for (let i = 0; i < taskRecords.value.length; i++) {
+    const record = taskRecords.value[i]
+    if (!record || record.task_type !== TASK_TYPE_NORMAL) continue
+
     if (!categoryMap.has(record.category_name)) {
       categoryMap.set(record.category_name, {
-        name: record.category_name,
-        totalMinutes: 0,
-        taskCount: 0,
-        tasks: new Map(), // Track individual tasks within category
+        tasks: new Map<string, any>(),
       })
     }
 
     const category = categoryMap.get(record.category_name)
-    category.taskCount++
 
     // Track individual task occurrences
     if (!category.tasks.has(record.task_name)) {
@@ -1022,12 +1019,10 @@ const getEnhancedCategoryBreakdown = () => {
     const task = category.tasks.get(record.task_name)
     task.count++
 
-    // Calculate duration for this specific task record using the same logic as composable
+    // Calculate duration using all records as boundaries
     const currentTime = parseTimeString(record.start_time)
     if (currentTime !== null) {
-      // Find next task to determine end time
-      const currentIndex = standardRecords.indexOf(record)
-      const nextRecord = currentIndex < standardRecords.length - 1 ? standardRecords[currentIndex + 1] : null
+      const nextRecord = i < taskRecords.value.length - 1 ? taskRecords.value[i + 1] : null
 
       let durationMinutes = 0
       if (nextRecord) {
@@ -1036,26 +1031,26 @@ const getEnhancedCategoryBreakdown = () => {
           durationMinutes = nextTime - currentTime
         }
       } else {
-        // Last task - use getLastTaskEndTime like composable does
         const endTime = getLastTaskEndTime(record.date, currentTime)
         durationMinutes = Math.max(0, endTime - currentTime)
       }
 
-      task.totalMinutes += Math.round(durationMinutes)
+      task.totalMinutes += Math.floor(durationMinutes)
     }
   }
 
-  // Use the composable's category breakdown for duration calculations
+  // Use the composable's category breakdown for category-level totals
   const baseCategoryBreakdown = getCategoryBreakdown()
 
-  // Enhance with task summaries
   return baseCategoryBreakdown.map(category => {
     const categoryData = categoryMap.get(category.categoryName)
     return {
       ...category,
       name: category.categoryName,
       totalTime: formatDurationMinutes(category.minutes),
-      taskCount: categoryData ? categoryData.taskCount : 0,
+      taskCount: categoryData
+        ? Array.from(categoryData.tasks.values()).reduce((sum: number, task: any) => sum + (task.count || 0), 0)
+        : 0,
       taskSummaries: categoryData
         ? Array.from(categoryData.tasks.values())
             .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
@@ -1066,7 +1061,7 @@ const getEnhancedCategoryBreakdown = () => {
         : [],
     }
   })
-}
+})
 
 const getUniqueCategoriesCount = (): number => {
   const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
