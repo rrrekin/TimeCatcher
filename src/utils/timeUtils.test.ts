@@ -194,7 +194,7 @@ describe('getLastTaskEndTime', () => {
         { hour: 6, minute: 30 }, // early morning
         { hour: 12, minute: 0 }, // noon
         { hour: 18, minute: 45 }, // evening
-        { hour: 23, minute: 59 }, // late night
+        { hour: 23, minute: 59 } // late night
       ]
 
       testCases.forEach(({ hour, minute }) => {

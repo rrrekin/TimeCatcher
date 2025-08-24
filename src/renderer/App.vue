@@ -137,7 +137,7 @@ import {
   type TaskRecord,
   type TaskType,
   type SpecialTaskType,
-  type TaskRecordWithId,
+  type TaskRecordWithId
 } from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
@@ -171,7 +171,7 @@ const {
   deleteCategory,
   setDefaultCategory,
   getDefaultCategory,
-  categoryExists,
+  categoryExists
 } = useCategories()
 
 const {
@@ -185,7 +185,7 @@ const {
   addTaskRecord,
   addSpecialTask,
   updateTaskRecord,
-  deleteTaskRecord,
+  deleteTaskRecord
 } = useTaskRecords(selectedDate)
 
 const {
@@ -195,7 +195,7 @@ const {
   tempTargetWorkHours,
   applyTheme,
   saveSettings: saveSettingsComposable,
-  initializeTempSettings,
+  initializeTempSettings
 } = useSettings()
 
 const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
@@ -225,7 +225,7 @@ const showAddTaskForm = ref(false)
 const newTask = ref<NewTaskForm>({
   categoryId: null,
   name: '',
-  time: '',
+  time: ''
 })
 // Loading states
 const isDeletingCategory = ref(false)
@@ -263,7 +263,7 @@ const dateTitle = computed(() => {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
-    day: 'numeric',
+    day: 'numeric'
   }).format(selectedDate.value)
 })
 
@@ -273,7 +273,7 @@ const dateInputValue = computed({
     // Parse as UTC to avoid timezone issues
     const [year, month, day] = value.split('-').map(Number)
     selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
-  },
+  }
 })
 
 const goToPreviousDay = () => {
@@ -492,7 +492,7 @@ const addTask = async () => {
       task_name: newTask.value.name,
       start_time: timeString,
       date: dateString,
-      task_type: TASK_TYPE_NORMAL,
+      task_type: TASK_TYPE_NORMAL
     }
 
     await addTaskRecord(taskRecord)
@@ -682,7 +682,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       task_name: record.task_name,
       start_time: timeString,
       date: dateString,
-      task_type: TASK_TYPE_NORMAL,
+      task_type: TASK_TYPE_NORMAL
     }
 
     await addTaskRecord(taskRecord)
@@ -1000,7 +1000,7 @@ const getEnhancedCategoryBreakdown = computed(() => {
 
     if (!categoryMap.has(record.category_name)) {
       categoryMap.set(record.category_name, {
-        tasks: new Map<string, any>(),
+        tasks: new Map<string, any>()
       })
     }
 
@@ -1012,7 +1012,7 @@ const getEnhancedCategoryBreakdown = computed(() => {
         name: record.task_name,
         count: 0,
         totalMinutes: 0,
-        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime(),
+        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
       })
     }
 
@@ -1056,9 +1056,9 @@ const getEnhancedCategoryBreakdown = computed(() => {
             .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
             .map((task: any) => ({
               ...task,
-              totalTime: formatDurationMinutes(task.totalMinutes),
+              totalTime: formatDurationMinutes(task.totalMinutes)
             }))
-        : [],
+        : []
     }
   })
 })

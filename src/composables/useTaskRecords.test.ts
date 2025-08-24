@@ -35,7 +35,7 @@ describe('useTaskRecords', () => {
         ['09:05', '09:05'],
         ['14:15', '14:15'],
         ['0:0', '00:00'],
-        ['23:59', '23:59'],
+        ['23:59', '23:59']
       ])('should normalize "%s" to "%s"', (input, expected) => {
         const result = parseTimeInput(input)
         expect(result).toBe(expected)

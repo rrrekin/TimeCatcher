@@ -173,7 +173,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
       .map(([categoryName, rawMinutes]) => ({
         categoryName,
         minutes: Math.round(rawMinutes),
-        percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0,
+        percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0
       }))
       .sort((a, b) => b.minutes - a.minutes || a.categoryName.localeCompare(b.categoryName))
   }
@@ -182,6 +182,6 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     sortedTaskRecords,
     calculateDuration,
     getTotalMinutesTracked,
-    getCategoryBreakdown,
+    getCategoryBreakdown
   }
 }

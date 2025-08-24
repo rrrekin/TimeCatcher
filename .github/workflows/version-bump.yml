@@ -1,19 +1,21 @@
 name: Version Bump
 
-on:
+'on':
   pull_request:
     types: [closed]
     branches: [main]
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
   actions: read
 
 jobs:
   version-bump:
     # Only run when PR is merged (not just closed)
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.head.ref, 'version-bump-') &&
+      github.event.pull_request.user.login != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -52,13 +54,13 @@ jobs:
           # Enable strict shell error handling
           set -euo pipefail
           IFS=$'\n\t'
-          
+
           # Set up cleanup trap to restore shell state
           cleanup() {
             shopt -u nocasematch 2>/dev/null || true
           }
           trap cleanup EXIT
-          
+
           echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
 
           # Enable case-insensitive pattern matching
@@ -116,29 +118,33 @@ jobs:
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "📊 New version: $NEW_VERSION"
 
-      - name: Push changes
+      - name: Create version bump branch and PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.version-info.outputs.new_version }}
+          BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
         run: |
-          echo "📤 Pushing version bump commit..."
+          echo "📤 Creating version bump branch and PR..."
 
-          # Fetch latest changes from origin to get current state
-          echo "🔄 Fetching latest changes from origin..."
-          git fetch origin
+          # Create and switch to version bump branch (idempotent)
+          BRANCH_NAME="version-bump-$NEW_VERSION"
+          git checkout -B "$BRANCH_NAME"
 
-          # Rebase our bump commit onto the latest origin/main
-          echo "🔀 Rebasing bump commit onto latest origin/main..."
-          if ! git rebase origin/main; then
-            echo "❌ Rebase failed - likely due to conflicts"
-            echo "This suggests origin/main has conflicting changes since PR merge"
-            git rebase --abort
-            echo "Manual intervention may be required"
-            exit 1
-          fi
+          # Push the branch with force-with-lease and set upstream
+          git push --force-with-lease --set-upstream origin "$BRANCH_NAME"
 
-          # Push using force-with-lease for safety (only if remote hasn't changed since fetch)
-          echo "⬆️ Pushing rebased commit with force-with-lease..."
-          git push origin HEAD:main --force-with-lease
+          # Create PR with auto-merge
+          gh pr create \
+            --title "chore: bump $BUMP_TYPE version to $NEW_VERSION" \
+            --body "Automated version bump from merged PR #${{ github.event.pull_request.number }}" \
+            --base main \
+            --head "$BRANCH_NAME"
 
-          echo "✅ Successfully pushed version ${{ steps.version-info.outputs.new_version }}"
+          # Enable auto-merge if available
+          PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
+          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || echo "Auto-merge not available, manual merge required"
+
+          echo "✅ Created PR for version $NEW_VERSION"
 
       - name: Summary
         run: |

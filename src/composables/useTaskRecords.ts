@@ -5,7 +5,7 @@ import type {
   TaskRecordUpdate,
   TaskType,
   SpecialTaskType,
-  TaskRecordWithId,
+  TaskRecordWithId
 } from '@/shared/types'
 import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, TASK_TYPE_END } from '@/shared/types'
 import { toYMDLocal } from '@/utils/dateUtils'
@@ -129,7 +129,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         task_name: taskName,
         start_time: currentTime,
         date: dateString,
-        task_type: taskType,
+        task_type: taskType
       }
 
       await window.electronAPI.addTaskRecord(taskRecord)
@@ -219,6 +219,6 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     addTaskRecord,
     addSpecialTask,
     updateTaskRecord,
-    deleteTaskRecord,
+    deleteTaskRecord
   }
 }

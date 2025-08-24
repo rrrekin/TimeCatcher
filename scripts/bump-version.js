@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { execSync } = require('child_process');
+const fs = require('fs')
+const path = require('path')
+const os = require('os')
+const { execSync } = require('child_process')
 
 // Configuration
-const PACKAGE_JSON_PATH = path.join(__dirname, '../package.json');
+const PACKAGE_JSON_PATH = path.join(__dirname, '../package.json')
 
 /**
  * Executes a git command and returns the output
@@ -15,9 +15,9 @@ const PACKAGE_JSON_PATH = path.join(__dirname, '../package.json');
  */
 function execGit(command) {
   try {
-    return execSync(`git ${command}`, { encoding: 'utf-8', stdio: 'pipe' }).trim();
+    return execSync(`git ${command}`, { encoding: 'utf-8', stdio: 'pipe' }).trim()
   } catch (error) {
-    throw new Error(`Git command failed: ${command}\n${error.message}`);
+    throw new Error(`Git command failed: ${command}\n${error.message}`)
   }
 }
 
@@ -27,10 +27,10 @@ function execGit(command) {
  */
 function readPackageJson() {
   try {
-    const content = fs.readFileSync(PACKAGE_JSON_PATH, 'utf-8');
-    return JSON.parse(content);
+    const content = fs.readFileSync(PACKAGE_JSON_PATH, 'utf-8')
+    return JSON.parse(content)
   } catch (error) {
-    throw new Error(`Failed to read package.json: ${error.message}`);
+    throw new Error(`Failed to read package.json: ${error.message}`)
   }
 }
 
@@ -40,10 +40,10 @@ function readPackageJson() {
  */
 function writePackageJson(packageData) {
   try {
-    const content = JSON.stringify(packageData, null, 2) + '\n';
-    fs.writeFileSync(PACKAGE_JSON_PATH, content);
+    const content = JSON.stringify(packageData, null, 2) + '\n'
+    fs.writeFileSync(PACKAGE_JSON_PATH, content)
   } catch (error) {
-    throw new Error(`Failed to write package.json: ${error.message}`);
+    throw new Error(`Failed to write package.json: ${error.message}`)
   }
 }
 
@@ -53,15 +53,15 @@ function writePackageJson(packageData) {
  * @returns {object} Version components {major, minor, patch}
  */
 function parseVersion(version) {
-  const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/);
+  const match = version.match(/^(\d+)\.(\d+)\.(\d+)$/)
   if (!match) {
-    throw new Error(`Invalid version format: ${version}`);
+    throw new Error(`Invalid version format: ${version}`)
   }
   return {
     major: parseInt(match[1]),
     minor: parseInt(match[2]),
     patch: parseInt(match[3])
-  };
+  }
 }
 
 /**
@@ -70,7 +70,7 @@ function parseVersion(version) {
  * @returns {string} Formatted version string
  */
 function formatVersion(version) {
-  return `${version.major}.${version.minor}.${version.patch}`;
+  return `${version.major}.${version.minor}.${version.patch}`
 }
 
 /**
@@ -79,7 +79,7 @@ function formatVersion(version) {
  * @returns {string} Tag name (e.g., "0.20")
  */
 function getMajorMinorTag(version) {
-  return `${version.major}.${version.minor}`;
+  return `${version.major}.${version.minor}`
 }
 
 /**
@@ -87,23 +87,23 @@ function getMajorMinorTag(version) {
  * @param {string} message - Commit message
  */
 function commitWithMessage(message) {
-  let tmpFile = null;
+  let tmpFile = null
   try {
     // Create temporary file in system temp directory
-    tmpFile = path.join(os.tmpdir(), `commit-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`);
-    
+    tmpFile = path.join(os.tmpdir(), `commit-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.txt`)
+
     // Write message to temporary file
-    fs.writeFileSync(tmpFile, message + '\n', 'utf-8');
-    
+    fs.writeFileSync(tmpFile, message + '\n', 'utf-8')
+
     // Commit using the file
-    execGit(`commit -F "${tmpFile}"`);
+    execGit(`commit -F "${tmpFile}"`)
   } finally {
     // Always clean up the temporary file
     if (tmpFile && fs.existsSync(tmpFile)) {
       try {
-        fs.unlinkSync(tmpFile);
+        fs.unlinkSync(tmpFile)
       } catch (cleanupError) {
-        console.warn(`Warning: Failed to clean up temporary file ${tmpFile}: ${cleanupError.message}`);
+        console.warn(`Warning: Failed to clean up temporary file ${tmpFile}: ${cleanupError.message}`)
       }
     }
   }
@@ -115,55 +115,57 @@ function commitWithMessage(message) {
  * @param {string} [commitMessage] - Optional commit message
  */
 function bumpVersion(bumpType, commitMessage) {
-  console.log(`🚀 Bumping ${bumpType} version...`);
+  console.log(`🚀 Bumping ${bumpType} version...`)
 
   // Read current version
-  const packageData = readPackageJson();
-  const currentVersion = parseVersion(packageData.version);
+  const packageData = readPackageJson()
+  const currentVersion = parseVersion(packageData.version)
 
-  console.log(`📋 Current version: ${formatVersion(currentVersion)}`);
+  console.log(`📋 Current version: ${formatVersion(currentVersion)}`)
 
   // Calculate new version
-  let newVersion;
+  let newVersion
   switch (bumpType) {
     case 'major':
-      newVersion = { major: currentVersion.major + 1, minor: 0, patch: 0 };
-      break;
+      newVersion = { major: currentVersion.major + 1, minor: 0, patch: 0 }
+      break
     case 'minor':
-      newVersion = { major: currentVersion.major, minor: currentVersion.minor + 1, patch: 0 };
-      break;
+      newVersion = { major: currentVersion.major, minor: currentVersion.minor + 1, patch: 0 }
+      break
     case 'patch':
-      newVersion = { major: currentVersion.major, minor: currentVersion.minor, patch: currentVersion.patch + 1 };
-      break;
+      newVersion = { major: currentVersion.major, minor: currentVersion.minor, patch: currentVersion.patch + 1 }
+      break
     default:
-      throw new Error(`Invalid bump type: ${bumpType}. Use 'major', 'minor', or 'patch'.`);
+      throw new Error(`Invalid bump type: ${bumpType}. Use 'major', 'minor', or 'patch'.`)
   }
 
-  const newVersionString = formatVersion(newVersion);
+  const newVersionString = formatVersion(newVersion)
 
-  console.log(`📈 New version: ${newVersionString}`);
+  console.log(`📈 New version: ${newVersionString}`)
 
   // Update package.json
-  packageData.version = newVersionString;
-  writePackageJson(packageData);
-  console.log(`✅ Updated package.json to ${newVersionString}`);
+  packageData.version = newVersionString
+  writePackageJson(packageData)
+  console.log(`✅ Updated package.json to ${newVersionString}`)
 
   // Stage package.json for commit
-  execGit('add package.json');
+  execGit('add package.json')
 
   // Create commit
   const defaultMessage = `chore: bump version to ${newVersionString}
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
-Co-Authored-By: Claude <noreply@anthropic.com>`;
+Co-Authored-By: Claude <noreply@anthropic.com>`
 
-  const finalMessage = commitMessage || defaultMessage;
-  commitWithMessage(finalMessage);
-  console.log(`✅ Created commit with version bump`);
+  const finalMessage = commitMessage || defaultMessage
+  commitWithMessage(finalMessage)
+  console.log(`✅ Created commit with version bump`)
 
-  console.log(`🎉 Version bump complete: ${currentVersion.major}.${currentVersion.minor}.${currentVersion.patch} → ${newVersionString}`);
-  console.log(`📝 Note: Git tags will be created manually during release process`);
+  console.log(
+    `🎉 Version bump complete: ${currentVersion.major}.${currentVersion.minor}.${currentVersion.patch} → ${newVersionString}`
+  )
+  console.log(`📝 Note: Git tags will be created manually during release process`)
 }
 
 /**
@@ -172,26 +174,26 @@ Co-Authored-By: Claude <noreply@anthropic.com>`;
  * @returns {string} Bump type: 'major', 'minor', or 'patch'
  */
 function getBumpTypeFromPRTitle(prTitle) {
-  if (!prTitle) return 'patch';
+  if (!prTitle) return 'patch'
 
-  const title = prTitle.toLowerCase();
+  const title = prTitle.toLowerCase()
 
   if (title.includes('[major]') || title.includes('major:')) {
-    return 'major';
+    return 'major'
   }
 
   if (title.includes('[minor]') || title.includes('minor:')) {
-    return 'minor';
+    return 'minor'
   }
 
-  return 'patch';
+  return 'patch'
 }
 
 /**
  * Main function - handles command line arguments
  */
 function main() {
-  const args = process.argv.slice(2);
+  const args = process.argv.slice(2)
 
   if (args.length === 0) {
     console.log(`
@@ -210,28 +212,28 @@ Examples:
   node bump-version.js patch
   node bump-version.js minor "feat: add new feature"
   node bump-version.js --pr-title "feat: [MINOR] add user authentication"
-`);
-    process.exit(1);
+`)
+    process.exit(1)
   }
 
   try {
     if (args[0] === '--pr-title') {
       if (args.length < 2) {
-        throw new Error('PR title is required when using --pr-title flag');
+        throw new Error('PR title is required when using --pr-title flag')
       }
-      const prTitle = args[1];
-      const bumpType = getBumpTypeFromPRTitle(prTitle);
-      console.log(`📝 PR Title: "${prTitle}"`);
-      console.log(`🎯 Detected bump type: ${bumpType}`);
-      bumpVersion(bumpType, args[2]);
+      const prTitle = args[1]
+      const bumpType = getBumpTypeFromPRTitle(prTitle)
+      console.log(`📝 PR Title: "${prTitle}"`)
+      console.log(`🎯 Detected bump type: ${bumpType}`)
+      bumpVersion(bumpType, args[2])
     } else {
-      const bumpType = args[0];
-      const commitMessage = args[1];
-      bumpVersion(bumpType, commitMessage);
+      const bumpType = args[0]
+      const commitMessage = args[1]
+      bumpVersion(bumpType, commitMessage)
     }
   } catch (error) {
-    console.error(`❌ Error: ${error.message}`);
-    process.exit(1);
+    console.error(`❌ Error: ${error.message}`)
+    process.exit(1)
   }
 }
 
@@ -242,9 +244,9 @@ module.exports = {
   getMajorMinorTag,
   getBumpTypeFromPRTitle,
   bumpVersion
-};
+}
 
 // Run if called directly
 if (require.main === module) {
-  main();
+  main()
 }
