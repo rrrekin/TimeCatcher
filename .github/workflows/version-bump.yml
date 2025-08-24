@@ -15,7 +15,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    
+
     # Prevent concurrent version bumps to avoid conflicts
     concurrency:
       group: version-bump-main
@@ -45,15 +45,18 @@ jobs:
 
       - name: Determine version bump type
         id: bump-type
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
           echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
 
           # Enable case-insensitive pattern matching
           shopt -s nocasematch
 
           # Determine bump type from PR title
-          if [[ "$PR_TITLE" =~ \[(major)\]|major: ]]; then
+          # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
+          if [[ "$PR_TITLE" =~ \[(major)\]|major:|breaking\ change|!:|\w+!: ]]; then
             echo "bump_type=major" >> $GITHUB_OUTPUT
             echo "🚀 Detected MAJOR version bump from PR title"
           elif [[ "$PR_TITLE" =~ \[(minor)\]|minor: ]]; then
@@ -64,7 +67,7 @@ jobs:
             echo "🔧 Default PATCH version bump"
           fi
 
-          # Disable case-insensitive matching to avoid side effects
+          # Restore shopt state
           shopt -u nocasematch
 
       - name: Bump version
@@ -77,7 +80,7 @@ jobs:
 
           # Create temporary commit message file to avoid shell injection
           COMMIT_FILE=$(mktemp)
-          
+
           # Write commit message to file with proper escaping
           cat > "$COMMIT_FILE" << EOF
           chore: bump ${BUMP_TYPE} version
@@ -92,7 +95,7 @@ jobs:
           # Read commit message from file safely and pass to script
           COMMIT_MSG=$(cat "$COMMIT_FILE")
           node scripts/bump-version.js "${BUMP_TYPE}" "$COMMIT_MSG"
-          
+
           # Clean up temporary file
           rm -f "$COMMIT_FILE"
 
