@@ -259,9 +259,9 @@ describe('DailyReport Component', () => {
     })
 
     it('should handle malformed input gracefully', () => {
-      expect(vm.formatTaskTime('')).toBe('0m')
-      expect(vm.formatTaskTime('invalid')).toBe('0m')
-      expect(vm.formatTaskTime('h m')).toBe('0m')
+      expect(vm.formatTaskTime('')).toBe('-')
+      expect(vm.formatTaskTime('invalid')).toBe('-')
+      expect(vm.formatTaskTime('h m')).toBe('-')
     })
   })
 

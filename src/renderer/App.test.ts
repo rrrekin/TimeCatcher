@@ -1697,7 +1697,7 @@ describe('App Component', () => {
     it('should trigger lines 1040-1042 - parseTimeString calls in getSortedTaskRecords sort', () => {
       const vm = wrapper.vm as any
       
-      // Spy on parseTimeString from timeUtils
+      // Spy on parseTimeString from the mocked timeUtils module
       const parseTimeStringSpy = vi.spyOn(timeUtils, 'parseTimeString').mockImplementation((timeStr) => {
         // Convert "HH:MM" to minutes for comparison
         const [hours, minutes] = timeStr.split(':').map(Number)

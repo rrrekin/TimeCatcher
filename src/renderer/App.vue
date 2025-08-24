@@ -948,13 +948,13 @@ const parseDurationToMinutes = (durationStr: string): number => {
   
   // Match hours (e.g., "1h", "2h")
   const hoursMatch = durationStr.match(/(\d+)h/)
-  if (hoursMatch) {
+  if (hoursMatch && hoursMatch[1]) {
     totalMinutes += parseInt(hoursMatch[1]) * 60
   }
   
   // Match minutes (e.g., "30m", "45m")
   const minutesMatch = durationStr.match(/(\d+)m/)
-  if (minutesMatch) {
+  if (minutesMatch && minutesMatch[1]) {
     totalMinutes += parseInt(minutesMatch[1])
   }
   

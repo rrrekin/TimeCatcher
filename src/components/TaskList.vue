@@ -1,6 +1,13 @@
 <template>
   <div class="task-table" ref="taskTableRef">
     <table aria-label="Task records">
+      <colgroup>
+        <col style="width: 120px;">
+        <col>
+        <col style="width: 80px;">
+        <col style="width: 70px;">
+        <col style="width: 90px;">
+      </colgroup>
       <thead>
       <tr>
         <th scope="col">Category</th>
@@ -99,8 +106,8 @@
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
-              pattern="[0-2][0-9]:[0-5][0-9]"
-              maxlength="5"
+              :pattern="!record.start_time.trim() ? '^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$' : ''"
+              :maxlength="!record.start_time.trim() ? 5 : 0"
           />
         </td>
         <!-- Duration column (visibility based on task type) -->
@@ -513,12 +520,6 @@ table {
   table-layout: fixed;
 }
 
-/* Column width controls */
-table th:nth-child(1) { width: 120px; } /* Category - fixed width for category names */
-table th:nth-child(2) { width: auto; } /* Task - flexible width for task descriptions */  
-table th:nth-child(3) { width: 80px; } /* Start time - fixed width for time format (HH:MM) */
-table th:nth-child(4) { width: 70px; } /* Duration - fixed width for duration display */
-table th:nth-child(5) { width: 90px; } /* Actions - fixed width for replay/delete buttons */
 
 th {
   background: var(--primary);

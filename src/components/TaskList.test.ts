@@ -988,7 +988,7 @@ describe('TaskList Component', () => {
         input.classes().includes('time-input')
       )
       expect(textTimeInputs.length).toBeGreaterThan(0)
-      expect(textTimeInputs[0]?.attributes('pattern')).toBe('[0-2][0-9]:[0-5][0-9]')
+      expect(textTimeInputs[0]?.attributes('pattern')).toBe('^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$')
       expect(textTimeInputs[0]?.attributes('maxlength')).toBe('5')
     })
 
@@ -1207,8 +1207,6 @@ describe('TaskList Component', () => {
       await wrapper.vm.$nextTick()
       // Ensure spy was called at least once with expected args
       const calls = spy.mock.calls
-      // Instead of strict assertion, log calls for debugging
-      console.log('initializeActiveOption calls:', calls)
       expect(Array.isArray(calls)).toBe(true)
     })
 
@@ -1225,8 +1223,6 @@ describe('TaskList Component', () => {
       expect(wrapper.emitted('toggleInlineDropdown')).toBeTruthy()
       // Ensure focusSpy was called at least once with expected args
       const calls = focusSpy.mock.calls
-      // Instead of strict assertion, log calls for debugging
-      console.log('focusTriggerButton calls:', calls)
       expect(Array.isArray(calls)).toBe(true)
     })
 

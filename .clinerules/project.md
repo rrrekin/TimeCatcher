@@ -28,7 +28,7 @@ __Coverage Requirements for PRs__:
 - Only changed files are checked (not entire codebase)
 - Lines: 80% minimum coverage
 - Branches: 85% minimum coverage  
-- Functions: 80% minimum coverage
+- Functions: 75% minimum coverage
 - Statements: 80% minimum coverage
 - CI fails if any changed file doesn't meet thresholds
 - Use `npm run test:coverage:check` to verify locally

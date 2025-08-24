@@ -57,8 +57,20 @@
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
-              <span class="task-time-rounded">{{ formatTaskTime(task.totalTime) }}</span>
-              <span class="task-time-actual">{{ task.totalTime }}</span>
+              <span
+                  class="task-time-rounded"
+                  :title="`Rounded (nearest 5m)`"
+                  :aria-label="`Rounded (nearest 5m): ${formatTaskTime(task.totalTime)}`"
+              >
+                {{ formatTaskTime(task.totalTime) }}
+              </span>
+              <span
+                  class="task-time-actual"
+                  :title="`Actual`"
+                  :aria-label="`Actual: ${task.totalTime}`"
+              >
+                {{ task.totalTime }}
+              </span>
             </li>
           </ul>
         </div>
@@ -120,24 +132,22 @@ const getStatusText = () => {
 
 // Format task time to show rounded to nearest 5 minutes
 const formatTaskTime = (timeString: string): string => {
-  // Parse the time string to extract minutes
-  // Expected formats: "1h 30m", "45m", "2h", etc.
-  const hourMatch = timeString.match(/(\d+)h/)
-  const minuteMatch = timeString.match(/(\d+)m/)
-  
+  const raw = (timeString || '').trim()
+  if (!raw || raw === '-') return '-' // preserve “no data”
+  // Support: "1h 30m", "1h30m", "2h", "45m"
+  const parts = [...raw.matchAll(/(\d+)\s*([hm])/gi)]
+  if (parts.length === 0) return '-'
   let totalMinutes = 0
-  if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60
-  if (minuteMatch) totalMinutes += parseInt(minuteMatch[1])
-  
-  // Round to nearest 5 minutes
+  for (const [, n, unit] of parts) {
+    if (!n || !unit) continue
+    const value = parseInt(n, 10)
+    if (Number.isNaN(value)) continue
+    totalMinutes += unit.toLowerCase() === 'h' ? value * 60 : value
+  }
   const roundedMinutes = Math.round(totalMinutes / 5) * 5
-  
-  // Format back to string
   if (roundedMinutes === 0) return '0m'
-  
   const hours = Math.floor(roundedMinutes / 60)
   const minutes = roundedMinutes % 60
-  
   if (hours === 0) return `${minutes}m`
   if (minutes === 0) return `${hours}h`
   return `${hours}h ${minutes}m`
@@ -291,7 +301,7 @@ const formatTaskTime = (timeString: string): string => {
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr minmax(50px, auto) minmax(50px, auto) minmax(50px, auto);
   gap: 12px;
   align-items: center;
   padding: 8px 12px;

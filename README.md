@@ -14,7 +14,7 @@ Work In Progress
 ![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
 ![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
 ![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)
-!['codecov app svg image'](https://github.com/codecov/engineering-team/assets/152432831/e90313f4-9d3a-4b63-8b54-cfe14e7ec20d)
+[![codecov](https://codecov.io/gh/rrrekin/TimeCatcher/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rrrekin/TimeCatcher)
 
 ## Development Setup
 
