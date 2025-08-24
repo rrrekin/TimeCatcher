@@ -505,6 +505,18 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 </script>
 
 <style scoped>
+/* Component-specific CSS custom properties */
+.task-table {
+  --primary-alpha: rgba(87, 189, 175, 0.2);
+  --warning-alpha: rgba(253, 203, 110, 0.1);
+  --success-alpha: rgba(89, 201, 100, 0.1);
+  --emerald-shadow: rgba(86, 179, 114, 0.3);
+  --emerald-shadow-hover: rgba(86, 179, 114, 0.4);
+  --transition-fast: 0.2s ease;
+  --warning-hover: color-mix(in srgb, var(--warning) 80%, var(--text-primary) 20%);
+  --success-hover: color-mix(in srgb, var(--success) 80%, var(--text-primary) 20%);
+}
+
 /* Task table styles */
 .task-table {
   background: var(--bg-primary);
@@ -590,11 +602,11 @@ tr:last-child td {
 }
 
 .pause-task-row {
-  background: rgba(253, 203, 110, 0.1);
+  background: var(--warning-alpha);
 }
 
 .end-task-row {
-  background: rgba(89, 201, 100, 0.1);
+  background: var(--success-alpha);
 }
 
 .special-task-cell {
@@ -612,14 +624,14 @@ tr:last-child td {
   border-radius: 4px;
   color: var(--text-primary);
   font-size: 13px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .editable-cell:focus {
   outline: none;
   border-color: var(--primary);
   background: var(--bg-primary);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.2);
+  box-shadow: 0 0 0 2px var(--primary-alpha);
 }
 
 .time-input {
@@ -695,7 +707,7 @@ tr:last-child td {
   cursor: pointer;
   background: transparent;
   font-size: 13px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .dropdown-trigger:hover {
@@ -756,7 +768,7 @@ tr:last-child td {
   padding: 4px 6px;
   margin: 0 1px;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 14px;
 }
 
@@ -786,14 +798,14 @@ tr:last-child td {
   font-size: 12px;
   min-width: 80px;
   border: 1px solid var(--emerald);
-  box-shadow: 0 2px 4px rgba(86, 179, 114, 0.3);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px var(--emerald-shadow);
+  transition: all var(--transition-fast);
 }
 
 .primary-add-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, var(--mantis), var(--emerald));
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(86, 179, 114, 0.4);
+  box-shadow: 0 4px 8px var(--emerald-shadow-hover);
 }
 
 .primary-add-btn:disabled {
@@ -831,7 +843,7 @@ tr:last-child td {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   color: white;
 }
 
@@ -840,7 +852,7 @@ tr:last-child td {
 }
 
 .pause-btn:hover {
-  background: color-mix(in srgb, var(--warning) 80%, black 20%);
+  background: var(--warning-hover);
   transform: translateY(-2px);
 }
 
@@ -849,7 +861,7 @@ tr:last-child td {
 }
 
 .end-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--success) 80%, black 20%);
+  background: var(--success-hover);
   transform: translateY(-2px);
 }
 

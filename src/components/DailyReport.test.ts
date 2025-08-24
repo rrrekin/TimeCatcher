@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import DailyReport from './DailyReport.vue'
@@ -75,20 +76,20 @@ describe('DailyReport Component', () => {
 
   describe('Component Rendering', () => {
     it('should render the report header with total time', () => {
-      const header = wrapper.find('.report-header h2')
+      const header = wrapper.find('[data-testid="report-header-title"]')
       expect(header.text()).toContain('Daily Report: 5h 0m')
     })
 
     it('should display the date title', () => {
-      const dateTitle = wrapper.find('p')
+      const dateTitle = wrapper.find('[data-testid="report-date"]')
       expect(dateTitle.text()).toContain('Monday, January 15')
     })
 
     it('should render category breakdown when tasks exist', () => {
-      const categoryBreakdown = wrapper.find('.category-breakdown')
+      const categoryBreakdown = wrapper.find('[data-testid="category-breakdown"]')
       expect(categoryBreakdown.exists()).toBe(true)
 
-      const categorySections = wrapper.findAll('.category-section')
+      const categorySections = wrapper.findAll('[data-testid="category-section"]')
       expect(categorySections).toHaveLength(2) // Work and Personal
     })
 

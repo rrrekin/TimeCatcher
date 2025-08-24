@@ -23,6 +23,7 @@
   },
   "include": [
     "src/vue-shims.d.ts",
+    "src/vite-env.d.ts",
     "src/renderer/**/*.ts",
     "src/renderer/**/*.vue",
     "src/components/**/*.ts",

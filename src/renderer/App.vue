@@ -583,17 +583,25 @@ onMounted(async () => {
   }
 
   // Wait a moment for database initialization to complete, then load categories
-  console.log('App mounted, waiting for database initialization...')
+  if (import.meta.env.DEV) {
+    console.log('App mounted, waiting for database initialization...')
+  }
   await new Promise(resolve => setTimeout(resolve, 1000))
 
-  console.log('Loading categories and initializing task form...')
+  if (import.meta.env.DEV) {
+    console.log('Loading categories and initializing task form...')
+  }
   await loadCategoriesWrapper()
   initializeNewTask()
 
   // Load task records for today
-  console.log('Loading task records...')
+  if (import.meta.env.DEV) {
+    console.log('Loading task records...')
+  }
   await loadTaskRecordsWrapper()
-  console.log('App initialization complete')
+  if (import.meta.env.DEV) {
+    console.log('App initialization complete')
+  }
   
   // Start auto-refresh for today's tasks
   startAutoRefresh()

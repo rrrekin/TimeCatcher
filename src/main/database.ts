@@ -49,22 +49,30 @@ class DatabaseService {
     const defaultCategories = ['Development', 'Meeting', 'Maintenance']
     const existingCount = this.db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number }
     
-    console.log('Initializing default categories, existing count:', existingCount.count)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Initializing default categories, existing count:', existingCount.count)
+    }
     
     if (existingCount.count === 0) {
-      console.log('No categories found, creating default categories...')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('No categories found, creating default categories...')
+      }
       const insert = this.db.prepare('INSERT OR IGNORE INTO categories (name, is_default) VALUES (?, ?)')
       defaultCategories.forEach((category, index) => {
         try {
           // Set Development (first category) as default - use 1/0 for SQLite boolean
           const isDefault = index === 0 ? 1 : 0
-          console.log('Attempting to create category:', { category, is_default: Boolean(isDefault) })
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Attempting to create category:', { category, is_default: Boolean(isDefault) })
+          }
           const result = insert.run(category, isDefault)
           
           if (result.changes === 0) {
             console.warn('Category already exists during initialization:', { category, is_default: Boolean(isDefault) })
           } else if (result.changes > 0) {
-            console.log('Created category:', { category, is_default: Boolean(isDefault) })
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Created category:', { category, is_default: Boolean(isDefault) })
+            }
           }
         } catch (error) {
           // Re-throw unexpected database errors (IO, schema, etc.)
@@ -72,16 +80,24 @@ class DatabaseService {
           throw error
         }
       })
-      console.log('Default categories creation completed')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Default categories creation completed')
+      }
     } else {
-      console.log('Categories exist, checking for default category...')
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Categories exist, checking for default category...')
+      }
       // Check if there's a default category set, if not set Development as default
       const defaultCount = this.db.prepare('SELECT COUNT(*) as count FROM categories WHERE is_default = TRUE').get() as { count: number }
-      console.log('Default categories count:', defaultCount.count)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Default categories count:', defaultCount.count)
+      }
       if (defaultCount.count === 0) {
         const devCategory = this.db.prepare('SELECT id FROM categories WHERE name = ?').get('Development') as { id: number } | undefined
         if (devCategory) {
-          console.log('Setting Development as default category')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('Setting Development as default category')
+          }
           this.db.prepare('UPDATE categories SET is_default = TRUE WHERE id = ?').run(devCategory.id)
         }
       }

@@ -680,14 +680,13 @@ describe('TaskList Component', () => {
     it('should prevent default on Enter key for new task inputs', async () => {
       const addTaskRow = wrapper.find('.add-task-row')
       const timeInput = addTaskRow.find('input[type="time"]')
-      
+
       const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' })
       const preventDefaultSpy = vi.spyOn(enterEvent, 'preventDefault')
-      
+
       await timeInput.element.dispatchEvent(enterEvent)
-      
-      // Note: This test might be tricky to verify preventDefault directly in Vue Test Utils
-      // The actual prevention happens in the component's event handler
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
     })
   })
 

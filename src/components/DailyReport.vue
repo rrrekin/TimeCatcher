@@ -1,7 +1,7 @@
 <template>
   <div class="daily-report">
     <div class="report-header">
-      <h2>Daily Report: {{ totalTimeTracked }}</h2>
+      <h2 data-testid="report-header-title">Daily Report: {{ totalTimeTracked }}</h2>
       <div class="status-emojis" aria-live="polite" aria-atomic="true">
         <span v-if="!hasEndTaskForSelectedDate" class="status-emoji" role="img" aria-label="Missing end task" title="Missing end task">⚠️</span>
         <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji" role="img" aria-label="Target reached" title="Target reached">😊</span>
@@ -11,7 +11,7 @@
         </span>
       </div>
     </div>
-    <p>
+    <p data-testid="report-date">
       {{ dateTitle }}
       {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
     </p>
@@ -22,11 +22,12 @@
       <div v-if="standardTaskCount === 0" class="empty-report">
         No standard tasks recorded for this day
       </div>
-      <div v-else class="category-breakdown">
+      <div v-else class="category-breakdown" data-testid="category-breakdown">
         <div
             v-for="(categoryData, index) in categoryBreakdown"
             :key="`${categoryData.name}-${index}`"
             class="category-section"
+            data-testid="category-section"
         >
           <div class="category-header">
             <div class="category-info">

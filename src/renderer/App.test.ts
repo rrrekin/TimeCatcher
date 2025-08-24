@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi, type MockedFunction } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import { nextTick } from 'vue'
@@ -333,9 +334,6 @@ describe('App Component', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks()
-    
-    // Mock console.log to avoid noise in tests
-    vi.spyOn(console, 'log').mockImplementation(() => {})
     
     wrapper = mount(App, {
       global: {
