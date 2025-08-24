@@ -4,11 +4,31 @@
 # This script is shared in the repository and can be installed via: npm run install-hooks
 
 # Get list of staged files (NUL-delimited for safe handling of filenames with spaces)
-staged_md_files=$(git diff --cached --name-only -z --diff-filter=ACM | grep -zZ '\.md$' | grep -vzZ node_modules || true)
-staged_src_files=$(git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules || true)
+staged_md_files=()
+staged_src_files=()
+
+# Collect staged markdown files
+git diff --cached --name-only -z --diff-filter=ACM | grep -zZ '\.md$' | grep -vzZ node_modules | \
+while IFS= read -r -d '' file; do
+  staged_md_files+=("$file")
+done
+
+# Collect staged source files
+git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | \
+while IFS= read -r -d '' file; do
+  staged_src_files+=("$file")
+done
+
+# Compute counts of staged files
+staged_md_count=${#staged_md_files[@]}
+staged_src_count=${#staged_src_files[@]}
+
+# Ensure counts are integers (fallback to 0 if unset)
+staged_md_count=$((staged_md_count + 0))
+staged_src_count=$((staged_src_count + 0))
 
 # Check if any files need processing
-if [ -z "$staged_md_files" ] && [ -z "$staged_src_files" ]; then
+if [ $staged_md_count -eq 0 ] && [ $staged_src_count -eq 0 ]; then
   # No files staged for formatting, exit successfully
   exit 0
 fi
@@ -16,60 +36,47 @@ fi
 echo "🔍 Checking files for formatting issues..."
 
 # Process markdown files if any are staged
-if [ -n "$staged_md_files" ]; then
+if [ ${#staged_md_files[@]} -gt 0 ]; then
   # Check if markdownlint-cli2 is available
-  if ! npm list markdownlint-cli2 >/dev/null 2>&1; then
+  if ! npx -q markdownlint-cli2 --version >/dev/null 2>&1; then
     echo "⚠️  markdownlint-cli2 not found. Run 'npm install' to install dependencies."
     echo "⚠️  Skipping markdown formatting check."
   else
     # Run markdownlint-cli2 on staged files only
-    echo "📝 Running markdownlint on staged files: $staged_md_files"
+    echo "📝 Running markdownlint on staged markdown files..."
 
-    # Create temporary file list for staged files (NUL-delimited)
-    temp_file=$(mktemp)
-    printf '%s' "$staged_md_files" > "$temp_file"
-
-    # Run markdownlint with fix on the specific files (using NUL-delimited input)
-    if cat "$temp_file" | xargs -0 npx markdownlint-cli2 --config .markdownlint-cli2.jsonc; then
+    if printf '%s\0' "${staged_md_files[@]}" | xargs -0 npx markdownlint-cli2 --config .markdownlint-cli2.jsonc; then
       echo "✅ Markdown formatting complete"
-      
-      # Add any fixed files back to the staging area (handle NUL-delimited filenames)
-      printf '%s' "$staged_md_files" | while IFS= read -r -d '' file; do
+
+      # Add any fixed files back to the staging area
+      for file in "${staged_md_files[@]}"; do
         if [ -f "$file" ]; then
           git add "$file"
         fi
       done
-      
-      # Clean up
-      rm -f "$temp_file"
     else
       echo "❌ Markdown formatting failed"
       echo "💡 Fix the issues above or run 'npm run format:md' to auto-fix what's possible"
-      rm -f "$temp_file"
       exit 1
     fi
   fi
 fi
 
 # Process source files if any are staged
-if [ -n "$staged_src_files" ]; then
+if [ ${#staged_src_files[@]} -gt 0 ]; then
   # Check if prettier is available
-  if ! npm list prettier >/dev/null 2>&1; then
+  if ! npx -q prettier --version >/dev/null 2>&1; then
     echo "⚠️  Prettier not found. Run 'npm install' to install dependencies."
     echo "⚠️  Skipping code formatting check."
   else
-    echo "🎨 Running Prettier on staged files: $staged_src_files"
-    
-    # Run prettier on staged files (using NUL-delimited input for safe filename handling)
-    if printf '%s' "$staged_src_files" | xargs -0 npx prettier --write; then
+    echo "🎨 Running Prettier on staged source files..."
+
+    # Run Prettier directly on staged source files via NUL-delimited pipeline
+    if git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | xargs -0 npx prettier --write; then
       echo "✅ Code formatting complete"
-      
-      # Add any formatted files back to the staging area (handle NUL-delimited filenames)
-      printf '%s' "$staged_src_files" | while IFS= read -r -d '' file; do
-        if [ -f "$file" ]; then
-          git add "$file"
-        fi
-      done
+
+      # Re-stage any formatted files
+      git diff --cached --name-only -z --diff-filter=ACM | grep -zZE '\.(ts|js|vue|json|html|css|scss|yaml|yml)$' | grep -vzZ node_modules | xargs -0 git add
     else
       echo "❌ Code formatting failed"
       echo "💡 Fix the issues above or run 'npm run format' to format all files"
