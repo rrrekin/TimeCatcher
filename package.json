@@ -61,5 +61,29 @@
     "better-sqlite3": "^12.2.0",
     "electron-store": "^10.1.0",
     "vue": "^3.5.18"
+  },
+  "build": {
+    "appId": "com.example.timecatcher",
+    "productName": "TimeCatcher",
+    "directories": {
+      "output": "dist/packages"
+    },
+    "files": [
+      "dist/main/**/*",
+      "dist/renderer/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [],
+    "mac": {
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "category": "Office"
+    }
   }
 }
