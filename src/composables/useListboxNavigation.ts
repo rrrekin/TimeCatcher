@@ -146,6 +146,6 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     handleKeydown,
     focusOption,
     initializeActiveOption,
-    focusTrigger
+    focusTrigger,
   }
 }

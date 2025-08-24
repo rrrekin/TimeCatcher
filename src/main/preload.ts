@@ -14,5 +14,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTaskRecordsByDate: (date: string) => ipcRenderer.invoke('db:get-task-records-by-date', date),
   updateTaskRecord: (id: number, record: TaskRecordUpdate) => ipcRenderer.invoke('db:update-task-record', id, record),
   deleteTaskRecord: (id: number) => ipcRenderer.invoke('db:delete-task-record', id),
-  debugAll: () => ipcRenderer.invoke('db:debug-all')
+  debugAll: () => ipcRenderer.invoke('db:debug-all'),
 })

@@ -138,6 +138,6 @@ export function useCategories() {
     deleteCategory,
     setDefaultCategory,
     getDefaultCategory,
-    categoryExists
+    categoryExists,
   }
 }

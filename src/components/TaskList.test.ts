@@ -17,9 +17,9 @@ vi.mock('@/composables/useListboxNavigation', () => ({
       initializeActiveOption: vi.fn(async (contextId: string | number, selectedIndex: number = 0): Promise<void> => {
         mockActiveIndexValue[contextId] = selectedIndex
       }),
-      focusTrigger: vi.fn((_triggerSelector: string) => {})
+      focusTrigger: vi.fn((_triggerSelector: string) => {}),
     }
-  })
+  }),
 }))
 
 // Mock the types import
@@ -30,8 +30,8 @@ vi.mock('@/shared/types', async () => {
     DURATION_VISIBLE_BY_TASK_TYPE: {
       normal: true,
       pause: true,
-      end: false
-    }
+      end: false,
+    },
   }
 })
 
@@ -48,7 +48,7 @@ describe('TaskList Component', () => {
         task_name: 'Task 1',
         start_time: '09:00',
         date: '2024-01-15',
-        task_type: 'normal'
+        task_type: 'normal',
       },
       {
         id: 2,
@@ -56,14 +56,14 @@ describe('TaskList Component', () => {
         task_name: 'Task 2',
         start_time: '10:00',
         date: '2024-01-15',
-        task_type: 'normal'
-      }
+        task_type: 'normal',
+      },
     ]
 
     mockCategories = [
       { id: 1, name: 'Work', is_default: true },
       { id: 2, name: 'Personal', is_default: false },
-      { id: 3, name: 'Learning', is_default: false }
+      { id: 3, name: 'Learning', is_default: false },
     ]
 
     // Mount the component with required props
@@ -79,15 +79,15 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: null,
           name: '',
-          time: ''
+          time: '',
         },
         // Function props
         calculateDuration: vi.fn(() => '1h 30m'),
         convertToTimeInput: vi.fn(time => time),
         getCurrentTime: vi.fn(() => '10:30'),
         getSelectedCategoryName: vi.fn(() => 'Work'),
-        isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
-      }
+        isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType)),
+      },
     })
   })
 
@@ -123,7 +123,7 @@ describe('TaskList Component', () => {
     it('should show empty state when no tasks exist', async () => {
       await wrapper.setProps({
         taskRecords: [],
-        isLoadingTasks: false
+        isLoadingTasks: false,
       })
 
       const emptyCell = wrapper.find('.empty-cell')
@@ -138,11 +138,11 @@ describe('TaskList Component', () => {
         task_name: 'End Task',
         start_time: '17:00',
         date: '2024-01-15',
-        task_type: 'end' as const
+        task_type: 'end' as const,
       }
 
       await wrapper.setProps({
-        taskRecords: [...mockTaskRecords, endTask]
+        taskRecords: [...mockTaskRecords, endTask],
       })
 
       const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
@@ -178,7 +178,7 @@ describe('TaskList Component', () => {
 
     it('should show dropdown menu when showInlineDropdown is true for the task', async () => {
       await wrapper.setProps({
-        showInlineDropdown: { 1: true }
+        showInlineDropdown: { 1: true },
       })
 
       const firstTaskRow = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))[0]
@@ -191,7 +191,7 @@ describe('TaskList Component', () => {
 
     it('should render category options correctly in dropdown', async () => {
       await wrapper.setProps({
-        showInlineDropdown: { 1: true }
+        showInlineDropdown: { 1: true },
       })
 
       const dropdownMenu = wrapper.find('[role="listbox"]')
@@ -204,7 +204,7 @@ describe('TaskList Component', () => {
 
     it('should mark current category as selected in dropdown', async () => {
       await wrapper.setProps({
-        showInlineDropdown: { 1: true }
+        showInlineDropdown: { 1: true },
       })
 
       const dropdownMenu = wrapper.find('[role="listbox"]')
@@ -216,7 +216,7 @@ describe('TaskList Component', () => {
 
     it('should emit selectInlineCategory when category option is clicked', async () => {
       await wrapper.setProps({
-        showInlineDropdown: { 1: true }
+        showInlineDropdown: { 1: true },
       })
 
       const dropdownMenu = wrapper.find('[role="listbox"]')
@@ -230,7 +230,7 @@ describe('TaskList Component', () => {
 
     it('should have proper ARIA attributes on dropdown elements', async () => {
       await wrapper.setProps({
-        showInlineDropdown: { 1: true }
+        showInlineDropdown: { 1: true },
       })
 
       // Find the specific row with the open dropdown (task ID 1)
@@ -300,7 +300,7 @@ describe('TaskList Component', () => {
 
       expect(wrapper.emitted('selectFormCategory')).toBeTruthy()
       expect(wrapper.emitted('selectFormCategory')?.[0]).toMatchObject([
-        expect.objectContaining({ id: 2, name: 'Personal', is_default: false })
+        expect.objectContaining({ id: 2, name: 'Personal', is_default: false }),
       ])
     })
   })
@@ -393,8 +393,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Test Task',
-          time: '10:00'
-        }
+          time: '10:00',
+        },
       })
 
       const addBtn = wrapper.find('.add-btn')
@@ -409,8 +409,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: null,
           name: '',
-          time: ''
-        }
+          time: '',
+        },
       })
 
       const addBtn = wrapper.find('.add-btn')
@@ -449,9 +449,9 @@ describe('TaskList Component', () => {
             task_name: 'Pause Task',
             start_time: '11:00',
             date: '2024-01-15',
-            task_type: 'pause'
-          }
-        ]
+            task_type: 'pause',
+          },
+        ],
       })
 
       const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
@@ -497,8 +497,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: null,
           name: '',
-          time: ''
-        }
+          time: '',
+        },
       })
 
       const addBtn = wrapper.find('.primary-add-btn')
@@ -510,8 +510,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Test Task',
-          time: '10:00'
-        }
+          time: '10:00',
+        },
       })
 
       const addBtn = wrapper.find('.primary-add-btn')
@@ -525,9 +525,9 @@ describe('TaskList Component', () => {
         taskRecords: [
           {
             ...mockTaskRecords[0],
-            start_time: ''
-          }
-        ]
+            start_time: '',
+          },
+        ],
       })
 
       // Find the time input for the task with empty start_time
@@ -547,9 +547,9 @@ describe('TaskList Component', () => {
         taskRecords: [
           {
             ...mockTaskRecords[0],
-            start_time: ''
-          }
-        ]
+            start_time: '',
+          },
+        ],
       })
 
       // Find the time input that's text type (for empty time)
@@ -564,9 +564,9 @@ describe('TaskList Component', () => {
         taskRecords: [
           {
             ...mockTaskRecords[0],
-            start_time: '09:00'
-          }
-        ]
+            start_time: '09:00',
+          },
+        ],
       })
 
       const timeTimeInputs = wrapper
@@ -587,8 +587,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Test',
-          time: ''
-        }
+          time: '',
+        },
       })
 
       const addTaskRow = wrapper.find('.add-task-row')
@@ -602,8 +602,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Test',
-          time: '10:30'
-        }
+          time: '10:30',
+        },
       })
 
       const addTaskRow = wrapper.find('.add-task-row')
@@ -632,8 +632,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Test Task',
-          time: '10:00'
-        }
+          time: '10:00',
+        },
       })
 
       const addTaskRow = wrapper.find('.add-task-row')
@@ -669,8 +669,8 @@ describe('TaskList Component', () => {
         key: 'Escape',
         target: {
           value: 'Modified Task Name',
-          blur: vi.fn()
-        }
+          blur: vi.fn(),
+        },
       }
 
       // Directly test the escape cancellation logic
@@ -694,7 +694,7 @@ describe('TaskList Component', () => {
         // Mock the convertToTimeInput function to return expected format
         const mockConvertToTimeInput = vi.fn(() => originalTime)
         await wrapper.setProps({
-          convertToTimeInput: mockConvertToTimeInput
+          convertToTimeInput: mockConvertToTimeInput,
         })
 
         // Change the value
@@ -704,7 +704,7 @@ describe('TaskList Component', () => {
         const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
         Object.defineProperty(escapeEvent, 'target', {
           value: timeInput.element,
-          writable: false
+          writable: false,
         })
 
         // Trigger escape key
@@ -781,7 +781,7 @@ describe('TaskList Component', () => {
       // Create mock keyboard event
       const mockEvent = {
         key: 'Escape',
-        target: mockInput
+        target: mockInput,
       } as any
 
       const originalValue = 'Original Value'
@@ -820,7 +820,7 @@ describe('TaskList Component', () => {
       // Create mock keyboard event
       const mockEvent = {
         key: 'Escape',
-        target: mockInput
+        target: mockInput,
       } as any
 
       // Mock record with start_time
@@ -829,7 +829,7 @@ describe('TaskList Component', () => {
         start_time: '09:00',
         task_name: 'Test Task',
         category_name: 'Work',
-        task_type: 'normal'
+        task_type: 'normal',
       } as any
 
       // Mock convertToTimeInput function
@@ -874,7 +874,7 @@ describe('TaskList Component', () => {
       // Create mock keyboard event with non-Escape key
       const mockEvent = {
         key: 'Enter',
-        target: mockInput
+        target: mockInput,
       } as any
 
       const originalValue = 'Original Value'
@@ -943,9 +943,9 @@ describe('TaskList Component', () => {
         taskRecords: [
           {
             ...mockTaskRecords[0],
-            start_time: ''
-          }
-        ]
+            start_time: '',
+          },
+        ],
       })
 
       const textTimeInputs = wrapper
@@ -972,9 +972,9 @@ describe('TaskList Component', () => {
             task_name: '⏸ Pause',
             start_time: '12:00',
             date: '2024-01-15',
-            task_type: 'pause'
-          }
-        ]
+            task_type: 'pause',
+          },
+        ],
       })
 
       const specialCell = wrapper.find('.special-task-cell')
@@ -991,7 +991,7 @@ describe('TaskList Component', () => {
             task_name: '⏸ Pause',
             start_time: '12:00',
             date: '2024-01-15',
-            task_type: 'pause'
+            task_type: 'pause',
           },
           {
             id: 4,
@@ -999,9 +999,9 @@ describe('TaskList Component', () => {
             task_name: '⏹ End',
             start_time: '17:00',
             date: '2024-01-15',
-            task_type: 'end'
-          }
-        ]
+            task_type: 'end',
+          },
+        ],
       })
 
       const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
@@ -1036,7 +1036,7 @@ describe('TaskList Component', () => {
     it('should not emit addTask when form is invalid via handleAddTask', async () => {
       const vm = wrapper.vm as any
       await wrapper.setProps({
-        newTask: { categoryId: null, name: '', time: '' }
+        newTask: { categoryId: null, name: '', time: '' },
       })
       vm.handleAddTask()
       expect(wrapper.emitted('addTask')).toBeFalsy()
@@ -1045,7 +1045,7 @@ describe('TaskList Component', () => {
     it('should emit addTask when form is valid via handleAddTask', async () => {
       const vm = wrapper.vm as any
       await wrapper.setProps({
-        newTask: { categoryId: 1, name: 'Valid', time: '' }
+        newTask: { categoryId: 1, name: 'Valid', time: '' },
       })
       vm.handleAddTask()
       expect(wrapper.emitted('addTask')).toBeTruthy()
@@ -1054,7 +1054,7 @@ describe('TaskList Component', () => {
     it('should not emit addTask when form is invalid via onAddTaskEnter', async () => {
       const vm = wrapper.vm as any
       await wrapper.setProps({
-        newTask: { categoryId: null, name: '', time: '' }
+        newTask: { categoryId: null, name: '', time: '' },
       })
       vm.onAddTaskEnter()
       expect(wrapper.emitted('addTask')).toBeFalsy()
@@ -1063,7 +1063,7 @@ describe('TaskList Component', () => {
     it('should emit addTask when form is valid via onAddTaskEnter', async () => {
       const vm = wrapper.vm as any
       await wrapper.setProps({
-        newTask: { categoryId: 1, name: 'Valid', time: '' }
+        newTask: { categoryId: 1, name: 'Valid', time: '' },
       })
       vm.onAddTaskEnter()
       expect(wrapper.emitted('addTask')).toBeTruthy()
@@ -1086,8 +1086,8 @@ describe('TaskList Component', () => {
         newTask: {
           categoryId: 1,
           name: 'Valid Task',
-          time: '10:00'
-        }
+          time: '10:00',
+        },
       })
 
       const vm = wrapper.vm as any

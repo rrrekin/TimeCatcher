@@ -80,6 +80,6 @@ export function useAutoRefresh(selectedDate: Ref<Date>, refreshCallback: () => v
   return {
     startAutoRefresh,
     stopAutoRefresh,
-    restartAutoRefresh
+    restartAutoRefresh,
   }
 }
