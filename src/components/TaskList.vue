@@ -2,72 +2,73 @@
   <div class="task-table" ref="taskTableRef">
     <table aria-label="Task records">
       <colgroup>
-        <col style="width: 120px;">
-        <col>
-        <col style="width: 80px;">
-        <col style="width: 70px;">
-        <col style="width: 90px;">
+        <col style="width: 120px" />
+        <col />
+        <col style="width: 80px" />
+        <col style="width: 70px" />
+        <col style="width: 90px" />
       </colgroup>
       <thead>
-      <tr>
-        <th scope="col">Category</th>
-        <th scope="col">Task</th>
-        <th scope="col">Start time</th>
-        <th scope="col">Duration</th>
-        <th scope="col">Actions</th>
-      </tr>
+        <tr>
+          <th scope="col">Category</th>
+          <th scope="col">Task</th>
+          <th scope="col">Start time</th>
+          <th scope="col">Duration</th>
+          <th scope="col">Actions</th>
+        </tr>
       </thead>
       <tbody>
-      <tr v-if="isLoadingTasks">
-        <td colspan="5" class="loading-cell">
-          <div class="loading-indicator" role="status" aria-busy="true">
-            <span class="loading-spinner" aria-hidden="true"></span>
-            Loading tasks...
-          </div>
-        </td>
-      </tr>
-      <tr v-else-if="taskRecords.length === 0">
-        <td colspan="5" class="empty-cell">
-          No tasks recorded for {{ displayDate }}
-        </td>
-      </tr>
-      <tr v-else v-for="record in taskRecords" :key="record.id" 
-          :class="{ 
+        <tr v-if="isLoadingTasks">
+          <td colspan="5" class="loading-cell">
+            <div class="loading-indicator" role="status" aria-busy="true">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              Loading tasks...
+            </div>
+          </td>
+        </tr>
+        <tr v-else-if="taskRecords.length === 0">
+          <td colspan="5" class="empty-cell">No tasks recorded for {{ displayDate }}</td>
+        </tr>
+        <tr
+          v-else
+          v-for="record in taskRecords"
+          :key="record.id"
+          :class="{
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === 'pause',
             'end-task-row': record.task_type === 'end'
-          }">
-        <!-- Special task layout: merged category + task columns -->
-        <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
-          {{ record.task_name }}
-        </td>
-        <!-- Normal task layout: separate category and task columns -->
-        <template v-else>
-          <td>
-            <div class="custom-dropdown table-dropdown"
-                 :class="{ open: showInlineDropdown[record.id] }">
-              <button 
-                type="button"
-                class="dropdown-trigger" 
-                :id="`${componentId}-dropdown-trigger-${record.id}`"
-                @click="handleInlineDropdownToggle(record.id, record.category_name)"
-                :aria-expanded="!!showInlineDropdown[record.id]"
-                :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
-                aria-haspopup="listbox"
-              >
-                <span class="dropdown-value">{{ record.category_name }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </button>
-              <div 
-                v-if="showInlineDropdown[record.id]" 
-                class="dropdown-menu"
-                role="listbox"
-                :id="`${componentId}-dropdown-menu-${record.id}`"
-                :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
-                @keydown="handleDropdownKeydown($event, record.id)"
-                tabindex="-1"
-              >
+          }"
+        >
+          <!-- Special task layout: merged category + task columns -->
+          <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
+            {{ record.task_name }}
+          </td>
+          <!-- Normal task layout: separate category and task columns -->
+          <template v-else>
+            <td>
+              <div class="custom-dropdown table-dropdown" :class="{ open: showInlineDropdown[record.id] }">
+                <button
+                  type="button"
+                  class="dropdown-trigger"
+                  :id="`${componentId}-dropdown-trigger-${record.id}`"
+                  @click="handleInlineDropdownToggle(record.id, record.category_name)"
+                  :aria-expanded="!!showInlineDropdown[record.id]"
+                  :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
+                  aria-haspopup="listbox"
+                >
+                  <span class="dropdown-value">{{ record.category_name }}</span>
+                  <span class="dropdown-arrow">▼</span>
+                </button>
                 <div
+                  v-if="showInlineDropdown[record.id]"
+                  class="dropdown-menu"
+                  role="listbox"
+                  :id="`${componentId}-dropdown-menu-${record.id}`"
+                  :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
+                  @keydown="handleDropdownKeydown($event, record.id)"
+                  tabindex="-1"
+                >
+                  <div
                     v-for="(category, index) in categories"
                     :key="category.id ?? `inline-cat-${category.name}-${index}`"
                     class="dropdown-item"
@@ -78,14 +79,14 @@
                     :data-record-id="record.id"
                     :data-index="index"
                     @click="handleCategorySelection(record.id, category.name)"
-                >
-                  {{ category.name }}
+                  >
+                    {{ category.name }}
+                  </div>
                 </div>
               </div>
-            </div>
-          </td>
-          <td>
-            <input
+            </td>
+            <td>
+              <input
                 type="text"
                 :value="record.task_name"
                 @blur="$emit('handleBlur', record.id, 'task_name', $event)"
@@ -93,11 +94,11 @@
                 @keydown="handleEscapeCancel($event, record.task_name)"
                 class="editable-cell editable-input"
                 placeholder="Task name"
-            />
-          </td>
-        </template>
-        <td>
-          <input
+              />
+            </td>
+          </template>
+          <td>
+            <input
               :type="record.start_time.trim() ? 'time' : 'text'"
               step="60"
               :value="convertToTimeInput(record.start_time)"
@@ -108,56 +109,60 @@
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
               :pattern="!record.start_time.trim() ? '^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$' : ''"
               :maxlength="!record.start_time.trim() ? 5 : 0"
-          />
-        </td>
-        <!-- Duration column (visibility based on task type) -->
-        <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
-          {{ calculateDuration(record) }}
-        </td>
-        <td v-else class="duration-cell" data-test="task-duration">-</td>
-        <td class="actions-cell">
-          <button 
-            v-if="record.task_type !== 'pause' && record.task_type !== 'end'" 
-            class="action-btn replay-btn" 
-            @click="$emit('replayTask', record)" 
-            title="Replay this task for today" 
-            aria-label="Replay this task"
-          >
-            ▶▶︎
-          </button>
-          <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task" aria-label="Delete this task">
-            🗑
-          </button>
-        </td>
-      </tr>
-      
-      <!-- Add task form row (always visible at bottom) -->
-      <tr class="add-task-row">
-        <td>
-          <div class="custom-dropdown table-dropdown add-task-dropdown"
-               :class="{ open: showFormCategoryDropdown }">
-            <button 
-              type="button"
-              class="dropdown-trigger" 
-              :id="formDropdownTriggerId"
-              @click="handleFormDropdownToggle"
-              :aria-expanded="showFormCategoryDropdown"
-              :aria-controls="formDropdownMenuId"
-              aria-haspopup="listbox"
+            />
+          </td>
+          <!-- Duration column (visibility based on task type) -->
+          <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
+            {{ calculateDuration(record) }}
+          </td>
+          <td v-else class="duration-cell" data-test="task-duration">-</td>
+          <td class="actions-cell">
+            <button
+              v-if="record.task_type !== 'pause' && record.task_type !== 'end'"
+              class="action-btn replay-btn"
+              @click="$emit('replayTask', record)"
+              title="Replay this task for today"
+              aria-label="Replay this task"
             >
-              <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
-              <span class="dropdown-arrow">▼</span>
+              ▶▶︎
             </button>
-            <div 
-              v-if="showFormCategoryDropdown" 
-              class="dropdown-menu"
-              role="listbox"
-              :id="formDropdownMenuId"
-              :aria-labelledby="formDropdownTriggerId"
-              @keydown="handleFormDropdownKeydown"
-              tabindex="-1"
+            <button
+              class="action-btn delete-btn"
+              @click="$emit('confirmDeleteTask', record)"
+              title="Delete this task"
+              aria-label="Delete this task"
             >
+              🗑
+            </button>
+          </td>
+        </tr>
+
+        <!-- Add task form row (always visible at bottom) -->
+        <tr class="add-task-row">
+          <td>
+            <div class="custom-dropdown table-dropdown add-task-dropdown" :class="{ open: showFormCategoryDropdown }">
+              <button
+                type="button"
+                class="dropdown-trigger"
+                :id="formDropdownTriggerId"
+                @click="handleFormDropdownToggle"
+                :aria-expanded="showFormCategoryDropdown"
+                :aria-controls="formDropdownMenuId"
+                aria-haspopup="listbox"
+              >
+                <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
+                <span class="dropdown-arrow">▼</span>
+              </button>
               <div
+                v-if="showFormCategoryDropdown"
+                class="dropdown-menu"
+                role="listbox"
+                :id="formDropdownMenuId"
+                :aria-labelledby="formDropdownTriggerId"
+                @keydown="handleFormDropdownKeydown"
+                tabindex="-1"
+              >
+                <div
                   v-for="(category, index) in categories"
                   :key="category.id ?? `form-cat-${category.name}-${index}`"
                   class="dropdown-item"
@@ -167,57 +172,55 @@
                   :tabindex="formListbox.getActiveIndex('form') === index ? '0' : '-1'"
                   :data-option-index="index"
                   @click="handleFormCategorySelection(category)"
-              >
-                {{ category.name }}
+                >
+                  {{ category.name }}
+                </div>
               </div>
             </div>
-          </div>
-        </td>
-        <td>
-          <input
+          </td>
+          <td>
+            <input
               type="text"
               :value="newTask.name"
               @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
               @keydown.enter.prevent="onAddTaskEnter"
               class="editable-cell add-task-input"
               placeholder="Enter task name..."
-          />
-        </td>
-        <td>
-          <input
+            />
+          </td>
+          <td>
+            <input
               type="time"
               step="60"
               :value="newTask.time"
               @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
               @keydown.enter.prevent="onAddTaskEnter"
               :class="['editable-cell', 'time-input', { 'empty-time': !newTask.time.trim() }]"
-          />
-        </td>
-        <td class="duration-cell">-</td>
-        <td class="actions-cell">
-          <button 
-            class="action-btn add-btn primary-add-btn" 
-            @click="handleAddTask" 
-            :disabled="!isAddTaskValid"
-            :aria-disabled="!isAddTaskValid"
-            :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
-            :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
-          >
-            + Add Task
-          </button>
-        </td>
-      </tr>
+            />
+          </td>
+          <td class="duration-cell">-</td>
+          <td class="actions-cell">
+            <button
+              class="action-btn add-btn primary-add-btn"
+              @click="handleAddTask"
+              :disabled="!isAddTaskValid"
+              :aria-disabled="!isAddTaskValid"
+              :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
+              :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
+            >
+              + Add Task
+            </button>
+          </td>
+        </tr>
       </tbody>
     </table>
 
     <!-- Special task buttons -->
     <div class="special-task-buttons">
-      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">
-        ⏸ Pause
-      </button>
-      <button 
+      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">⏸ Pause</button>
+      <button
         type="button"
-        class="special-task-btn end-btn" 
+        class="special-task-btn end-btn"
         @click="$emit('addEndTask')"
         :disabled="hasEndTaskForSelectedDate"
         :aria-disabled="hasEndTaskForSelectedDate"
@@ -236,11 +239,10 @@ import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
 // Generate unique component instance ID for ARIA references
-const componentId = (typeof globalThis !== 'undefined' && 
-                    globalThis.crypto && 
-                    typeof globalThis.crypto.randomUUID === 'function')
-  ? `tasklist-${globalThis.crypto.randomUUID()}`
-  : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const componentId =
+  typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+    ? `tasklist-${globalThis.crypto.randomUUID()}`
+    : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 const formDropdownMenuId = `form-dropdown-menu-${componentId}`
 const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
@@ -352,11 +354,11 @@ const inlineListbox = useListboxNavigation({
       focusTriggerButton(contextId)
     }
   },
-  getOptionSelector: (recordId: string | number, optionIndex: number) => 
+  getOptionSelector: (recordId: string | number, optionIndex: number) =>
     `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
 })
 
-// Form dropdown navigation composable  
+// Form dropdown navigation composable
 const formListbox = useListboxNavigation({
   containerRef: taskTableRef,
   items: categoriesRef,
@@ -368,7 +370,7 @@ const formListbox = useListboxNavigation({
     await nextTick()
     focusFormTriggerButton()
   },
-  getOptionSelector: (contextId: string | number, optionIndex: number) => 
+  getOptionSelector: (contextId: string | number, optionIndex: number) =>
     `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
 })
 
@@ -381,10 +383,10 @@ const handleDropdownKeydown = (event: KeyboardEvent, recordId: number) => {
 const handleInlineDropdownToggle = async (recordId: number, categoryName: string) => {
   // Capture pre-toggle state to determine if dropdown will open
   const willOpen = !props.showInlineDropdown[recordId]
-  
+
   // Emit the toggle
   emit('toggleInlineDropdown', recordId)
-  
+
   // If opening, wait for DOM update then initialize active option
   if (willOpen) {
     await nextTick()
@@ -396,10 +398,10 @@ const handleInlineDropdownToggle = async (recordId: number, categoryName: string
 const handleCategorySelection = async (recordId: number, categoryName: string) => {
   // 1. Emit the category selection
   emit('selectInlineCategory', recordId, categoryName)
-  
+
   // 2. Close the dropdown
   emit('toggleInlineDropdown', recordId)
-  
+
   // 3. Return focus to the trigger button
   await nextTick()
   focusTriggerButton(recordId)
@@ -407,7 +409,9 @@ const handleCategorySelection = async (recordId: number, categoryName: string) =
 
 // Focus management helpers for trigger buttons
 const focusTriggerButton = (recordId: number) => {
-  const button = taskTableRef.value?.querySelector<HTMLElement>(`[aria-controls="${componentId}-dropdown-menu-${recordId}"]`)
+  const button = taskTableRef.value?.querySelector<HTMLElement>(
+    `[aria-controls="${componentId}-dropdown-menu-${recordId}"]`
+  )
   button?.focus()
 }
 
@@ -420,10 +424,10 @@ const handleFormDropdownKeydown = (event: KeyboardEvent) => {
 const handleFormCategorySelection = async (category: Category) => {
   // 1. Emit the category selection
   emit('selectFormCategory', category)
-  
+
   // 2. Close the dropdown
   emit('toggleFormDropdown')
-  
+
   // 3. Return focus to the trigger button
   await nextTick()
   focusFormTriggerButton()
@@ -439,17 +443,17 @@ const focusFormTriggerButton = () => {
 const handleFormDropdownToggle = async () => {
   // Capture pre-toggle intent to avoid race condition
   const willOpen = !props.showFormCategoryDropdown
-  
+
   // Emit the toggle
   emit('toggleFormDropdown')
-  
+
   // Only initialize when opening and categories exist
   if (willOpen) {
     // Guard against empty/loading categories
     if (!props.categories || props.categories.length === 0) {
       return
     }
-    
+
     await nextTick()
     initializeFormActiveOption()
   }
@@ -532,7 +536,6 @@ table {
   table-layout: fixed;
 }
 
-
 th {
   background: var(--primary);
   color: white;
@@ -555,7 +558,8 @@ tr:last-child td {
 }
 
 /* Loading and empty states */
-.loading-cell, .empty-cell {
+.loading-cell,
+.empty-cell {
   text-align: center;
   padding: 32px;
   color: var(--text-muted);
@@ -581,10 +585,14 @@ tr:last-child td {
   .loading-spinner {
     animation: spin 1s linear infinite;
   }
-  
+
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 }
 

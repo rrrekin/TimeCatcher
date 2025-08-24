@@ -21,12 +21,12 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
       .sort((a, b) => {
         const timeA: number | null = timeMap.get(a) ?? null
         const timeB: number | null = timeMap.get(b) ?? null
-        
+
         // Handle invalid times deterministically - push nulls to end
         if (timeA === null && timeB === null) return 0
-        if (timeA === null) return 1  // a goes after b
+        if (timeA === null) return 1 // a goes after b
         if (timeB === null) return -1 // b goes after a
-        
+
         return timeA - timeB
       })
   })
@@ -35,11 +35,11 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
   const nextRecordByRecord = computed(() => {
     const records = sortedTaskRecords.value
     const nextRecordMap = new Map<T, T | null>()
-    
+
     records.forEach((record, index) => {
       nextRecordMap.set(record, index < records.length - 1 ? records[index + 1]! : null)
     })
-    
+
     return nextRecordMap
   })
 
@@ -56,7 +56,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     const nextRecordMap = nextRecordByRecord.value
     const timeMap = timeByRecord.value
     const nextRecord = nextRecordMap.get(currentRecord)
-    
+
     // Check if record exists in sorted list
     if (nextRecord === undefined) {
       return '-'
@@ -70,15 +70,15 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     // If this is NOT the last task, calculate duration to next task
     if (nextRecord !== null) {
       const nextTime = timeMap.get(nextRecord)
-      
+
       if (nextTime == null || nextTime < currentTime) {
         return '-'
       }
-      
+
       if (nextTime === currentTime) {
         return formatDurationMinutes(0)
       }
-      
+
       return formatDurationMinutes(nextTime - currentTime)
     }
 
@@ -100,10 +100,10 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
 
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
-      
+
       // Skip if record not found in map (undefined means missing from map)
       if (nextRecord === undefined) continue
-      
+
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
@@ -112,7 +112,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
         const nextTime = timeMap.get(nextRecord)
-        
+
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
@@ -141,10 +141,10 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     // Calculate duration for each standard task
     for (const standardRecord of standardRecords) {
       const nextRecord = nextRecordMap.get(standardRecord)
-      
+
       // Skip if record not found in map (undefined means missing from map)
       if (nextRecord === undefined) continue
-      
+
       const currentTime = timeMap.get(standardRecord)
       if (currentTime == null) continue
 
@@ -153,7 +153,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
       // If this is NOT the last task, calculate duration to next task
       if (nextRecord !== null) {
         const nextTime = timeMap.get(nextRecord)
-        
+
         if (nextTime != null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
         }
@@ -168,7 +168,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     }
 
     const totalRawMinutes = Object.values(categoryTotals).reduce((sum, minutes) => sum + minutes, 0)
-    
+
     return Object.entries(categoryTotals)
       .map(([categoryName, rawMinutes]) => ({
         categoryName,

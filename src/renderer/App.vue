@@ -70,15 +70,15 @@
       :new-category-name="newCategoryName"
       @close="closeSetupModal"
       @save="saveSettings"
-      @update-temp-theme="(theme) => tempTheme = theme"
-      @update-temp-target-work-hours="(hours) => tempTargetWorkHours = hours"
+      @update-temp-theme="theme => (tempTheme = theme)"
+      @update-temp-target-work-hours="hours => (tempTargetWorkHours = hours)"
       @start-edit-category="startEditCategory"
-      @update-editing-category-name="(name) => editingCategoryName = name"
+      @update-editing-category-name="name => (editingCategoryName = name)"
       @save-edit-category="saveEditCategory"
       @cancel-edit-category="cancelEditCategory"
       @set-default-category="setDefaultCategoryWrapper"
       @delete-category="deleteCategoryWrapper"
-      @update-new-category-name="(name) => newCategoryName = name"
+      @update-new-category-name="name => (newCategoryName = name)"
       @add-category="addCategoryWrapper"
       @cancel-adding-category="cancelAddingCategory"
       @start-adding-category="startAddingCategory"
@@ -109,7 +109,9 @@
         <div class="modal-content">
           <div class="delete-message">
             <p>Are you sure you want to delete this task?</p>
-            <p><strong>"{{ taskToDelete?.task_name }}"</strong></p>
+            <p>
+              <strong>"{{ taskToDelete?.task_name }}"</strong>
+            </p>
             <p class="warning-text">This action cannot be undone.</p>
           </div>
         </div>
@@ -125,8 +127,17 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType, type TaskRecordWithId} from '../shared/types'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import {
+  SPECIAL_TASK_CATEGORY,
+  SPECIAL_TASK_TYPES,
+  DURATION_VISIBLE_BY_TASK_TYPE,
+  type Category,
+  type TaskRecord,
+  type TaskType,
+  type SpecialTaskType,
+  type TaskRecordWithId
+} from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
 import { useSettings } from '@/composables/useSettings'
@@ -150,8 +161,8 @@ const selectedDate = ref(new Date())
 const isSetupModalOpen = ref(false)
 
 // Composables
-const { 
-  categories, 
+const {
+  categories,
   isLoadingCategories,
   loadCategories,
   addCategory,
@@ -186,18 +197,10 @@ const {
   initializeTempSettings
 } = useSettings()
 
-const {
-  sortedTaskRecords,
-  calculateDuration,
-  getTotalMinutesTracked,
-  getCategoryBreakdown
-} = useDurationCalculations(taskRecords)
+const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
+  useDurationCalculations(taskRecords)
 
-const {
-  startAutoRefresh,
-  stopAutoRefresh,
-  restartAutoRefresh
-} = useAutoRefresh(selectedDate, () => {
+const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
   taskRecords.value = [...taskRecords.value] // Trigger reactivity
 })
 
@@ -258,7 +261,7 @@ const dateTitle = computed(() => {
   }
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
-    month: 'long', 
+    month: 'long',
     day: 'numeric'
   }).format(selectedDate.value)
 })
@@ -271,8 +274,6 @@ const dateInputValue = computed({
     selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
   }
 })
-
-
 
 const goToPreviousDay = () => {
   const newDate = new Date(selectedDate.value)
@@ -447,7 +448,6 @@ const setDefaultCategoryWrapper = async (category: Category) => {
   }
 }
 
-
 // Task record management functions - wrappers with UI state management
 const loadTaskRecordsWrapper = async () => {
   try {
@@ -555,18 +555,21 @@ const initializeNewTask = () => {
   newTask.value.time = ''
 }
 
-
 // Watch for date changes to reload task records and manage auto-refresh
-watch(selectedDate, async () => {
-  // Stop any existing auto-refresh first
-  stopAutoRefresh()
-  
-  // Await loading the new task records
-  await loadTaskRecordsWrapper()
-  
-  // Start auto-refresh if we're viewing today
-  startAutoRefresh()
-}, {immediate: false})
+watch(
+  selectedDate,
+  async () => {
+    // Stop any existing auto-refresh first
+    stopAutoRefresh()
+
+    // Await loading the new task records
+    await loadTaskRecordsWrapper()
+
+    // Start auto-refresh if we're viewing today
+    startAutoRefresh()
+  },
+  { immediate: false }
+)
 
 onMounted(async () => {
   // Listen for system theme changes when in auto mode
@@ -602,7 +605,7 @@ onMounted(async () => {
   if (import.meta.env.DEV) {
     console.log('App initialization complete')
   }
-  
+
   // Start auto-refresh for today's tasks
   startAutoRefresh()
 
@@ -615,7 +618,7 @@ onMounted(async () => {
 onUnmounted(() => {
   // Stop auto-refresh
   stopAutoRefresh()
-  
+
   // Clean up click outside event listener
   if (typeof document !== 'undefined') {
     document.removeEventListener('click', handleClickOutside)
@@ -674,11 +677,11 @@ const replayTask = async (record: TaskRecordWithId) => {
     }
 
     await addTaskRecord(taskRecord)
-    
+
     // Check if the user is viewing today's date
     const todayString = toYMDLocalUtil(now)
     const selectedDateString = toYMDLocalUtil(selectedDate.value)
-    
+
     if (selectedDateString !== todayString) {
       // Automatically switch to today to show the replayed task
       selectedDate.value = now
@@ -697,7 +700,11 @@ const replayTask = async (record: TaskRecordWithId) => {
 // and actual updates happen on blur/enter events via handleBlur
 
 // Common task field update logic extracted from handleBlur and handleCategoryChange
-const updateTaskField = async (recordId: number | undefined, updates: Record<string, any>, successMessage: string = 'Task updated successfully!') => {
+const updateTaskField = async (
+  recordId: number | undefined,
+  updates: Record<string, any>,
+  successMessage: string = 'Task updated successfully!'
+) => {
   if (recordId === undefined) {
     console.error('Record ID is undefined')
     return
@@ -710,7 +717,10 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
     }
 
     if (!window.electronAPI.updateTaskRecord) {
-      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
+      showToastMessage(
+        'Update function not available. Please restart the application to enable inline editing.',
+        'error'
+      )
       await loadTaskRecordsWrapper()
       return
     }
@@ -783,7 +793,7 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
         await loadTaskRecordsWrapper()
         return
       }
-      
+
       // Use parseTimeInput for consistent validation and formatting
       processedValue = parseTimeInput(value)
     } catch (timeError) {
@@ -818,7 +828,7 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     return
   }
 
-  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 const convertToTimeInput = (timeString: string): string => {
@@ -826,24 +836,21 @@ const convertToTimeInput = (timeString: string): string => {
   if (!timeString) return ''
 
   const parts = timeString.split(':')
-  
+
   // Validate and normalize the parts
   if (parts.length >= 2) {
     const hours = parseInt(parts[0] || '0', 10)
     const minutes = parseInt(parts[1] || '0', 10)
-    
+
     // Validate ranges
     if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
       // Return HH:MM format for HTML time input (no seconds needed)
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
     }
   }
-  
+
   return ''
 }
-
-
-
 
 // Delete task functions
 const confirmDeleteTask = (record: TaskRecordWithId) => {
@@ -928,7 +935,7 @@ const selectInlineCategory = async (recordId: number | undefined, categoryName: 
   showInlineDropdown.value[recordId] = false
 
   // Update the category
-  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 // Close dropdown when clicking outside
@@ -943,7 +950,6 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-
 // Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
 let autoRefreshInterval: number | null = null
 
@@ -957,19 +963,19 @@ const getTotalTimeTracked = (): string => {
 // Helper function to parse duration strings back to minutes
 const parseDurationToMinutes = (durationStr: string): number => {
   let totalMinutes = 0
-  
+
   // Match hours (e.g., "1h", "2h")
   const hoursMatch = durationStr.match(/(\d+)h/)
   if (hoursMatch && hoursMatch[1]) {
     totalMinutes += parseInt(hoursMatch[1]) * 60
   }
-  
+
   // Match minutes (e.g., "30m", "45m")
   const minutesMatch = durationStr.match(/(\d+)m/)
   if (minutesMatch && minutesMatch[1]) {
     totalMinutes += parseInt(minutesMatch[1])
   }
-  
+
   return totalMinutes
 }
 
@@ -979,7 +985,7 @@ const getEnhancedCategoryBreakdown = () => {
   if (standardRecords.length === 0) return []
 
   const categoryMap = new Map()
-  
+
   // Initialize category tracking with task summaries (only for standard tasks)
   for (const record of standardRecords) {
     if (!categoryMap.has(record.category_name)) {
@@ -990,10 +996,10 @@ const getEnhancedCategoryBreakdown = () => {
         tasks: new Map() // Track individual tasks within category
       })
     }
-    
+
     const category = categoryMap.get(record.category_name)
     category.taskCount++
-    
+
     // Track individual task occurrences
     if (!category.tasks.has(record.task_name)) {
       category.tasks.set(record.task_name, {
@@ -1003,17 +1009,17 @@ const getEnhancedCategoryBreakdown = () => {
         firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
       })
     }
-    
+
     const task = category.tasks.get(record.task_name)
     task.count++
-    
+
     // Calculate duration for this specific task record using the same logic as composable
     const currentTime = parseTimeString(record.start_time)
     if (currentTime !== null) {
       // Find next task to determine end time
       const currentIndex = standardRecords.indexOf(record)
       const nextRecord = currentIndex < standardRecords.length - 1 ? standardRecords[currentIndex + 1] : null
-      
+
       let durationMinutes = 0
       if (nextRecord) {
         const nextTime = parseTimeString(nextRecord.start_time)
@@ -1025,14 +1031,14 @@ const getEnhancedCategoryBreakdown = () => {
         const endTime = getLastTaskEndTime(record.date, currentTime)
         durationMinutes = Math.max(0, endTime - currentTime)
       }
-      
+
       task.totalMinutes += Math.round(durationMinutes)
     }
   }
 
   // Use the composable's category breakdown for duration calculations
   const baseCategoryBreakdown = getCategoryBreakdown()
-  
+
   // Enhance with task summaries
   return baseCategoryBreakdown.map(category => {
     const categoryData = categoryMap.get(category.categoryName)
@@ -1041,16 +1047,17 @@ const getEnhancedCategoryBreakdown = () => {
       name: category.categoryName,
       totalTime: formatDurationMinutes(category.minutes),
       taskCount: categoryData ? categoryData.taskCount : 0,
-      taskSummaries: categoryData ? Array.from(categoryData.tasks.values())
-        .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
-        .map((task: any) => ({
-          ...task,
-          totalTime: formatDurationMinutes(task.totalMinutes)
-        })) : []
+      taskSummaries: categoryData
+        ? Array.from(categoryData.tasks.values())
+            .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
+            .map((task: any) => ({
+              ...task,
+              totalTime: formatDurationMinutes(task.totalMinutes)
+            }))
+        : []
     }
   })
 }
-
 
 const getUniqueCategoriesCount = (): number => {
   const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
@@ -1058,15 +1065,14 @@ const getUniqueCategoriesCount = (): number => {
   return uniqueCategories.size
 }
 
-
 const getSortedTaskRecords = () => {
   return taskRecords.value
-      .filter(record => record.start_time && record.start_time.trim() !== '')
-      .sort((a, b) => {
-        const timeA = parseTimeString(a.start_time) || 0
-        const timeB = parseTimeString(b.start_time) || 0
-        return timeA - timeB
-      })
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = parseTimeString(a.start_time) || 0
+      const timeB = parseTimeString(b.start_time) || 0
+      return timeA - timeB
+    })
 }
 
 const formatTime12Hour = (timeString: string): string => {
@@ -1085,9 +1091,6 @@ const formatTime12Hour = (timeString: string): string => {
 
   return `${hour12}:${minutes} ${period}`
 }
-
-
-
 </script>
 
 <style>
@@ -1346,7 +1349,8 @@ body {
   border-top: 1px solid var(--border-color);
 }
 
-.cancel-btn, .save-btn {
+.cancel-btn,
+.save-btn {
   padding: 0.5rem 1.5rem;
   border: none;
   border-radius: 4px;

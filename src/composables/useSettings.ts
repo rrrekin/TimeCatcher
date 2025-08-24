@@ -89,21 +89,19 @@ export function useSettings() {
   const saveSettings = () => {
     // Validate and update theme
     currentTheme.value = tempTheme.value
-    
+
     // Validate tempTargetWorkHours before committing (coerce to number first)
     const coerced = Number(tempTargetWorkHours.value)
     if (Number.isFinite(coerced) && coerced > 0 && coerced <= 24) {
       targetWorkHours.value = coerced
     } else {
       // Keep old value or use safe default if current value is also invalid
-      if (!Number.isFinite(targetWorkHours.value) || 
-          targetWorkHours.value <= 0 || 
-          targetWorkHours.value > 24) {
+      if (!Number.isFinite(targetWorkHours.value) || targetWorkHours.value <= 0 || targetWorkHours.value > 24) {
         targetWorkHours.value = 8 // Safe default
       }
       // Note: tempTargetWorkHours remains invalid, targetWorkHours keeps valid value
     }
-    
+
     applyTheme(currentTheme.value)
     localStorage.setItem('theme', currentTheme.value)
     localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
@@ -120,7 +118,7 @@ export function useSettings() {
   // Load settings on mount and setup OS theme detection
   onMounted(() => {
     loadSettings()
-    
+
     // Set up OS theme change detection
     if (typeof window !== 'undefined' && window.matchMedia) {
       mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)')

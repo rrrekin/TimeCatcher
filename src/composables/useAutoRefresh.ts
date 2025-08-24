@@ -11,10 +11,7 @@ function formatLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-export function useAutoRefresh(
-  selectedDate: Ref<Date>, 
-  refreshCallback: () => void
-) {
+export function useAutoRefresh(selectedDate: Ref<Date>, refreshCallback: () => void) {
   // Use number | null type with DOM timer behavior (explicit comment for clarity)
   const autoRefreshInterval: Ref<number | null> = ref(null) // DOM timer type, not Node.js
 
@@ -33,7 +30,7 @@ export function useAutoRefresh(
 
     autoRefreshInterval.value = window.setInterval(() => {
       const currentDateString = formatLocalDateString(selectedDate.value)
-      
+
       // Stop auto-refresh if date is no longer today
       if (!isToday(currentDateString)) {
         stopAutoRefresh()

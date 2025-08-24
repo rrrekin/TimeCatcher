@@ -17,30 +17,73 @@ class DatabaseService {
   private initializeTables() {
     // Create categories table
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL,
-        is_default BOOLEAN DEFAULT FALSE,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS categories
+      (
+        id
+        INTEGER
+        PRIMARY
+        KEY
+        AUTOINCREMENT,
+        name
+        TEXT
+        UNIQUE
+        NOT
+        NULL,
+        is_default
+        BOOLEAN
+        DEFAULT
+        FALSE,
+        created_at
+        DATETIME
+        DEFAULT
+        CURRENT_TIMESTAMP
       )
     `)
 
     // Create task_records table
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS task_records (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        category_name TEXT NOT NULL,
-        task_name TEXT NOT NULL,
-        start_time DATETIME NOT NULL,
-        date TEXT NOT NULL,
-        task_type TEXT DEFAULT 'normal' CHECK (task_type IN ('normal', 'pause', 'end')),
+      CREATE TABLE IF NOT EXISTS task_records
+      (
+        id
+        INTEGER
+        PRIMARY
+        KEY
+        AUTOINCREMENT,
+        category_name
+        TEXT
+        NOT
+        NULL,
+        task_name
+        TEXT
+        NOT
+        NULL,
+        start_time
+        DATETIME
+        NOT
+        NULL,
+        date
+        TEXT
+        NOT
+        NULL,
+        task_type
+        TEXT
+        DEFAULT
+        'normal'
+        CHECK (
+        task_type
+        IN
+      (
+        'normal',
+        'pause',
+        'end'
+      )),
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
+        )
     `)
 
     // Create covering index for date filtering and start_time ordering
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time)`)
-    
+
     // Create unique index to enforce one end task per day
     this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
   }
@@ -48,11 +91,11 @@ class DatabaseService {
   private initializeDefaultCategories() {
     const defaultCategories = ['Development', 'Meeting', 'Maintenance']
     const existingCount = this.db.prepare('SELECT COUNT(*) as count FROM categories').get() as { count: number }
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('Initializing default categories, existing count:', existingCount.count)
     }
-    
+
     if (existingCount.count === 0) {
       if (process.env.NODE_ENV === 'development') {
         console.log('No categories found, creating default categories...')
@@ -66,7 +109,7 @@ class DatabaseService {
             console.log('Attempting to create category:', { category, is_default: Boolean(isDefault) })
           }
           const result = insert.run(category, isDefault)
-          
+
           if (result.changes === 0) {
             console.warn('Category already exists during initialization:', { category, is_default: Boolean(isDefault) })
           } else if (result.changes > 0) {
@@ -88,12 +131,16 @@ class DatabaseService {
         console.log('Categories exist, checking for default category...')
       }
       // Check if there's a default category set, if not set Development as default
-      const defaultCount = this.db.prepare('SELECT COUNT(*) as count FROM categories WHERE is_default = TRUE').get() as { count: number }
+      const defaultCount = this.db
+        .prepare('SELECT COUNT(*) as count FROM categories WHERE is_default = TRUE')
+        .get() as { count: number }
       if (process.env.NODE_ENV === 'development') {
         console.log('Default categories count:', defaultCount.count)
       }
       if (defaultCount.count === 0) {
-        const devCategory = this.db.prepare('SELECT id FROM categories WHERE name = ?').get('Development') as { id: number } | undefined
+        const devCategory = this.db.prepare('SELECT id FROM categories WHERE name = ?').get('Development') as
+          | { id: number }
+          | undefined
         if (devCategory) {
           if (process.env.NODE_ENV === 'development') {
             console.log('Setting Development as default category')
@@ -121,12 +168,14 @@ class DatabaseService {
     if (defaultCategory && defaultCategory.id === id) {
       throw new Error('Cannot delete the default category. Please set another category as default first.')
     }
-    
+
     this.db.prepare('DELETE FROM categories WHERE id = ?').run(id)
   }
 
   categoryExists(name: string): boolean {
-    const result = this.db.prepare('SELECT COUNT(*) as count FROM categories WHERE name = ?').get(name) as { count: number }
+    const result = this.db.prepare('SELECT COUNT(*) as count FROM categories WHERE name = ?').get(name) as {
+      count: number
+    }
     return result.count > 0
   }
 
@@ -142,7 +191,7 @@ class DatabaseService {
       // Then set the specified category as default
       this.db.prepare('UPDATE categories SET is_default = TRUE WHERE id = ?').run(id)
     })
-    
+
     // Execute the transaction
     transaction()
   }
@@ -154,32 +203,41 @@ class DatabaseService {
   // Task record operations
   addTaskRecord(record: TaskRecordInsert): TaskRecord {
     const insert = this.db.prepare(`
-      INSERT INTO task_records (category_name, task_name, start_time, date, task_type) 
+      INSERT INTO task_records (category_name, task_name, start_time, date, task_type)
       VALUES (?, ?, ?, ?, ?)
     `)
     // Use sentinel value for special tasks (when category_name is empty or whitespace-only)
     const trimmedCategory = (record.category_name || '').trim()
     const categoryName = trimmedCategory === '' ? SPECIAL_TASK_CATEGORY : trimmedCategory
     const result = insert.run(categoryName, record.task_name, record.start_time, record.date, record.task_type)
-    return this.db.prepare(`
-      SELECT id, category_name, task_name, start_time, date, task_type, created_at 
-      FROM task_records WHERE id = ?
-    `).get(result.lastInsertRowid) as TaskRecord
+    return this.db
+      .prepare(
+        `
+          SELECT id, category_name, task_name, start_time, date, task_type, created_at
+          FROM task_records
+          WHERE id = ?
+        `
+      )
+      .get(result.lastInsertRowid) as TaskRecord
   }
 
   getTaskRecordsByDate(date: string): TaskRecord[] {
-    return this.db.prepare(`
-      SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at 
-      FROM task_records 
-      WHERE date = ? 
-      ORDER BY start_time
-    `).all(SPECIAL_TASK_CATEGORY, date) as TaskRecord[]
+    return this.db
+      .prepare(
+        `
+          SELECT id, COALESCE(category_name, ?) as category_name, task_name, start_time, date, task_type, created_at
+          FROM task_records
+          WHERE date = ?
+          ORDER BY start_time
+        `
+      )
+      .all(SPECIAL_TASK_CATEGORY, date) as TaskRecord[]
   }
 
   updateTaskRecord(id: number, record: TaskRecordUpdate): void {
     const fields: string[] = []
     const values: any[] = []
-    
+
     if (record.category_name !== undefined) {
       fields.push('category_name = ?')
       values.push(record.category_name)
@@ -196,13 +254,15 @@ class DatabaseService {
       fields.push('date = ?')
       values.push(record.date)
     }
-    
+
     if (fields.length === 0) {
       throw new Error('No fields to update')
     }
-    
+
     values.push(id)
-    const sql = `UPDATE task_records SET ${fields.join(', ')} WHERE id = ?`
+    const sql = `UPDATE task_records
+                 SET ${fields.join(', ')}
+                 WHERE id = ?`
     this.db.prepare(sql).run(...values)
   }
 

@@ -12,7 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
 - `npm run lint:md` - Check markdown formatting issues
 - `npm run format:md` - Auto-fix markdown formatting issues
-- `npm run install-hooks` - Install git hooks for automatic markdown formatting
+- `npm run format` - Format all source code files with Prettier
+- `npm run format:check` - Check if code formatting is consistent with Prettier
+- `npm run install-hooks` - Install git hooks for automatic markdown and code formatting
 
 ### CI/CD Pipeline
 
@@ -209,7 +211,7 @@ __Git Hooks__: Run `npm run install-hooks` after cloning to enable automatic mar
 
 __Core__: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
 
-__Config__: `vite.config.ts`, `vitest.config.ts`, `.editorconfig`
+__Config__: `vite.config.ts`, `vitest.config.ts`, `.editorconfig`, `.prettierrc.json`
 
 __Composables__: `src/composables/use*.ts` files
 

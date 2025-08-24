@@ -83,10 +83,10 @@ describe('TaskList Component', () => {
         },
         // Function props
         calculateDuration: vi.fn(() => '1h 30m'),
-        convertToTimeInput: vi.fn((time) => time),
+        convertToTimeInput: vi.fn(time => time),
         getCurrentTime: vi.fn(() => '10:30'),
         getSelectedCategoryName: vi.fn(() => 'Work'),
-        isSpecial: vi.fn((taskType) => SPECIAL_TASK_TYPES.includes(taskType))
+        isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
       }
     })
   })
@@ -102,38 +102,30 @@ describe('TaskList Component', () => {
     it('should render the task table with correct headers', () => {
       const headers = wrapper.findAll('th')
       const headerTexts = headers.map(h => h.text())
-      
-      expect(headerTexts).toEqual([
-        'Category',
-        'Task', 
-        'Start time',
-        'Duration',
-        'Actions'
-      ])
+
+      expect(headerTexts).toEqual(['Category', 'Task', 'Start time', 'Duration', 'Actions'])
     })
 
     it('should display task records in the table', () => {
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
-      
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
+
       expect(taskRows).toHaveLength(2) // Two task records
     })
 
     it('should show loading state when isLoadingTasks is true', async () => {
       await wrapper.setProps({ isLoadingTasks: true })
-      
+
       const loadingCell = wrapper.find('.loading-cell')
       expect(loadingCell.exists()).toBe(true)
       expect(loadingCell.text()).toContain('Loading tasks...')
     })
 
     it('should show empty state when no tasks exist', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         taskRecords: [],
-        isLoadingTasks: false 
+        isLoadingTasks: false
       })
-      
+
       const emptyCell = wrapper.find('.empty-cell')
       expect(emptyCell.exists()).toBe(true)
       expect(emptyCell.text()).toContain('No tasks recorded for 2024-01-15')
@@ -153,17 +145,13 @@ describe('TaskList Component', () => {
         taskRecords: [...mockTaskRecords, endTask]
       })
 
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
-      
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
+
       // Find the row containing the end task
-      const endTaskRow = taskRows.find(row => 
-        row.text().includes('End Task')
-      )
-      
+      const endTaskRow = taskRows.find(row => row.text().includes('End Task'))
+
       expect(endTaskRow?.exists()).toBe(true)
-      
+
       // Get the duration cell using data-test attribute for stability
       const durationCell = endTaskRow?.find('[data-test="task-duration"]')
       expect(durationCell?.text().trim()).toBe('-')
@@ -174,98 +162,90 @@ describe('TaskList Component', () => {
     it('should render dropdown trigger for normal tasks', () => {
       const dropdownTriggers = wrapper.findAll('.dropdown-trigger')
       expect(dropdownTriggers.length).toBeGreaterThan(0)
-      
+
       // First trigger should show the category name
       expect(dropdownTriggers[0]?.text()).toContain('Work')
     })
 
     it('should emit toggleInlineDropdown when dropdown trigger is clicked', async () => {
-      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )[0]
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))[0]
       const dropdownTrigger = firstTaskRow.find('.dropdown-trigger')
       await dropdownTrigger.trigger('click')
-      
+
       expect(wrapper.emitted('toggleInlineDropdown')).toBeTruthy()
       expect(wrapper.emitted('toggleInlineDropdown')?.[0]).toEqual([1]) // First task's ID
     })
 
     it('should show dropdown menu when showInlineDropdown is true for the task', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         showInlineDropdown: { 1: true }
       })
-      
-      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )[0]
+
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))[0]
       const dropdownMenu = firstTaskRow.find('[role="listbox"]')
       expect(dropdownMenu.exists()).toBe(true)
-      
+
       const dropdownItems = dropdownMenu.findAll('[role="option"]')
       expect(dropdownItems).toHaveLength(3) // Three categories
     })
 
     it('should render category options correctly in dropdown', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         showInlineDropdown: { 1: true }
       })
-      
+
       const dropdownMenu = wrapper.find('[role="listbox"]')
       const options = dropdownMenu.findAll('[role="option"]')
-      
+
       expect(options[0]?.text()).toBe('Work')
-      expect(options[1]?.text()).toBe('Personal') 
+      expect(options[1]?.text()).toBe('Personal')
       expect(options[2]?.text()).toBe('Learning')
     })
 
     it('should mark current category as selected in dropdown', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         showInlineDropdown: { 1: true }
       })
-      
+
       const dropdownMenu = wrapper.find('[role="listbox"]')
       const selectedOption = dropdownMenu.find('.selected')
-      
+
       expect(selectedOption.exists()).toBe(true)
       expect(selectedOption.text()).toBe('Work') // First task's category
     })
 
     it('should emit selectInlineCategory when category option is clicked', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         showInlineDropdown: { 1: true }
       })
-      
+
       const dropdownMenu = wrapper.find('[role="listbox"]')
       const personalOption = dropdownMenu.findAll('[role="option"]')[1]
       expect(personalOption?.exists()).toBe(true)
       await personalOption.trigger('click')
-      
+
       expect(wrapper.emitted('selectInlineCategory')).toBeTruthy()
       expect(wrapper.emitted('selectInlineCategory')?.[0]).toEqual([1, 'Personal'])
     })
 
     it('should have proper ARIA attributes on dropdown elements', async () => {
-      await wrapper.setProps({ 
+      await wrapper.setProps({
         showInlineDropdown: { 1: true }
       })
-      
+
       // Find the specific row with the open dropdown (task ID 1)
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
-      const targetRow = taskRows.find(row => 
-        row.find('[role="listbox"]').exists()
-      )
-      
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
+      const targetRow = taskRows.find(row => row.find('[role="listbox"]').exists())
+
       expect(targetRow?.exists()).toBe(true)
-      
+
       const trigger = targetRow.find('.dropdown-trigger')
       const menu = targetRow.find('[role="listbox"]')
-      
+
       expect(trigger.attributes('aria-expanded')).toBe('true')
       expect(trigger.attributes('aria-haspopup')).toBe('listbox')
       expect(trigger.attributes('aria-controls')).toBeTruthy()
-      
+
       expect(menu.attributes('role')).toBe('listbox')
       expect(menu.attributes('aria-labelledby')).toBeTruthy()
 
@@ -280,44 +260,44 @@ describe('TaskList Component', () => {
     it('should render form dropdown in add task row', () => {
       const addTaskRow = wrapper.find('.add-task-row')
       const formDropdown = addTaskRow.find('.add-task-dropdown')
-      
+
       expect(formDropdown.exists()).toBe(true)
     })
 
     it('should emit toggleFormDropdown when form dropdown trigger is clicked', async () => {
       const addTaskRow = wrapper.find('.add-task-row')
       const formTrigger = addTaskRow.find('.dropdown-trigger')
-      
+
       await formTrigger.trigger('click')
-      
+
       expect(wrapper.emitted('toggleFormDropdown')).toBeTruthy()
     })
 
     it('should show form dropdown menu when showFormCategoryDropdown is true', async () => {
       await wrapper.setProps({ showFormCategoryDropdown: true })
-      
+
       const addTaskRow = wrapper.find('.add-task-row')
       const dropdownMenu = addTaskRow.find('[role="listbox"]')
-      
+
       expect(dropdownMenu.exists()).toBe(true)
-      
+
       const options = dropdownMenu.findAll('[role="option"]')
       expect(options).toHaveLength(3)
     })
 
     it('should emit selectFormCategory when form category option is clicked', async () => {
       await wrapper.setProps({ showFormCategoryDropdown: true })
-      
+
       const addTaskRow = wrapper.find('.add-task-row')
       const dropdownMenu = addTaskRow.find('[role="listbox"]')
       const personalOption = dropdownMenu.findAll('[role="option"]')[1]
-      
+
       if (!personalOption) {
         throw new Error('Personal option not found in dropdown menu')
       }
-      
+
       await personalOption.trigger('click')
-      
+
       expect(wrapper.emitted('selectFormCategory')).toBeTruthy()
       expect(wrapper.emitted('selectFormCategory')?.[0]).toMatchObject([
         expect.objectContaining({ id: 2, name: 'Personal', is_default: false })
@@ -330,7 +310,7 @@ describe('TaskList Component', () => {
       const taskNameInput = wrapper.find('input[placeholder="Task name"]')
       expect(taskNameInput.exists()).toBe(true)
       await taskNameInput.trigger('blur')
-      
+
       expect(wrapper.emitted('handleBlur')).toBeTruthy()
       expect(wrapper.emitted('handleBlur')?.[0]?.[1]).toBe('task_name')
     })
@@ -339,7 +319,7 @@ describe('TaskList Component', () => {
       const taskNameInput = wrapper.find('input[placeholder="Task name"]')
       expect(taskNameInput.exists()).toBe(true)
       await taskNameInput.trigger('keydown.enter')
-      
+
       expect(wrapper.emitted('handleEnter')).toBeTruthy()
       expect(wrapper.emitted('handleEnter')?.[0]?.[1]).toBe('task_name')
     })
@@ -348,7 +328,7 @@ describe('TaskList Component', () => {
       const timeInput = wrapper.find('input[type="time"]')
       expect(timeInput.exists()).toBe(true)
       await timeInput.trigger('blur')
-      
+
       expect(wrapper.emitted('handleBlur')).toBeTruthy()
       expect(wrapper.emitted('handleBlur')?.[0]?.[1]).toBe('start_time')
     })
@@ -359,10 +339,10 @@ describe('TaskList Component', () => {
       const specialButtons = wrapper.find('.special-task-buttons')
       const pauseBtn = specialButtons.find('.pause-btn')
       const endBtn = specialButtons.find('.end-btn')
-      
+
       expect(pauseBtn.exists()).toBe(true)
       expect(pauseBtn.text()).toContain('Pause')
-      
+
       expect(endBtn.exists()).toBe(true)
       expect(endBtn.text()).toContain('End')
     })
@@ -370,30 +350,30 @@ describe('TaskList Component', () => {
     it('should emit addPauseTask when pause button is clicked', async () => {
       const pauseBtn = wrapper.find('.pause-btn')
       await pauseBtn.trigger('click')
-      
+
       expect(wrapper.emitted('addPauseTask')).toBeTruthy()
     })
 
     it('should emit addEndTask when end button is clicked', async () => {
       const endBtn = wrapper.find('.end-btn')
       await endBtn.trigger('click')
-      
+
       expect(wrapper.emitted('addEndTask')).toBeTruthy()
     })
 
     it('should disable end button when hasEndTaskForSelectedDate is true', async () => {
       await wrapper.setProps({ hasEndTaskForSelectedDate: true })
-      
+
       const endBtn = wrapper.find('.end-btn')
       expect(endBtn.attributes('disabled')).toBeDefined()
       expect(endBtn.attributes('aria-disabled')).toBe('true')
     })
 
     it('should NOT emit addEndTask when end button is disabled', async () => {
-        await wrapper.setProps({ hasEndTaskForSelectedDate: true })
-        const endBtn = wrapper.find('.end-btn')
-        await endBtn.trigger('click')
-        expect(wrapper.emitted('addEndTask')).toBeFalsy()
+      await wrapper.setProps({ hasEndTaskForSelectedDate: true })
+      const endBtn = wrapper.find('.end-btn')
+      await endBtn.trigger('click')
+      expect(wrapper.emitted('addEndTask')).toBeFalsy()
     })
   })
 
@@ -401,9 +381,9 @@ describe('TaskList Component', () => {
     it('should emit updateNewTask when task name input changes', async () => {
       const addTaskRow = wrapper.find('.add-task-row')
       const taskNameInput = addTaskRow.find('input[placeholder="Enter task name..."]')
-      
+
       await taskNameInput.setValue('New Task')
-      
+
       expect(wrapper.emitted('updateNewTask')).toBeTruthy()
     })
 
@@ -416,10 +396,10 @@ describe('TaskList Component', () => {
           time: '10:00'
         }
       })
-      
+
       const addBtn = wrapper.find('.add-btn')
       await addBtn.trigger('click')
-      
+
       expect(wrapper.emitted('addTask')).toBeTruthy()
     })
 
@@ -432,7 +412,7 @@ describe('TaskList Component', () => {
           time: ''
         }
       })
-      
+
       const addBtn = wrapper.find('.add-btn')
       expect(addBtn.attributes('disabled')).toBeDefined()
       expect(addBtn.attributes('aria-disabled')).toBe('true')
@@ -441,23 +421,19 @@ describe('TaskList Component', () => {
 
   describe('Action Buttons', () => {
     it('should emit replayTask when replay button is clicked', async () => {
-      const firstTaskRow = wrapper.findAll('tbody tr').filter(row =>
-          !row.classes().includes('add-task-row')
-      )[0]
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))[0]
       const replayBtn = firstTaskRow.find('.replay-btn')
       await replayBtn.trigger('click')
-      
+
       expect(wrapper.emitted('replayTask')).toBeTruthy()
       expect(wrapper.emitted('replayTask')?.[0]?.[0]).toEqual(mockTaskRecords[0])
     })
 
     it('should emit confirmDeleteTask when delete button is clicked', async () => {
-      const firstTaskRow = wrapper.findAll('tbody tr').filter(row =>
-          !row.classes().includes('add-task-row')
-      )[0]
+      const firstTaskRow = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))[0]
       const deleteBtn = firstTaskRow.find('.delete-btn')
       await deleteBtn.trigger('click')
-      
+
       expect(wrapper.emitted('confirmDeleteTask')).toBeTruthy()
       expect(wrapper.emitted('confirmDeleteTask')?.[0]?.[0]).toEqual(mockTaskRecords[0])
     })
@@ -477,25 +453,21 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
+
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
 
       // Control: normal task should have replay button (search by category name)
-      const normalTaskRow = taskRows.find(row => 
-        row.text().includes('Work') // First task's category from mockTaskRecords
+      const normalTaskRow = taskRows.find(
+        row => row.text().includes('Work') // First task's category from mockTaskRecords
       )
-      
+
       const normalTaskReplay = normalTaskRow?.find('.replay-btn')
       expect(normalTaskReplay?.exists()).toBe(true)
-      
+
       // Find pause task row by task name
-      const pauseTaskRow = taskRows.find(row => 
-        row.text().includes('Pause Task')
-      )
+      const pauseTaskRow = taskRows.find(row => row.text().includes('Pause Task'))
       const replayBtn = pauseTaskRow?.find('.replay-btn')
-      
+
       expect(replayBtn?.exists()).toBe(false)
     })
   })
@@ -528,7 +500,7 @@ describe('TaskList Component', () => {
           time: ''
         }
       })
-      
+
       const addBtn = wrapper.find('.primary-add-btn')
       expect(addBtn.attributes('title')).toContain('Please fill in all required fields')
     })
@@ -541,7 +513,7 @@ describe('TaskList Component', () => {
           time: '10:00'
         }
       })
-      
+
       const addBtn = wrapper.find('.primary-add-btn')
       expect(addBtn.attributes('title')).toBe('Add new task')
     })
@@ -557,14 +529,10 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
+
       // Find the time input for the task with empty start_time
-      const timeInputs = wrapper.findAll('input').filter(input => 
-        input.classes().includes('time-input')
-      )
-      const emptyTimeInput = timeInputs.find(input => 
-        input.classes().includes('empty-time')
-      )
+      const timeInputs = wrapper.findAll('input').filter(input => input.classes().includes('time-input'))
+      const emptyTimeInput = timeInputs.find(input => input.classes().includes('empty-time'))
       expect(emptyTimeInput?.exists()).toBe(true)
     })
 
@@ -583,14 +551,14 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
+
       // Find the time input that's text type (for empty time)
-      const textTimeInputs = wrapper.findAll('input[type="text"]').filter(input => 
-        input.classes().includes('time-input')
-      )
+      const textTimeInputs = wrapper
+        .findAll('input[type="text"]')
+        .filter(input => input.classes().includes('time-input'))
       expect(textTimeInputs.length).toBeGreaterThan(0)
       expect(textTimeInputs[0]?.attributes('placeholder')).toBe('HH:MM')
-      
+
       // Test with value - should be time type
       await wrapper.setProps({
         taskRecords: [
@@ -600,17 +568,17 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
-      const timeTimeInputs = wrapper.findAll('input[type="time"]').filter(input => 
-        input.classes().includes('time-input')
-      )
+
+      const timeTimeInputs = wrapper
+        .findAll('input[type="time"]')
+        .filter(input => input.classes().includes('time-input'))
       expect(timeTimeInputs.length).toBeGreaterThan(0)
     })
 
     it('should always use time type for new task input', () => {
       const addTaskRow = wrapper.find('.add-task-row')
       const newTaskTimeInput = addTaskRow.find('input[type="time"]')
-      
+
       expect(newTaskTimeInput.exists()).toBe(true)
     })
 
@@ -622,10 +590,10 @@ describe('TaskList Component', () => {
           time: ''
         }
       })
-      
+
       const addTaskRow = wrapper.find('.add-task-row')
       const timeInput = addTaskRow.find('input[type="time"]')
-      
+
       expect(timeInput.classes()).toContain('empty-time')
     })
 
@@ -637,10 +605,10 @@ describe('TaskList Component', () => {
           time: '10:30'
         }
       })
-      
+
       const addTaskRow = wrapper.find('.add-task-row')
       const timeInput = addTaskRow.find('input[type="time"]')
-      
+
       expect(timeInput.classes()).not.toContain('empty-time')
     })
   })
@@ -648,13 +616,13 @@ describe('TaskList Component', () => {
   describe('Keyboard Event Handling', () => {
     it('should handle Escape key in time input to cancel editing', async () => {
       const timeInput = wrapper.find('input[type="time"]')
-      
+
       // Simulate changing the value
       await timeInput.setValue('11:00')
-      
+
       // Simulate Escape key
       await timeInput.trigger('keydown.esc')
-      
+
       // Should revert to original value via convertToTimeInput
       expect(wrapper.props('convertToTimeInput')).toHaveBeenCalled()
     })
@@ -667,12 +635,12 @@ describe('TaskList Component', () => {
           time: '10:00'
         }
       })
-      
+
       const addTaskRow = wrapper.find('.add-task-row')
       const timeInput = addTaskRow.find('input[type="time"]')
-      
+
       await timeInput.trigger('keydown.enter')
-      
+
       // Should trigger add task functionality
       expect(wrapper.emitted('addTask')).toBeTruthy()
     })
@@ -694,7 +662,7 @@ describe('TaskList Component', () => {
     it('should handle escape key to cancel task name editing with original value restoration', async () => {
       // Mock the handleEscapeCancel function directly since UI inline editing isn't easily testable
       const vm = wrapper.vm as any
-      
+
       // Simulate the handleEscapeCancel function behavior
       const originalValue = 'Task 1'
       const mockEvent = {
@@ -704,13 +672,13 @@ describe('TaskList Component', () => {
           blur: vi.fn()
         }
       }
-      
+
       // Directly test the escape cancellation logic
       if (mockEvent.key === 'Escape') {
         mockEvent.target.value = originalValue
         mockEvent.target.blur()
       }
-      
+
       // Verify the behavior
       expect(mockEvent.target.value).toBe(originalValue)
       expect(mockEvent.target.blur).toHaveBeenCalled()
@@ -719,54 +687,51 @@ describe('TaskList Component', () => {
     it('should handle escape key to cancel time editing with original value restoration', async () => {
       // Find a time input for inline editing
       const timeInput = wrapper.find('input[type="time"]')
-      
+
       if (timeInput.exists()) {
         const originalTime = '09:00'
-        
+
         // Mock the convertToTimeInput function to return expected format
         const mockConvertToTimeInput = vi.fn(() => originalTime)
-        await wrapper.setProps({ 
+        await wrapper.setProps({
           convertToTimeInput: mockConvertToTimeInput
         })
-        
-        // Change the value 
+
+        // Change the value
         await timeInput.setValue('11:30')
-        
+
         // Create escape event and simulate it
         const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
-        Object.defineProperty(escapeEvent, 'target', { 
+        Object.defineProperty(escapeEvent, 'target', {
           value: timeInput.element,
           writable: false
         })
-        
+
         // Trigger escape key
         await timeInput.trigger('keydown.esc')
-        
+
         // Verify convertToTimeInput was called to get original value
         expect(mockConvertToTimeInput).toHaveBeenCalledWith(mockTaskRecords[0].start_time)
       }
     })
 
     it('should only handle escape key and ignore other keys in task name input', async () => {
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
       const firstTaskRow = taskRows[0]
-      
+
       // Try to find or create a task name input
-      const taskNameInput = firstTaskRow.find('input[placeholder="Task name"]') || 
-                           wrapper.find('input').filter(input => 
-                             input.attributes('placeholder') === 'Task name'
-                           )[0]
-      
+      const taskNameInput =
+        firstTaskRow.find('input[placeholder="Task name"]') ||
+        wrapper.find('input').filter(input => input.attributes('placeholder') === 'Task name')[0]
+
       if (taskNameInput && taskNameInput.exists()) {
         const originalValue = taskNameInput.element.value
-        
+
         // Test non-escape keys should not trigger cancellation
         await taskNameInput.trigger('keydown.enter')
         await taskNameInput.trigger('keydown.tab')
         await taskNameInput.trigger('keydown.space')
-        
+
         // Value should remain unchanged for non-escape keys
         // (This test verifies the escape handler only responds to Escape key)
       }
@@ -774,15 +739,15 @@ describe('TaskList Component', () => {
 
     it('should only handle escape key and ignore other keys in time input', async () => {
       const timeInput = wrapper.find('input[type="time"]')
-      
+
       if (timeInput.exists()) {
         const originalValue = timeInput.element.value
-        
+
         // Test non-escape keys should not trigger the time escape cancellation
         await timeInput.trigger('keydown.enter')
         await timeInput.trigger('keydown.tab')
         await timeInput.trigger('keydown.space')
-        
+
         // The handleTimeEscapeCancel should only respond to Escape key
         // This verifies the function has proper key filtering
       }
@@ -790,15 +755,15 @@ describe('TaskList Component', () => {
 
     it('should call blur() method when escape key cancels editing', async () => {
       const timeInput = wrapper.find('input[type="time"]')
-      
+
       if (timeInput.exists()) {
         // Mock the blur method to verify it's called
         const blurSpy = vi.fn()
-      ;(timeInput.element as any).blur = blurSpy
-        
+        ;(timeInput.element as any).blur = blurSpy
+
         // Trigger escape key
         await timeInput.trigger('keydown.esc')
-        
+
         // The blur method should be called as part of escape cancellation
         // Note: This may not work perfectly in test environment but tests the intent
       }
@@ -806,21 +771,21 @@ describe('TaskList Component', () => {
 
     it('should test handleEscapeCancel function directly (lines 484-487)', () => {
       const vm = wrapper.vm as any
-      
+
       // Create a mock input element
       const mockInput = document.createElement('input')
       mockInput.value = 'Modified Value'
       const blurSpy = vi.fn()
       mockInput.blur = blurSpy
-      
+
       // Create mock keyboard event
       const mockEvent = {
         key: 'Escape',
         target: mockInput
       } as any
-      
+
       const originalValue = 'Original Value'
-      
+
       // Call the handleEscapeCancel function directly to hit lines 484-487
       if (vm.handleEscapeCancel) {
         vm.handleEscapeCancel(mockEvent, originalValue)
@@ -830,13 +795,13 @@ describe('TaskList Component', () => {
           const target = mockEvent.target as HTMLInputElement
           target.value = originalValue
           if (typeof target.blur === 'function') {
-          if (typeof target.blur === 'function') {
-          ;(target as HTMLInputElement).blur()
-        }
-        }
+            if (typeof target.blur === 'function') {
+              ;(target as HTMLInputElement).blur()
+            }
+          }
         }
       }
-      
+
       // Verify the escape cancellation behavior
       expect(mockInput.value).toBe(originalValue)
       expect(blurSpy).toHaveBeenCalled()
@@ -844,20 +809,20 @@ describe('TaskList Component', () => {
 
     it('should test handleTimeEscapeCancel function directly (lines 493-496)', async () => {
       const vm = wrapper.vm as any
-      
+
       // Create a mock input element
       const mockInput = document.createElement('input')
       mockInput.type = 'time'
       mockInput.value = '14:30'
       const blurSpy = vi.fn()
       mockInput.blur = blurSpy
-      
+
       // Create mock keyboard event
       const mockEvent = {
         key: 'Escape',
         target: mockInput
       } as any
-      
+
       // Mock record with start_time
       const mockRecord = {
         id: 1,
@@ -866,12 +831,12 @@ describe('TaskList Component', () => {
         category_name: 'Work',
         task_type: 'normal'
       } as any
-      
+
       // Mock convertToTimeInput function
       const originalConvertToTimeInput = (wrapper.props() as any).convertToTimeInput
       const mockConvertToTimeInput = vi.fn(() => '09:00')
       await wrapper.setProps({ convertToTimeInput: mockConvertToTimeInput })
-      
+
       // Call the handleTimeEscapeCancel function directly to hit lines 493-496
       if (vm.handleTimeEscapeCancel) {
         vm.handleTimeEscapeCancel(mockEvent, mockRecord)
@@ -882,38 +847,38 @@ describe('TaskList Component', () => {
           target.value = mockConvertToTimeInput(mockRecord.start_time)
           if (typeof target.blur === 'function') {
             if (typeof target.blur === 'function') {
-            ;(target as HTMLInputElement).blur()
-          }
+              ;(target as HTMLInputElement).blur()
+            }
           }
         }
       }
-      
+
       // Verify the escape cancellation behavior
       expect(mockInput.value).toBe('09:00')
       expect(blurSpy).toHaveBeenCalled()
       expect(mockConvertToTimeInput).toHaveBeenCalledWith('09:00')
-      
+
       // Restore original function
       await wrapper.setProps({ convertToTimeInput: originalConvertToTimeInput })
     })
 
     it('should not trigger handleEscapeCancel for non-Escape keys', () => {
       const vm = wrapper.vm as any
-      
+
       // Create a mock input element
       const mockInput = document.createElement('input')
       mockInput.value = 'Modified Value'
       const blurSpy = vi.fn()
       mockInput.blur = blurSpy
-      
+
       // Create mock keyboard event with non-Escape key
       const mockEvent = {
         key: 'Enter',
         target: mockInput
       } as any
-      
+
       const originalValue = 'Original Value'
-      
+
       // Test the handleEscapeCancel logic - should only work for Escape key
       if (mockEvent.key === 'Escape') {
         const target = mockEvent.target as HTMLInputElement
@@ -922,7 +887,7 @@ describe('TaskList Component', () => {
           ;(target as HTMLInputElement).blur()
         }
       }
-      
+
       // Verify that non-Escape keys don't trigger the cancellation
       expect(mockInput.value).toBe('Modified Value') // Should remain unchanged
       expect(blurSpy).not.toHaveBeenCalled()
@@ -982,10 +947,10 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
-      const textTimeInputs = wrapper.findAll('input[type="text"]').filter(input => 
-        input.classes().includes('time-input')
-      )
+
+      const textTimeInputs = wrapper
+        .findAll('input[type="text"]')
+        .filter(input => input.classes().includes('time-input'))
       expect(textTimeInputs.length).toBeGreaterThan(0)
       expect(textTimeInputs[0]?.attributes('pattern')).toBe('^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$')
       expect(textTimeInputs[0]?.attributes('maxlength')).toBe('5')
@@ -1011,7 +976,7 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
+
       const specialCell = wrapper.find('.special-task-cell')
       expect(specialCell.exists()).toBe(true)
       expect(specialCell.text()).toBe('⏸ Pause')
@@ -1038,17 +1003,15 @@ describe('TaskList Component', () => {
           }
         ]
       })
-      
-      const taskRows = wrapper.findAll('tbody tr').filter(row => 
-        !row.classes().includes('add-task-row')
-      )
-      
+
+      const taskRows = wrapper.findAll('tbody tr').filter(row => !row.classes().includes('add-task-row'))
+
       const pauseRow = taskRows.find(row => row.text().includes('⏸ Pause'))
       const endRow = taskRows.find(row => row.text().includes('⏹ End'))
-      
+
       expect(pauseRow?.classes()).toContain('special-task-row')
       expect(pauseRow?.classes()).toContain('pause-task-row')
-      
+
       expect(endRow?.classes()).toContain('special-task-row')
       expect(endRow?.classes()).toContain('end-task-row')
     })
@@ -1110,11 +1073,10 @@ describe('TaskList Component', () => {
   describe('Form Validation Logic', () => {
     it('should validate task form correctly - all fields required', () => {
       const vm = wrapper.vm as any
-      
+
       // Mock the computed property behavior
-      const isValid = vm.newTask?.categoryId !== null && 
-                     vm.newTask?.name?.trim().length > 0
-      
+      const isValid = vm.newTask?.categoryId !== null && vm.newTask?.name?.trim().length > 0
+
       // With empty form
       expect(isValid).toBe(false)
     })
@@ -1127,11 +1089,10 @@ describe('TaskList Component', () => {
           time: '10:00'
         }
       })
-      
+
       const vm = wrapper.vm as any
-      const isValid = vm.newTask?.categoryId !== null && 
-                     vm.newTask?.name?.trim().length > 0
-      
+      const isValid = vm.newTask?.categoryId !== null && vm.newTask?.name?.trim().length > 0
+
       expect(isValid).toBe(true)
     })
   })

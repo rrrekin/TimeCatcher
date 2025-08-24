@@ -81,7 +81,9 @@ describe('App Component - Coverage Extensions', () => {
     await vm.addTask() // invalid category
     vm.newTask.categoryId = null
     vm.newTask.time = 'invalid'
-    vm.parseTimeInput = vi.fn(() => { throw new Error('bad time') })
+    vm.parseTimeInput = vi.fn(() => {
+      throw new Error('bad time')
+    })
     await vm.addTask() // invalid time
     vm.newTask.categoryId = 1
     vm.categories = [{ id: 1, name: 'Work' }]
@@ -138,7 +140,9 @@ describe('App Component - Coverage Extensions', () => {
     const vm = wrapper.vm as any
     vm.taskRecords = []
     expect(vm.getEnhancedCategoryBreakdown()).toEqual([])
-    vm.taskRecords = [{ task_type: 'normal', category_name: 'Work', task_name: 'T', date: '2020-01-01', start_time: '10:00' }]
+    vm.taskRecords = [
+      { task_type: 'normal', category_name: 'Work', task_name: 'T', date: '2020-01-01', start_time: '10:00' }
+    ]
     vm.calculateDuration = vi.fn().mockReturnValue('-')
     const result = vm.getEnhancedCategoryBreakdown()
     if (result.length === 0) {
@@ -155,7 +159,7 @@ describe('App Component - Coverage Extensions', () => {
     expect(vm.formatTime12Hour('12')).toBe('12:00 AM')
   })
 })
- // End of coverage extension block
+// End of coverage extension block
 // (removed extra closing brace)
 
 // Mock useTaskRecords composable
@@ -260,15 +264,33 @@ vi.mock('@/components/TaskList.vue', () => ({
     name: 'TaskList',
     template: '<div data-testid="task-list"></div>',
     props: [
-      'taskRecords', 'categories', 'isLoadingTasks', 'displayDate',
-      'hasEndTaskForSelectedDate', 'showInlineDropdown', 'showFormCategoryDropdown',
-      'newTask', 'calculateDuration', 'convertToTimeInput', 'getCurrentTime',
-      'getSelectedCategoryName', 'isSpecial'
+      'taskRecords',
+      'categories',
+      'isLoadingTasks',
+      'displayDate',
+      'hasEndTaskForSelectedDate',
+      'showInlineDropdown',
+      'showFormCategoryDropdown',
+      'newTask',
+      'calculateDuration',
+      'convertToTimeInput',
+      'getCurrentTime',
+      'getSelectedCategoryName',
+      'isSpecial'
     ],
     emits: [
-      'toggleInlineDropdown', 'selectInlineCategory', 'handleBlur', 'handleEnter',
-      'replayTask', 'confirmDeleteTask', 'toggleFormDropdown', 'selectFormCategory',
-      'updateNewTask', 'addTask', 'addPauseTask', 'addEndTask'
+      'toggleInlineDropdown',
+      'selectInlineCategory',
+      'handleBlur',
+      'handleEnter',
+      'replayTask',
+      'confirmDeleteTask',
+      'toggleFormDropdown',
+      'selectFormCategory',
+      'updateNewTask',
+      'addTask',
+      'addPauseTask',
+      'addEndTask'
     ]
   }
 }))
@@ -278,8 +300,13 @@ vi.mock('@/components/DailyReport.vue', () => ({
     name: 'DailyReport',
     template: '<div data-testid="daily-report"></div>',
     props: [
-      'taskRecords', 'dateTitle', 'hasEndTaskForSelectedDate', 'targetWorkHours',
-      'totalTimeTracked', 'totalMinutesTracked', 'categoryBreakdown'
+      'taskRecords',
+      'dateTitle',
+      'hasEndTaskForSelectedDate',
+      'targetWorkHours',
+      'totalTimeTracked',
+      'totalMinutesTracked',
+      'categoryBreakdown'
     ]
   }
 }))
@@ -289,16 +316,33 @@ vi.mock('@/components/SetupModal.vue', () => ({
     name: 'SetupModal',
     template: '<div data-testid="setup-modal"></div>',
     props: [
-      'isOpen', 'tempTheme', 'tempTargetWorkHours', 'categories',
-      'isLoadingCategories', 'isAddingCategory', 'isUpdatingCategory',
-      'isDeletingCategory', 'isSettingDefault', 'editingCategoryId',
-      'editingCategoryName', 'newCategoryName'
+      'isOpen',
+      'tempTheme',
+      'tempTargetWorkHours',
+      'categories',
+      'isLoadingCategories',
+      'isAddingCategory',
+      'isUpdatingCategory',
+      'isDeletingCategory',
+      'isSettingDefault',
+      'editingCategoryId',
+      'editingCategoryName',
+      'newCategoryName'
     ],
     emits: [
-      'close', 'save', 'updateTempTheme', 'updateTempTargetWorkHours',
-      'startEditCategory', 'updateEditingCategoryName', 'saveEditCategory',
-      'cancelEditCategory', 'setDefaultCategory', 'deleteCategory',
-      'updateNewCategoryName', 'addCategory', 'cancelAddingCategory',
+      'close',
+      'save',
+      'updateTempTheme',
+      'updateTempTargetWorkHours',
+      'startEditCategory',
+      'updateEditingCategoryName',
+      'saveEditCategory',
+      'cancelEditCategory',
+      'setDefaultCategory',
+      'deleteCategory',
+      'updateNewCategoryName',
+      'addCategory',
+      'cancelAddingCategory',
       'startAddingCategory'
     ]
   }
@@ -395,6 +439,11 @@ describe('App Component', () => {
     })
 
     it('should handle date navigation correctly', () => {
+      // Use fake timers to prevent flaky tests
+      vi.useFakeTimers()
+      const fixedDate = new Date('2025-01-15T12:00:00Z')
+      vi.setSystemTime(fixedDate)
+
       const vm = wrapper.vm as any
       const initialDate = new Date(vm.selectedDate)
 
@@ -408,8 +457,11 @@ describe('App Component', () => {
       expect(vm.selectedDate.getDate()).toBe(initialDate.getDate() + 1)
 
       vm.goToToday()
-      // Should be today's date (within reasonable tolerance)
-      expect(Math.abs(vm.selectedDate.getTime() - new Date().getTime())).toBeLessThan(1000)
+      // Should be exactly the fixed date
+      expect(vm.selectedDate.getTime()).toBe(fixedDate.getTime())
+
+      // Restore real timers
+      vi.useRealTimers()
     })
 
     it('should handle date input updates with edge cases', () => {
@@ -1690,7 +1742,7 @@ describe('App Component', () => {
       const vm = wrapper.vm as any
 
       // Spy on parseTimeString from the mocked timeUtils module
-      const parseTimeStringSpy = vi.spyOn(timeUtils, 'parseTimeString').mockImplementation((timeStr) => {
+      const parseTimeStringSpy = vi.spyOn(timeUtils, 'parseTimeString').mockImplementation(timeStr => {
         // Convert "HH:MM" to minutes for comparison
         const [hours, minutes] = timeStr.split(':').map(Number)
         return hours * 60 + minutes
@@ -1798,7 +1850,7 @@ describe('App Component', () => {
       expect(wrapper.find('.toast-message').text()).toContain('Cannot delete the default category')
     })
 
-    it('should handle category edit when name hasn\'t changed', async () => {
+    it("should handle category edit when name hasn't changed", async () => {
       const vm = wrapper.vm as any
       const category = { id: 1, name: 'Work', is_default: true }
 
@@ -1874,9 +1926,7 @@ describe('App Component', () => {
       vm.taskRecords.value = mockRecords
 
       // Mock category breakdown
-      mockGetCategoryBreakdown.mockReturnValue([
-        { categoryName: 'Work', minutes: 120, percentage: 100 } as any
-      ])
+      mockGetCategoryBreakdown.mockReturnValue([{ categoryName: 'Work', minutes: 120, percentage: 100 } as any])
 
       const result = vm.getEnhancedCategoryBreakdown()
 
@@ -1908,9 +1958,9 @@ describe('App Component', () => {
 
       // Set up multiple inline dropdowns - some open, some closed
       vm.showInlineDropdown = {
-        1: true,   // This should be closed when toggling record 3
-        2: false,  // This remains false
-        3: false   // This is the one we're toggling to open
+        1: true, // This should be closed when toggling record 3
+        2: false, // This remains false
+        3: false // This is the one we're toggling to open
       }
 
       // Toggle record ID 3's dropdown
@@ -1930,7 +1980,7 @@ describe('App Component', () => {
 
       // Now record 3 should be closed, record 1 should be open
       expect(vm.showInlineDropdown[3]).toBe(false) // Closed by the forEach logic
-      expect(vm.showInlineDropdown[1]).toBe(true)  // Toggled to open
+      expect(vm.showInlineDropdown[1]).toBe(true) // Toggled to open
     })
   })
 

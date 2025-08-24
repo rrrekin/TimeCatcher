@@ -1,5 +1,5 @@
 export const TASK_TYPES = ['normal', 'pause', 'end'] as const
-export type TaskType = typeof TASK_TYPES[number]
+export type TaskType = (typeof TASK_TYPES)[number]
 
 export type SpecialTaskType = Exclude<TaskType, 'normal'>
 export const SPECIAL_TASK_TYPES = ['pause', 'end'] as const satisfies readonly SpecialTaskType[]

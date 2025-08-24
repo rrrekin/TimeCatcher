@@ -54,9 +54,7 @@ describe('DailyReport Component', () => {
       taskCount: 1,
       totalTime: '1h 30m',
       percentage: 30,
-      taskSummaries: [
-        { name: 'Exercise', count: 1, totalTime: '1h 30m' }
-      ]
+      taskSummaries: [{ name: 'Exercise', count: 1, totalTime: '1h 30m' }]
     }
   ]
 
@@ -140,20 +138,20 @@ describe('DailyReport Component', () => {
   describe('Category Display', () => {
     it('should display category information correctly', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
-      
+
       const categoryName = workCategory.find('.category-name')
       expect(categoryName.text()).toBe('Work')
-      
+
       const categoryTasks = workCategory.find('.category-tasks')
       expect(categoryTasks.text()).toBe('2 tasks')
-      
+
       const categoryTime = workCategory.find('.category-time')
       expect(categoryTime.text()).toBe('3h 30m')
     })
 
     it('should display singular "task" for single task count', () => {
       const personalCategory = wrapper.findAll('.category-section')[1]
-      
+
       const categoryTasks = personalCategory.find('.category-tasks')
       expect(categoryTasks.text()).toBe('1 task')
     })
@@ -161,7 +159,7 @@ describe('DailyReport Component', () => {
     it('should render progress bar with correct width', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const progressBar = workCategory.find('.category-progress')
-      
+
       expect(progressBar.attributes('style')).toContain('width: 70%')
       expect(progressBar.attributes('aria-valuenow')).toBe('70')
       expect(progressBar.attributes('aria-valuetext')).toBe('70%')
@@ -172,9 +170,9 @@ describe('DailyReport Component', () => {
     it('should display task summaries within categories', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const taskSummaries = workCategory.findAll('.task-summary')
-      
+
       expect(taskSummaries).toHaveLength(2)
-      
+
       // Check first task summary
       const firstTask = taskSummaries[0]
       expect(firstTask.find('.task-name').text()).toBe('Development')
@@ -184,10 +182,10 @@ describe('DailyReport Component', () => {
     it('should display rounded time and actual time for each task', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const firstTask = workCategory.findAll('.task-summary')[0]
-      
+
       const roundedTime = firstTask.find('.task-time-rounded')
       const actualTime = firstTask.find('.task-time-actual')
-      
+
       expect(roundedTime.exists()).toBe(true)
       expect(actualTime.exists()).toBe(true)
       expect(actualTime.text()).toBe('2h 15m') // Actual time from props
@@ -197,7 +195,7 @@ describe('DailyReport Component', () => {
   describe('Helper Functions', () => {
     it('should clamp percentages correctly', () => {
       const vm = wrapper.vm as any
-      
+
       expect(vm.clampPercent(50)).toBe(50)
       expect(vm.clampPercent(-10)).toBe(0)
       expect(vm.clampPercent(150)).toBe(100)
@@ -276,7 +274,7 @@ describe('DailyReport Component', () => {
 
       const vm = wrapper.vm as any
       const statusText = vm.getStatusText()
-      
+
       expect(statusText).toBe('Daily target work hours reached')
     })
 
@@ -289,7 +287,7 @@ describe('DailyReport Component', () => {
 
       const vm = wrapper.vm as any
       const statusText = vm.getStatusText()
-      
+
       expect(statusText).toBe('Day not finalized - missing end task')
     })
 
@@ -302,7 +300,7 @@ describe('DailyReport Component', () => {
 
       const vm = wrapper.vm as any
       const statusText = vm.getStatusText()
-      
+
       expect(statusText).toBe('Day not finalized - missing end task, Daily target work hours reached')
     })
 
@@ -315,7 +313,7 @@ describe('DailyReport Component', () => {
 
       const vm = wrapper.vm as any
       const statusText = vm.getStatusText()
-      
+
       expect(statusText).toBe('No status alerts')
     })
   })
@@ -323,7 +321,7 @@ describe('DailyReport Component', () => {
   describe('Accessibility', () => {
     it('should have proper ARIA attributes for progress bars', () => {
       const progressBars = wrapper.findAll('.category-progress')
-      
+
       progressBars.forEach(bar => {
         expect(bar.attributes('role')).toBe('progressbar')
         expect(bar.attributes('aria-valuenow')).toBeDefined()
@@ -347,7 +345,7 @@ describe('DailyReport Component', () => {
 
     it('should have proper role and aria-label attributes for status emojis', () => {
       const statusEmojis = wrapper.findAll('.status-emoji')
-      
+
       statusEmojis.forEach(emoji => {
         expect(emoji.attributes('role')).toBe('img')
         expect(emoji.attributes('aria-label')).toBeDefined()
@@ -359,7 +357,7 @@ describe('DailyReport Component', () => {
   describe('Responsive Design', () => {
     it('should have responsive grid layout for category headers', () => {
       const categoryHeaders = wrapper.findAll('.category-header')
-      
+
       categoryHeaders.forEach(header => {
         expect(header.classes()).toContain('category-header')
         // CSS grid classes should be applied via CSS

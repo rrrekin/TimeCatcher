@@ -3,8 +3,22 @@
     <div class="report-header">
       <h2 data-testid="report-header-title">Daily Report: {{ totalTimeTracked }}</h2>
       <div class="status-emojis" aria-live="polite" aria-atomic="true">
-        <span v-if="!hasEndTaskForSelectedDate" class="status-emoji" role="img" aria-label="Missing end task" title="Missing end task">⚠️</span>
-        <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji" role="img" aria-label="Target reached" title="Target reached">😊</span>
+        <span
+          v-if="!hasEndTaskForSelectedDate"
+          class="status-emoji"
+          role="img"
+          aria-label="Missing end task"
+          title="Missing end task"
+          >⚠️</span
+        >
+        <span
+          v-if="totalMinutesTracked >= targetWorkHours * 60"
+          class="status-emoji"
+          role="img"
+          aria-label="Target reached"
+          title="Target reached"
+          >😊</span
+        >
         <!-- Screen reader accessible status text -->
         <span class="sr-only">
           {{ getStatusText() }}
@@ -19,57 +33,53 @@
     <!-- Category Breakdown -->
     <div class="report-section">
       <h3>Summary per Category & Task</h3>
-      <div v-if="standardTaskCount === 0" class="empty-report">
-        No standard tasks recorded for this day
-      </div>
+      <div v-if="standardTaskCount === 0" class="empty-report">No standard tasks recorded for this day</div>
       <div v-else class="category-breakdown" data-testid="category-breakdown">
         <div
-            v-for="(categoryData, index) in categoryBreakdown"
-            :key="`${categoryData.name}-${index}`"
-            class="category-section"
-            data-testid="category-section"
+          v-for="(categoryData, index) in categoryBreakdown"
+          :key="`${categoryData.name}-${index}`"
+          class="category-section"
+          data-testid="category-section"
         >
           <div class="category-header">
             <div class="category-info">
               <span class="category-name" :id="`category-name-${index}`">{{ categoryData.name }}</span>
-              <span class="category-tasks">{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span>
+              <span class="category-tasks"
+                >{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span
+              >
             </div>
             <div class="category-time">{{ categoryData.totalTime }}</div>
             <div class="category-bar">
               <div
-                  class="category-progress"
-                  role="progressbar"
-                  :aria-valuenow="clampPercent(categoryData.percentage)"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
-                  :aria-labelledby="`category-name-${index}`"
-                  :style="{ width: clampPercent(categoryData.percentage) + '%' }"
+                class="category-progress"
+                role="progressbar"
+                :aria-valuenow="clampPercent(categoryData.percentage)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
+                :aria-labelledby="`category-name-${index}`"
+                :style="{ width: clampPercent(categoryData.percentage) + '%' }"
               ></div>
             </div>
           </div>
-          
+
           <!-- Task summaries within category -->
           <ul class="task-summaries">
             <li
-                v-for="(task, index) in categoryData.taskSummaries"
-                :key="task.name ? `${task.name}-${index}` : index"
-                class="task-summary"
+              v-for="(task, index) in categoryData.taskSummaries"
+              :key="task.name ? `${task.name}-${index}` : index"
+              class="task-summary"
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
               <span
-                  class="task-time-rounded"
-                  :title="`Rounded (nearest 5m)`"
-                  :aria-label="`Rounded (nearest 5m): ${formatTaskTime(task.totalTime)}`"
+                class="task-time-rounded"
+                :title="`Rounded (nearest 5m)`"
+                :aria-label="`Rounded (nearest 5m): ${formatTaskTime(task.totalTime)}`"
               >
                 {{ formatTaskTime(task.totalTime) }}
               </span>
-              <span
-                  class="task-time-actual"
-                  :title="`Actual`"
-                  :aria-label="`Actual: ${task.totalTime}`"
-              >
+              <span class="task-time-actual" :title="`Actual`" :aria-label="`Actual: ${task.totalTime}`">
                 {{ task.totalTime }}
               </span>
             </li>
@@ -119,15 +129,15 @@ const standardTaskCount = computed(() => {
 
 const getStatusText = () => {
   const statusMessages = []
-  
+
   if (!props.hasEndTaskForSelectedDate) {
     statusMessages.push('Day not finalized - missing end task')
   }
-  
-  if (props.totalMinutesTracked >= (props.targetWorkHours * 60)) {
+
+  if (props.totalMinutesTracked >= props.targetWorkHours * 60) {
     statusMessages.push('Daily target work hours reached')
   }
-  
+
   return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
 }
 

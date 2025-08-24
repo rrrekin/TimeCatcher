@@ -13,7 +13,7 @@ describe('useTaskRecords', () => {
       selectedDate = ref(new Date())
       const composableResult = useTaskRecords(selectedDate)
       parseTimeInput = composableResult.parseTimeInput
-      
+
       // Store any cleanup function if the composable returns one
       cleanup = undefined // useTaskRecords doesn't currently return cleanup, but ready for future
     })
