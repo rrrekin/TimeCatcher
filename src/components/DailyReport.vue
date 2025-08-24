@@ -1,17 +1,31 @@
 <template>
   <div class="daily-report">
     <div class="report-header">
-      <h2>Daily Report: {{ totalTimeTracked }}</h2>
+      <h2 data-testid="report-header-title">Daily Report: {{ totalTimeTracked }}</h2>
       <div class="status-emojis" aria-live="polite" aria-atomic="true">
-        <span v-if="!hasEndTaskForSelectedDate" class="status-emoji" role="img" aria-label="Missing end task" title="Missing end task">⚠️</span>
-        <span v-if="totalMinutesTracked >= (targetWorkHours * 60)" class="status-emoji" role="img" aria-label="Target reached" title="Target reached">😊</span>
+        <span
+          v-if="!hasEndTaskForSelectedDate"
+          class="status-emoji"
+          role="img"
+          aria-label="Missing end task"
+          title="Missing end task"
+          >⚠️</span
+        >
+        <span
+          v-if="totalMinutesTracked >= targetWorkHours * 60"
+          class="status-emoji"
+          role="img"
+          aria-label="Target reached"
+          title="Target reached"
+          >😊</span
+        >
         <!-- Screen reader accessible status text -->
         <span class="sr-only">
           {{ getStatusText() }}
         </span>
       </div>
     </div>
-    <p>
+    <p data-testid="report-date">
       {{ dateTitle }}
       {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
     </p>
@@ -19,45 +33,55 @@
     <!-- Category Breakdown -->
     <div class="report-section">
       <h3>Summary per Category & Task</h3>
-      <div v-if="standardTaskCount === 0" class="empty-report">
-        No standard tasks recorded for this day
-      </div>
-      <div v-else class="category-breakdown">
+      <div v-if="standardTaskCount === 0" class="empty-report">No standard tasks recorded for this day</div>
+      <div v-else class="category-breakdown" data-testid="category-breakdown">
         <div
-            v-for="(categoryData, index) in categoryBreakdown"
-            :key="`${categoryData.name}-${index}`"
-            class="category-section"
+          v-for="(categoryData, index) in categoryBreakdown"
+          :key="`${categoryData.name}-${index}`"
+          class="category-section"
+          data-testid="category-section"
         >
           <div class="category-header">
             <div class="category-info">
               <span class="category-name" :id="`category-name-${index}`">{{ categoryData.name }}</span>
-              <span class="category-tasks">{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span>
+              <span class="category-tasks"
+                >{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span
+              >
             </div>
             <div class="category-time">{{ categoryData.totalTime }}</div>
             <div class="category-bar">
               <div
-                  class="category-progress"
-                  role="progressbar"
-                  :aria-valuenow="clampPercent(categoryData.percentage)"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
-                  :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
-                  :aria-labelledby="`category-name-${index}`"
-                  :style="{ width: clampPercent(categoryData.percentage) + '%' }"
+                class="category-progress"
+                role="progressbar"
+                :aria-valuenow="clampPercent(categoryData.percentage)"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
+                :aria-labelledby="`category-name-${index}`"
+                :style="{ width: clampPercent(categoryData.percentage) + '%' }"
               ></div>
             </div>
           </div>
-          
+
           <!-- Task summaries within category -->
           <ul class="task-summaries">
             <li
-                v-for="(task, index) in categoryData.taskSummaries"
-                :key="task.name ? `${task.name}-${index}` : index"
-                class="task-summary"
+              v-for="(task, index) in categoryData.taskSummaries"
+              :key="task.name ? `${task.name}-${index}` : index"
+              class="task-summary"
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
-              <span class="task-time">{{ task.totalTime }}</span>
+              <span
+                class="task-time-rounded"
+                :title="`Rounded (nearest 5m)`"
+                :aria-label="`Rounded (nearest 5m): ${formatTaskTime(task.totalTime)}`"
+              >
+                {{ formatTaskTime(task.totalTime) }}
+              </span>
+              <span class="task-time-actual" :title="`Actual`" :aria-label="`Actual: ${task.totalTime}`">
+                {{ task.totalTime }}
+              </span>
             </li>
           </ul>
         </div>
@@ -69,6 +93,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TaskRecord } from '@/shared/types'
+import { TASK_TYPE_NORMAL } from '@/shared/types'
 
 interface DailyReportProps {
   taskRecords: TaskRecord[]
@@ -100,21 +125,44 @@ const clampPercent = (p: number): number => {
 
 // Computed properties
 const standardTaskCount = computed(() => {
-  return props.taskRecords.filter(r => r.task_type === 'normal').length
+  return props.taskRecords.filter(r => r.task_type === TASK_TYPE_NORMAL).length
 })
 
 const getStatusText = () => {
   const statusMessages = []
-  
+
   if (!props.hasEndTaskForSelectedDate) {
     statusMessages.push('Day not finalized - missing end task')
   }
-  
-  if (props.totalMinutesTracked >= (props.targetWorkHours * 60)) {
+
+  if (props.totalMinutesTracked >= props.targetWorkHours * 60) {
     statusMessages.push('Daily target work hours reached')
   }
-  
+
   return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
+}
+
+// Format task time to show rounded to nearest 5 minutes
+const formatTaskTime = (timeString: string): string => {
+  const raw = (timeString || '').trim()
+  if (!raw || raw === '-') return '-' // preserve “no data”
+  // Support: "1h 30m", "1h30m", "2h", "45m"
+  const parts = [...raw.matchAll(/(\d+)\s*([hm])/gi)]
+  if (parts.length === 0) return '-'
+  let totalMinutes = 0
+  for (const [, n, unit] of parts) {
+    if (!n || !unit) continue
+    const value = parseInt(n, 10)
+    if (Number.isNaN(value)) continue
+    totalMinutes += unit.toLowerCase() === 'h' ? value * 60 : value
+  }
+  const roundedMinutes = Math.round(totalMinutes / 5) * 5
+  if (roundedMinutes === 0) return '0m'
+  const hours = Math.floor(roundedMinutes / 60)
+  const minutes = roundedMinutes % 60
+  if (hours === 0) return `${minutes}m`
+  if (minutes === 0) return `${hours}h`
+  return `${hours}h ${minutes}m`
 }
 </script>
 
@@ -265,7 +313,7 @@ const getStatusText = () => {
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr minmax(50px, auto) minmax(50px, auto) minmax(50px, auto);
   gap: 12px;
   align-items: center;
   padding: 8px 12px;
@@ -290,12 +338,22 @@ const getStatusText = () => {
   text-align: center;
 }
 
-.task-time {
+.task-time-rounded {
   color: var(--text-secondary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-size: 12px;
   font-weight: 500;
-  min-width: 60px;
+  min-width: 50px;
+  text-align: right;
+}
+
+.task-time-actual {
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 11px;
+  font-weight: 400;
+  opacity: 0.8;
+  min-width: 50px;
   text-align: right;
 }
 </style>

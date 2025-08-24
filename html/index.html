@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="./favicon.ico" sizes="48x48">
+    <link rel="icon" href="./favicon.svg" sizes="any" type="image/svg+xml">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#111827" media="(prefers-color-scheme: dark)">
+      <title>TimeCatcher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        const prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const setting = localStorage.getItem("vueuse-color-scheme") || "auto";
+        if (setting === "dark" || (prefersDark && setting !== "light"))
+          document.documentElement.classList.toggle("dark", true);
+      })();
+    </script>
+    <script>window.METADATA_PATH="html.meta.json.gz"</script>
+      <link rel="stylesheet" href="./assets/index-X8b7Z_4p.css">
+      <script type="module" src="./assets/index-D_ryMEPs.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <noscript>
+        <p style="padding:8px; font-family: system-ui, sans-serif;">
+            JavaScript is required to run TimeCatcher.
+        </p>
+    </noscript>
+  </body>
+</html>

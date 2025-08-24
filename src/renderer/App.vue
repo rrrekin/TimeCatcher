@@ -49,7 +49,7 @@
           :target-work-hours="targetWorkHours"
           :total-time-tracked="getTotalTimeTracked()"
           :total-minutes-tracked="getTotalMinutesTracked()"
-          :category-breakdown="getEnhancedCategoryBreakdown()"
+          :category-breakdown="getEnhancedCategoryBreakdown"
         />
       </div>
     </div>
@@ -70,15 +70,15 @@
       :new-category-name="newCategoryName"
       @close="closeSetupModal"
       @save="saveSettings"
-      @update-temp-theme="(theme) => tempTheme = theme"
-      @update-temp-target-work-hours="(hours) => tempTargetWorkHours = hours"
+      @update-temp-theme="theme => (tempTheme = theme)"
+      @update-temp-target-work-hours="hours => (tempTargetWorkHours = hours)"
       @start-edit-category="startEditCategory"
-      @update-editing-category-name="(name) => editingCategoryName = name"
+      @update-editing-category-name="name => (editingCategoryName = name)"
       @save-edit-category="saveEditCategory"
       @cancel-edit-category="cancelEditCategory"
       @set-default-category="setDefaultCategoryWrapper"
       @delete-category="deleteCategoryWrapper"
-      @update-new-category-name="(name) => newCategoryName = name"
+      @update-new-category-name="name => (newCategoryName = name)"
       @add-category="addCategoryWrapper"
       @cancel-adding-category="cancelAddingCategory"
       @start-adding-category="startAddingCategory"
@@ -109,7 +109,9 @@
         <div class="modal-content">
           <div class="delete-message">
             <p>Are you sure you want to delete this task?</p>
-            <p><strong>"{{ taskToDelete?.task_name }}"</strong></p>
+            <p>
+              <strong>"{{ taskToDelete?.task_name }}"</strong>
+            </p>
             <p class="warning-text">This action cannot be undone.</p>
           </div>
         </div>
@@ -125,15 +127,25 @@
 </template>
 
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, DURATION_VISIBLE_BY_TASK_TYPE, type Category, type TaskRecord, type TaskType, type SpecialTaskType, type TaskRecordWithId} from '../shared/types'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import {
+  SPECIAL_TASK_CATEGORY,
+  SPECIAL_TASK_TYPES,
+  DURATION_VISIBLE_BY_TASK_TYPE,
+  TASK_TYPE_NORMAL,
+  type Category,
+  type TaskRecord,
+  type TaskType,
+  type SpecialTaskType,
+  type TaskRecordWithId,
+} from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
 import { useSettings } from '@/composables/useSettings'
 import { useDurationCalculations } from '@/composables/useDurationCalculations'
 import { useAutoRefresh } from '@/composables/useAutoRefresh'
 import { formatDateString, toYMDLocal as toYMDLocalUtil } from '@/utils/dateUtils'
-import { formatDurationMinutes, parseTimeString } from '@/utils/timeUtils'
+import { formatDurationMinutes, parseTimeString, getLastTaskEndTime } from '@/utils/timeUtils'
 import DateNavigation from '@/components/DateNavigation.vue'
 import TaskList from '@/components/TaskList.vue'
 import DailyReport from '@/components/DailyReport.vue'
@@ -150,8 +162,8 @@ const selectedDate = ref(new Date())
 const isSetupModalOpen = ref(false)
 
 // Composables
-const { 
-  categories, 
+const {
+  categories,
   isLoadingCategories,
   loadCategories,
   addCategory,
@@ -159,7 +171,7 @@ const {
   deleteCategory,
   setDefaultCategory,
   getDefaultCategory,
-  categoryExists
+  categoryExists,
 } = useCategories()
 
 const {
@@ -173,7 +185,7 @@ const {
   addTaskRecord,
   addSpecialTask,
   updateTaskRecord,
-  deleteTaskRecord
+  deleteTaskRecord,
 } = useTaskRecords(selectedDate)
 
 const {
@@ -183,21 +195,13 @@ const {
   tempTargetWorkHours,
   applyTheme,
   saveSettings: saveSettingsComposable,
-  initializeTempSettings
+  initializeTempSettings,
 } = useSettings()
 
-const {
-  sortedTaskRecords,
-  calculateDuration,
-  getTotalMinutesTracked,
-  getCategoryBreakdown
-} = useDurationCalculations(taskRecords)
+const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
+  useDurationCalculations(taskRecords)
 
-const {
-  startAutoRefresh,
-  stopAutoRefresh,
-  restartAutoRefresh
-} = useAutoRefresh(selectedDate, () => {
+const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
   taskRecords.value = [...taskRecords.value] // Trigger reactivity
 })
 
@@ -221,7 +225,7 @@ const showAddTaskForm = ref(false)
 const newTask = ref<NewTaskForm>({
   categoryId: null,
   name: '',
-  time: ''
+  time: '',
 })
 // Loading states
 const isDeletingCategory = ref(false)
@@ -252,10 +256,14 @@ const displayDate = computed(() => {
 })
 
 const dateTitle = computed(() => {
+  // Handle invalid dates gracefully
+  if (isNaN(selectedDate.value.getTime())) {
+    return 'Invalid Date'
+  }
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
-    month: 'long', 
-    day: 'numeric'
+    month: 'long',
+    day: 'numeric',
   }).format(selectedDate.value)
 })
 
@@ -265,10 +273,8 @@ const dateInputValue = computed({
     // Parse as UTC to avoid timezone issues
     const [year, month, day] = value.split('-').map(Number)
     selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
-  }
+  },
 })
-
-
 
 const goToPreviousDay = () => {
   const newDate = new Date(selectedDate.value)
@@ -443,7 +449,6 @@ const setDefaultCategoryWrapper = async (category: Category) => {
   }
 }
 
-
 // Task record management functions - wrappers with UI state management
 const loadTaskRecordsWrapper = async () => {
   try {
@@ -470,11 +475,16 @@ const addTask = async () => {
     const dateString = toYMDLocalUtil(selectedDate.value)
     let timeString: string
 
-    try {
-      timeString = parseTimeInput(newTask.value.time)
-    } catch (timeError) {
-      showToastMessage((timeError as Error).message, 'error')
-      return
+    // Use current time if no time is specified, otherwise parse the provided time
+    if (!newTask.value.time.trim()) {
+      timeString = getCurrentTime()
+    } else {
+      try {
+        timeString = parseTimeInput(newTask.value.time)
+      } catch (timeError) {
+        showToastMessage((timeError as Error).message, 'error')
+        return
+      }
     }
 
     const taskRecord = {
@@ -482,7 +492,7 @@ const addTask = async () => {
       task_name: newTask.value.name,
       start_time: timeString,
       date: dateString,
-      task_type: 'normal' as TaskType
+      task_type: TASK_TYPE_NORMAL,
     }
 
     await addTaskRecord(taskRecord)
@@ -546,18 +556,25 @@ const initializeNewTask = () => {
   newTask.value.time = ''
 }
 
-
 // Watch for date changes to reload task records and manage auto-refresh
-watch(selectedDate, async () => {
-  // Stop any existing auto-refresh first
-  stopAutoRefresh()
-  
-  // Await loading the new task records
-  await loadTaskRecordsWrapper()
-  
-  // Start auto-refresh if we're viewing today
-  startAutoRefresh()
-}, {immediate: false})
+watch(
+  selectedDate,
+  async () => {
+    // Stop any existing auto-refresh first
+    stopAutoRefresh()
+
+    // Await loading the new task records
+    await loadTaskRecordsWrapper()
+
+    // Start auto-refresh if we're viewing today
+    const todayString = toYMDLocalUtil(new Date())
+    const selectedDateString = toYMDLocalUtil(selectedDate.value)
+    if (selectedDateString === todayString) {
+      startAutoRefresh()
+    }
+  },
+  { immediate: false }
+)
 
 onMounted(async () => {
   // Listen for system theme changes when in auto mode
@@ -574,31 +591,47 @@ onMounted(async () => {
   }
 
   // Wait a moment for database initialization to complete, then load categories
-  console.log('App mounted, waiting for database initialization...')
+  if (import.meta.env.DEV) {
+    console.log('App mounted, waiting for database initialization...')
+  }
   await new Promise(resolve => setTimeout(resolve, 1000))
 
-  console.log('Loading categories and initializing task form...')
+  if (import.meta.env.DEV) {
+    console.log('Loading categories and initializing task form...')
+  }
   await loadCategoriesWrapper()
   initializeNewTask()
 
   // Load task records for today
-  console.log('Loading task records...')
+  if (import.meta.env.DEV) {
+    console.log('Loading task records...')
+  }
   await loadTaskRecordsWrapper()
-  console.log('App initialization complete')
-  
+  if (import.meta.env.DEV) {
+    console.log('App initialization complete')
+  }
+
   // Start auto-refresh for today's tasks
-  startAutoRefresh()
+  const todayString = toYMDLocalUtil(new Date())
+  const selectedDateString = toYMDLocalUtil(selectedDate.value)
+  if (selectedDateString === todayString) {
+    startAutoRefresh()
+  }
 
   // Add click outside listener for custom dropdown
-  document.addEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', handleClickOutside)
+  }
 })
 
 onUnmounted(() => {
   // Stop auto-refresh
   stopAutoRefresh()
-  
+
   // Clean up click outside event listener
-  document.removeEventListener('click', handleClickOutside)
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('click', handleClickOutside)
+  }
 
   // Clean up media query listener with fallback for older browsers
   if (mediaQueryList && mediaQueryHandler) {
@@ -635,7 +668,7 @@ const replayTask = async (record: TaskRecordWithId) => {
     }
 
     // Prevent replaying special tasks
-    if (record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY) {
+    if (record.task_type !== TASK_TYPE_NORMAL || record.category_name === SPECIAL_TASK_CATEGORY) {
       showToastMessage('Special tasks cannot be replayed.', 'error')
       return
     }
@@ -649,15 +682,15 @@ const replayTask = async (record: TaskRecordWithId) => {
       task_name: record.task_name,
       start_time: timeString,
       date: dateString,
-      task_type: 'normal' as TaskType
+      task_type: TASK_TYPE_NORMAL,
     }
 
     await addTaskRecord(taskRecord)
-    
+
     // Check if the user is viewing today's date
     const todayString = toYMDLocalUtil(now)
     const selectedDateString = toYMDLocalUtil(selectedDate.value)
-    
+
     if (selectedDateString !== todayString) {
       // Automatically switch to today to show the replayed task
       selectedDate.value = now
@@ -676,7 +709,11 @@ const replayTask = async (record: TaskRecordWithId) => {
 // and actual updates happen on blur/enter events via handleBlur
 
 // Common task field update logic extracted from handleBlur and handleCategoryChange
-const updateTaskField = async (recordId: number | undefined, updates: Record<string, any>, successMessage: string = 'Task updated successfully!') => {
+const updateTaskField = async (
+  recordId: number | undefined,
+  updates: Record<string, any>,
+  successMessage: string = 'Task updated successfully!'
+) => {
   if (recordId === undefined) {
     console.error('Record ID is undefined')
     return
@@ -689,7 +726,10 @@ const updateTaskField = async (recordId: number | undefined, updates: Record<str
     }
 
     if (!window.electronAPI.updateTaskRecord) {
-      showToastMessage('Update function not available. Please restart the application to enable inline editing.', 'error')
+      showToastMessage(
+        'Update function not available. Please restart the application to enable inline editing.',
+        'error'
+      )
       await loadTaskRecordsWrapper()
       return
     }
@@ -762,7 +802,7 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
         await loadTaskRecordsWrapper()
         return
       }
-      
+
       // Use parseTimeInput for consistent validation and formatting
       processedValue = parseTimeInput(value)
     } catch (timeError) {
@@ -797,7 +837,7 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
     return
   }
 
-  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 const convertToTimeInput = (timeString: string): string => {
@@ -805,24 +845,21 @@ const convertToTimeInput = (timeString: string): string => {
   if (!timeString) return ''
 
   const parts = timeString.split(':')
-  
+
   // Validate and normalize the parts
   if (parts.length >= 2) {
     const hours = parseInt(parts[0] || '0', 10)
     const minutes = parseInt(parts[1] || '0', 10)
-    
+
     // Validate ranges
     if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
       // Return HH:MM format for HTML time input (no seconds needed)
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
     }
   }
-  
+
   return ''
 }
-
-
-
 
 // Delete task functions
 const confirmDeleteTask = (record: TaskRecordWithId) => {
@@ -907,7 +944,7 @@ const selectInlineCategory = async (recordId: number | undefined, categoryName: 
   showInlineDropdown.value[recordId] = false
 
   // Update the category
-  await updateTaskField(recordId, {category_name: categoryName}, 'Category updated successfully!')
+  await updateTaskField(recordId, { category_name: categoryName }, 'Category updated successfully!')
 }
 
 // Close dropdown when clicking outside
@@ -922,7 +959,6 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-
 // Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
 let autoRefreshInterval: number | null = null
 
@@ -933,76 +969,114 @@ const getTotalTimeTracked = (): string => {
   return formatDurationMinutes(getTotalMinutesTracked())
 }
 
-// Enhanced category breakdown for the template (includes task summaries)
-const getEnhancedCategoryBreakdown = () => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
-  if (standardRecords.length === 0) return []
+// Helper function to parse duration strings back to minutes
+const parseDurationToMinutes = (durationStr: string): number => {
+  let totalMinutes = 0
+
+  // Match hours (e.g., "1h", "2h")
+  const hoursMatch = durationStr.match(/(\d+)h/)
+  if (hoursMatch && hoursMatch[1]) {
+    totalMinutes += parseInt(hoursMatch[1]) * 60
+  }
+
+  // Match minutes (e.g., "30m", "45m")
+  const minutesMatch = durationStr.match(/(\d+)m/)
+  if (minutesMatch && minutesMatch[1]) {
+    totalMinutes += parseInt(minutesMatch[1])
+  }
+
+  return totalMinutes
+}
+
+const getEnhancedCategoryBreakdown = computed(() => {
+  if (taskRecords.value.length === 0) return []
 
   const categoryMap = new Map()
-  
-  // Initialize category tracking with task summaries (only for standard tasks)
-  for (const record of standardRecords) {
+
+  // Iterate over all task records to respect special-task boundaries
+  for (let i = 0; i < taskRecords.value.length; i++) {
+    const record = taskRecords.value[i]
+    if (!record || record.task_type !== TASK_TYPE_NORMAL) continue
+
     if (!categoryMap.has(record.category_name)) {
       categoryMap.set(record.category_name, {
-        name: record.category_name,
-        totalMinutes: 0,
-        taskCount: 0,
-        tasks: new Map() // Track individual tasks within category
+        tasks: new Map<string, any>(),
       })
     }
-    
+
     const category = categoryMap.get(record.category_name)
-    category.taskCount++
-    
+
     // Track individual task occurrences
     if (!category.tasks.has(record.task_name)) {
       category.tasks.set(record.task_name, {
         name: record.task_name,
         count: 0,
         totalMinutes: 0,
-        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
+        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime(),
       })
     }
-    category.tasks.get(record.task_name).count++
+
+    const task = category.tasks.get(record.task_name)
+    task.count++
+
+    // Calculate duration using all records as boundaries
+    const currentTime = parseTimeString(record.start_time)
+    if (currentTime !== null) {
+      const nextRecord = i < taskRecords.value.length - 1 ? taskRecords.value[i + 1] : null
+
+      let durationMinutes = 0
+      if (nextRecord) {
+        const nextTime = parseTimeString(nextRecord.start_time)
+        if (nextTime !== null && nextTime > currentTime) {
+          durationMinutes = nextTime - currentTime
+        }
+      } else {
+        const endTime = getLastTaskEndTime(record.date, currentTime)
+        durationMinutes = Math.max(0, endTime - currentTime)
+      }
+
+      task.totalMinutes += Math.floor(durationMinutes)
+    }
   }
 
-  // Use the composable's category breakdown for duration calculations
+  // Use the composable's category breakdown for category-level totals
   const baseCategoryBreakdown = getCategoryBreakdown()
-  
-  // Enhance with task summaries
+
   return baseCategoryBreakdown.map(category => {
     const categoryData = categoryMap.get(category.categoryName)
     return {
       ...category,
       name: category.categoryName,
       totalTime: formatDurationMinutes(category.minutes),
-      taskCount: categoryData ? categoryData.taskCount : 0,
-      taskSummaries: categoryData ? Array.from(categoryData.tasks.values())
-        .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
-        .map((task: any) => ({
-          ...task,
-          totalTime: `${Math.floor(task.totalMinutes / 60)}h ${task.totalMinutes % 60}m`
-        })) : []
+      taskCount: categoryData
+        ? Array.from(categoryData.tasks.values()).reduce((sum: number, task: any) => sum + (task.count || 0), 0)
+        : 0,
+      taskSummaries: categoryData
+        ? Array.from(categoryData.tasks.values())
+            .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
+            .map((task: any) => ({
+              ...task,
+              totalTime: formatDurationMinutes(task.totalMinutes),
+            }))
+        : [],
     }
   })
-}
-
+})
 
 const getUniqueCategoriesCount = (): number => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
   const uniqueCategories = new Set(standardRecords.map(record => record.category_name))
   return uniqueCategories.size
 }
 
-
 const getSortedTaskRecords = () => {
   return taskRecords.value
-      .filter(record => record.start_time && record.start_time.trim() !== '')
-      .sort((a, b) => {
-        const timeA = parseTimeString(a.start_time) || 0
-        const timeB = parseTimeString(b.start_time) || 0
-        return timeA - timeB
-      })
+    .filter(record => record.start_time && record.start_time.trim() !== '')
+    .sort((a, b) => {
+      const timeA = parseTimeString(a.start_time) || 0
+      const timeB = parseTimeString(b.start_time) || 0
+      return timeA - timeB
+    })
 }
 
 const formatTime12Hour = (timeString: string): string => {
@@ -1021,9 +1095,6 @@ const formatTime12Hour = (timeString: string): string => {
 
   return `${hour12}:${minutes} ${period}`
 }
-
-
-
 </script>
 
 <style>
@@ -1039,6 +1110,8 @@ const formatTime12Hour = (timeString: string): string => {
   --accent: var(--aero);
   --success: var(--mantis);
   --neutral: var(--asparagus);
+  --error: var(--asparagus);
+  --warning: var(--aero);
 
   --bg-primary: #ffffff;
   --bg-secondary: #f8fffe;
@@ -1047,6 +1120,9 @@ const formatTime12Hour = (timeString: string): string => {
   --text-muted: #7a9184;
   --border-color: #e0ede8;
   --shadow-color: rgba(87, 189, 175, 0.1);
+  --focus-shadow: rgba(87, 189, 175, 0.2);
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
 }
 
 body {
@@ -1163,7 +1239,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   flex-shrink: 0;
 }
 
@@ -1182,11 +1258,11 @@ body {
 }
 
 .toast-error {
-  border-left: 4px solid #ff4757;
+  border-left: 4px solid var(--error);
 }
 
 .toast-error .toast-icon {
-  background: #ff4757;
+  background: var(--error);
   color: white;
 }
 
@@ -1252,7 +1328,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background 0.2s ease;
+  transition: background var(--transition-fast);
 }
 
 .close-btn:hover:not(:disabled) {
@@ -1277,13 +1353,14 @@ body {
   border-top: 1px solid var(--border-color);
 }
 
-.cancel-btn, .save-btn {
+.cancel-btn,
+.save-btn {
   padding: 0.5rem 1.5rem;
   border: none;
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 0.9rem;
 }
 
@@ -1356,7 +1433,7 @@ body {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 0.9rem;
   background: var(--mantis);
   color: white;

@@ -111,7 +111,7 @@ export function useCategories() {
 
   const categoryExists = async (name: string): Promise<boolean> => {
     const trimmedName = name.trim()
-    
+
     // Short-circuit for empty names - no IPC needed
     if (!trimmedName) {
       return false
@@ -138,6 +138,6 @@ export function useCategories() {
     deleteCategory,
     setDefaultCategory,
     getDefaultCategory,
-    categoryExists
+    categoryExists,
   }
 }

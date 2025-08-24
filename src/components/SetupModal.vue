@@ -3,8 +3,13 @@
     <div class="modal" @click.stop role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-header">
         <h3 id="modal-title">Settings</h3>
-        <button class="close-btn" @click="canClose && $emit('close')" :disabled="!canClose"
-                aria-label="Close settings modal">×
+        <button
+          class="close-btn"
+          @click="canClose && $emit('close')"
+          :disabled="!canClose"
+          aria-label="Close settings modal"
+        >
+          ×
         </button>
       </div>
 
@@ -13,23 +18,23 @@
           <h4>Theme</h4>
           <div class="theme-buttons">
             <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'light' }"
-                @click="$emit('updateTempTheme', 'light')"
+              class="theme-btn"
+              :class="{ active: tempTheme === 'light' }"
+              @click="$emit('updateTempTheme', 'light')"
             >
               Light
             </button>
             <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'dark' }"
-                @click="$emit('updateTempTheme', 'dark')"
+              class="theme-btn"
+              :class="{ active: tempTheme === 'dark' }"
+              @click="$emit('updateTempTheme', 'dark')"
             >
               Dark
             </button>
             <button
-                class="theme-btn"
-                :class="{ active: tempTheme === 'auto' }"
-                @click="$emit('updateTempTheme', 'auto')"
+              class="theme-btn"
+              :class="{ active: tempTheme === 'auto' }"
+              @click="$emit('updateTempTheme', 'auto')"
             >
               Auto
             </button>
@@ -63,46 +68,43 @@
             </div>
             <div class="categories-list" v-else>
               <div
-                  v-for="(category, index) in categories"
-                  :key="category.id ? category.id : `category-${index}`"
-                  class="category-item"
-                  @dblclick="$emit('startEditCategory', category)"
-                  title="Double-click to edit"
-                  :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
+                v-for="(category, index) in categories"
+                :key="category.id ?? `name-${category.name}-${index}`"
+                class="category-item"
+                @dblclick="$emit('startEditCategory', category)"
+                title="Double-click to edit"
+                :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
               >
                 <input
-                    v-if="editingCategoryId === category.id"
-                    :value="editingCategoryName"
-                    @input="$emit('updateEditingCategoryName', ($event.target as HTMLInputElement).value)"
-                    @keyup.enter="$emit('saveEditCategory', category)"
-                    @keyup.escape="handleEscapeCancel"
-                    @blur="handleBlurSave(category)"
-                    class="category-input"
-                    autofocus
+                  v-if="editingCategoryId === category.id"
+                  :value="editingCategoryName"
+                  @input="$emit('updateEditingCategoryName', ($event.target as HTMLInputElement).value)"
+                  @keyup.enter="$emit('saveEditCategory', category)"
+                  @keyup.escape="handleEscapeCancel"
+                  @blur="handleBlurSave(category)"
+                  class="category-input"
+                  autofocus
                 />
-                <span
-                    v-else
-                    class="category-name"
-                >
+                <span v-else class="category-name">
                   {{ category.name }}
                 </span>
                 <div class="category-actions">
                   <button
-                      class="default-category-btn"
-                      @click="$emit('setDefaultCategory', category)"
-                      @dblclick.stop
-                      :class="{ active: category.is_default }"
-                      title="Set as default category"
-                      :disabled="isAddingCategory || editingCategoryId === category.id || isSettingDefault"
+                    class="default-category-btn"
+                    @click="$emit('setDefaultCategory', category)"
+                    @dblclick.stop
+                    :class="{ active: category.is_default }"
+                    title="Set as default category"
+                    :disabled="isAddingCategory || editingCategoryId === category.id || isSettingDefault"
                   >
                     ✓
                   </button>
                   <button
-                      class="delete-category-btn"
-                      @click="$emit('deleteCategory', category)"
-                      @dblclick.stop
-                      title="Delete category"
-                      :disabled="isAddingCategory || editingCategoryId === category.id || isDeletingCategory"
+                    class="delete-category-btn"
+                    @click="$emit('deleteCategory', category)"
+                    @dblclick.stop
+                    title="Delete category"
+                    :disabled="isAddingCategory || editingCategoryId === category.id || isDeletingCategory"
                   >
                     ×
                   </button>
@@ -111,13 +113,13 @@
 
               <div v-if="isAddingCategory" class="add-category-form">
                 <input
-                    :value="newCategoryName"
-                    @input="$emit('updateNewCategoryName', ($event.target as HTMLInputElement).value)"
-                    @keyup.enter="$emit('addCategory')"
-                    @keyup.escape="$emit('cancelAddingCategory')"
-                    placeholder="Category name"
-                    class="category-input"
-                    autofocus
+                  :value="newCategoryName"
+                  @input="$emit('updateNewCategoryName', ($event.target as HTMLInputElement).value)"
+                  @keyup.enter="$emit('addCategory')"
+                  @keyup.escape="$emit('cancelAddingCategory')"
+                  placeholder="Category name"
+                  class="category-input"
+                  autofocus
                 />
                 <div class="add-category-actions">
                   <button class="add-confirm-btn" @click="$emit('addCategory')">Add</button>
@@ -126,11 +128,7 @@
               </div>
             </div>
 
-            <button
-                v-if="!isAddingCategory"
-                class="add-category-btn"
-                @click="$emit('startAddingCategory')"
-            >
+            <button v-if="!isAddingCategory" class="add-category-btn" @click="$emit('startAddingCategory')">
               + Add Category
             </button>
           </div>
@@ -138,12 +136,8 @@
       </div>
 
       <div class="modal-footer">
-        <button class="cancel-btn" @click="$emit('close')" :disabled="isBusy">
-          Cancel
-        </button>
-        <button class="save-btn" @click="$emit('save')" :disabled="isBusy">
-          Save
-        </button>
+        <button class="cancel-btn" @click="$emit('close')" :disabled="isBusy">Cancel</button>
+        <button class="save-btn" @click="$emit('save')" :disabled="isBusy">Save</button>
       </div>
     </div>
   </div>
@@ -157,52 +151,52 @@ import type { Category } from '@/shared/types'
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    required: true
+    required: true,
   },
   tempTheme: {
     type: String as PropType<'light' | 'dark' | 'auto'>,
-    required: true
+    required: true,
   },
   tempTargetWorkHours: {
     type: Number,
-    required: true
+    required: true,
   },
   categories: {
     type: Array as PropType<Category[]>,
-    required: true
+    required: true,
   },
   isLoadingCategories: {
     type: Boolean,
-    required: true
+    required: true,
   },
   isAddingCategory: {
     type: Boolean,
-    required: true
+    required: true,
   },
   isUpdatingCategory: {
     type: Boolean,
-    required: true
+    required: true,
   },
   isDeletingCategory: {
     type: Boolean,
-    required: true
+    required: true,
   },
   isSettingDefault: {
     type: Boolean,
-    required: true
+    required: true,
   },
   editingCategoryId: {
     type: Number as PropType<number | null>,
-    required: true
+    required: true,
   },
   editingCategoryName: {
     type: String,
-    required: true
+    required: true,
   },
   newCategoryName: {
     type: String,
-    required: true
-  }
+    required: true,
+  },
 })
 
 // Emits
@@ -227,11 +221,8 @@ const emit = defineEmits<{
 const isCancellingEdit = ref(false)
 
 // Computed property to track if any operation is in progress
-const isBusy = computed(() => 
-  props.isAddingCategory || 
-  props.isUpdatingCategory || 
-  props.isDeletingCategory || 
-  props.isSettingDefault
+const isBusy = computed(
+  () => props.isAddingCategory || props.isUpdatingCategory || props.isDeletingCategory || props.isSettingDefault
 )
 
 // Computed property to determine if modal can be closed
@@ -433,8 +424,12 @@ function handleBlurSave(category: Category) {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .categories-list {
@@ -494,7 +489,8 @@ function handleBlurSave(category: Category) {
   gap: 4px;
 }
 
-.default-category-btn, .delete-category-btn {
+.default-category-btn,
+.delete-category-btn {
   background: none;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -549,7 +545,8 @@ function handleBlurSave(category: Category) {
   gap: 8px;
 }
 
-.add-confirm-btn, .add-cancel-btn {
+.add-confirm-btn,
+.add-cancel-btn {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -603,7 +600,8 @@ function handleBlurSave(category: Category) {
   border-top: 1px solid var(--border-color);
 }
 
-.cancel-btn, .save-btn {
+.cancel-btn,
+.save-btn {
   padding: 10px 20px;
   border-radius: 6px;
   cursor: pointer;
@@ -631,7 +629,8 @@ function handleBlurSave(category: Category) {
   background: var(--emerald);
 }
 
-.cancel-btn:disabled, .save-btn:disabled {
+.cancel-btn:disabled,
+.save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

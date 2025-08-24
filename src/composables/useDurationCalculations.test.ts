@@ -47,7 +47,7 @@ vi.mock('@/utils/timeUtils', () => ({
     } else {
       return taskStartTime // future date, duration = 0
     }
-  })
+  }),
 }))
 
 describe('useDurationCalculations', () => {
@@ -61,7 +61,7 @@ describe('useDurationCalculations', () => {
     vi.useFakeTimers()
 
     vi.setSystemTime(new Date('2024-01-15T10:30:00'))
-     taskRecords = ref([])
+    taskRecords = ref([])
     composable = useDurationCalculations(taskRecords)
   })
 
@@ -78,7 +78,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -86,8 +86,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const sorted = composable.sortedTaskRecords.value
@@ -103,7 +103,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -111,7 +111,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 3,
@@ -119,8 +119,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 3',
           start_time: '11:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const sorted = composable.sortedTaskRecords.value
@@ -138,7 +138,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -146,7 +146,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: 'invalid',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 3,
@@ -154,8 +154,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 3',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const sorted = composable.sortedTaskRecords.value
@@ -174,7 +174,7 @@ describe('useDurationCalculations', () => {
         task_name: 'End Task',
         start_time: '17:00',
         date: '2024-01-15',
-        task_type: 'end'
+        task_type: 'end',
       }
 
       taskRecords.value = [endTaskRecord]
@@ -191,7 +191,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -199,8 +199,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '10:30',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       // Use the task from the reactive array, not a separate object
@@ -215,7 +215,7 @@ describe('useDurationCalculations', () => {
         task_name: 'Invalid Task',
         start_time: 'invalid',
         date: '2024-01-15',
-        task_type: 'normal'
+        task_type: 'normal',
       }
 
       taskRecords.value = [invalidTask]
@@ -232,7 +232,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -240,8 +240,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const duration = composable.calculateDuration(taskRecords.value[0]!)
@@ -256,8 +256,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Last Task',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const duration = composable.calculateDuration(taskRecords.value[0]!)
@@ -277,7 +277,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Normal Task',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -285,7 +285,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Pause Task',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'pause'
+          task_type: 'pause',
         },
         {
           id: 3,
@@ -293,8 +293,8 @@ describe('useDurationCalculations', () => {
           task_name: 'End Task',
           start_time: '10:30',
           date: '2024-01-15',
-          task_type: 'end'
-        }
+          task_type: 'end',
+        },
       ]
 
       const total = composable.getTotalMinutesTracked()
@@ -310,7 +310,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -318,7 +318,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 3,
@@ -326,8 +326,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 3',
           start_time: '11:30',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const total = composable.getTotalMinutesTracked()
@@ -345,8 +345,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Pause Task',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'pause'
-        }
+          task_type: 'pause',
+        },
       ]
 
       const total = composable.getTotalMinutesTracked()
@@ -363,7 +363,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -371,7 +371,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 3,
@@ -379,8 +379,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 3',
           start_time: '11:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const breakdown = composable.getCategoryBreakdown()
@@ -407,7 +407,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -415,8 +415,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '11:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const breakdown = composable.getCategoryBreakdown()
@@ -441,7 +441,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 1',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 2,
@@ -449,7 +449,7 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 2',
           start_time: '09:30',
           date: '2024-01-15',
-          task_type: 'normal'
+          task_type: 'normal',
         },
         {
           id: 3,
@@ -457,8 +457,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Task 3',
           start_time: '10:00',
           date: '2024-01-15',
-          task_type: 'normal'
-        }
+          task_type: 'normal',
+        },
       ]
 
       const breakdown = composable.getCategoryBreakdown()
@@ -481,8 +481,8 @@ describe('useDurationCalculations', () => {
           task_name: 'Pause Task',
           start_time: '09:00',
           date: '2024-01-15',
-          task_type: 'pause'
-        }
+          task_type: 'pause',
+        },
       ]
 
       const breakdown = composable.getCategoryBreakdown()

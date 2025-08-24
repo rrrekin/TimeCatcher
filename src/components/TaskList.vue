@@ -1,66 +1,74 @@
 <template>
   <div class="task-table" ref="taskTableRef">
     <table aria-label="Task records">
+      <colgroup>
+        <col style="width: 120px" />
+        <col />
+        <col style="width: 80px" />
+        <col style="width: 70px" />
+        <col style="width: 99px" />
+      </colgroup>
       <thead>
-      <tr>
-        <th scope="col">Category</th>
-        <th scope="col">Task</th>
-        <th scope="col">Start time</th>
-        <th scope="col">Duration</th>
-        <th scope="col">Actions</th>
-      </tr>
+        <tr>
+          <th scope="col">Category</th>
+          <th scope="col">Task</th>
+          <th scope="col">Start time</th>
+          <th scope="col">Duration</th>
+          <th scope="col">Actions</th>
+        </tr>
       </thead>
       <tbody>
-      <tr v-if="isLoadingTasks">
-        <td colspan="5" class="loading-cell">
-          <div class="loading-indicator" role="status" aria-busy="true">
-            <span class="loading-spinner" aria-hidden="true"></span>
-            Loading tasks...
-          </div>
-        </td>
-      </tr>
-      <tr v-else-if="taskRecords.length === 0">
-        <td colspan="5" class="empty-cell">
-          No tasks recorded for {{ displayDate }}
-        </td>
-      </tr>
-      <tr v-else v-for="record in taskRecords" :key="record.id" 
-          :class="{ 
+        <tr v-if="isLoadingTasks">
+          <td colspan="5" class="loading-cell">
+            <div class="loading-indicator" role="status" aria-busy="true">
+              <span class="loading-spinner" aria-hidden="true"></span>
+              Loading tasks...
+            </div>
+          </td>
+        </tr>
+        <tr v-else-if="taskRecords.length === 0">
+          <td colspan="5" class="empty-cell">No tasks recorded for {{ displayDate }}</td>
+        </tr>
+        <tr
+          v-else
+          v-for="record in taskRecords"
+          :key="record.id"
+          :class="{
             'special-task-row': isSpecial(record.task_type),
-            'pause-task-row': record.task_type === 'pause',
-            'end-task-row': record.task_type === 'end'
-          }">
-        <!-- Special task layout: merged category + task columns -->
-        <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
-          {{ record.task_name }}
-        </td>
-        <!-- Normal task layout: separate category and task columns -->
-        <template v-else>
-          <td>
-            <div class="custom-dropdown table-dropdown"
-                 :class="{ open: showInlineDropdown[record.id] }">
-              <button 
-                type="button"
-                class="dropdown-trigger" 
-                :id="`${componentId}-dropdown-trigger-${record.id}`"
-                @click="handleInlineDropdownToggle(record.id, record.category_name)"
-                :aria-expanded="!!showInlineDropdown[record.id]"
-                :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
-                aria-haspopup="listbox"
-              >
-                <span class="dropdown-value">{{ record.category_name }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </button>
-              <div 
-                v-if="showInlineDropdown[record.id]" 
-                class="dropdown-menu"
-                role="listbox"
-                :id="`${componentId}-dropdown-menu-${record.id}`"
-                :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
-                @keydown="handleDropdownKeydown($event, record.id)"
-                tabindex="-1"
-              >
+            'pause-task-row': record.task_type === TASK_TYPE_PAUSE,
+            'end-task-row': record.task_type === TASK_TYPE_END,
+          }"
+        >
+          <!-- Special task layout: merged category + task columns -->
+          <td v-if="isSpecial(record.task_type)" colspan="2" class="special-task-cell">
+            {{ record.task_name }}
+          </td>
+          <!-- Normal task layout: separate category and task columns -->
+          <template v-else>
+            <td>
+              <div class="custom-dropdown table-dropdown" :class="{ open: showInlineDropdown[record.id] }">
+                <button
+                  type="button"
+                  class="dropdown-trigger"
+                  :id="`${componentId}-dropdown-trigger-${record.id}`"
+                  @click="handleInlineDropdownToggle(record.id, record.category_name)"
+                  :aria-expanded="!!showInlineDropdown[record.id]"
+                  :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
+                  aria-haspopup="listbox"
+                >
+                  <span class="dropdown-value">{{ record.category_name }}</span>
+                  <span class="dropdown-arrow">▼</span>
+                </button>
                 <div
+                  v-if="showInlineDropdown[record.id]"
+                  class="dropdown-menu"
+                  role="listbox"
+                  :id="`${componentId}-dropdown-menu-${record.id}`"
+                  :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
+                  @keydown="handleDropdownKeydown($event, record.id)"
+                  tabindex="-1"
+                >
+                  <div
                     v-for="(category, index) in categories"
                     :key="category.id ?? `inline-cat-${category.name}-${index}`"
                     class="dropdown-item"
@@ -71,14 +79,14 @@
                     :data-record-id="record.id"
                     :data-index="index"
                     @click="handleCategorySelection(record.id, category.name)"
-                >
-                  {{ category.name }}
+                  >
+                    {{ category.name }}
+                  </div>
                 </div>
               </div>
-            </div>
-          </td>
-          <td>
-            <input
+            </td>
+            <td>
+              <input
                 type="text"
                 :value="record.task_name"
                 @blur="$emit('handleBlur', record.id, 'task_name', $event)"
@@ -86,68 +94,75 @@
                 @keydown="handleEscapeCancel($event, record.task_name)"
                 class="editable-cell editable-input"
                 placeholder="Task name"
-            />
-          </td>
-        </template>
-        <td>
-          <input
-              type="time"
+              />
+            </td>
+          </template>
+          <td>
+            <input
+              :type="record.start_time.trim() ? 'time' : 'text'"
               step="60"
               :value="convertToTimeInput(record.start_time)"
+              :placeholder="record.start_time.trim() ? '' : 'HH:MM'"
               @blur="$emit('handleBlur', record.id, 'start_time', $event)"
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
-              class="editable-cell time-input"
-          />
-        </td>
-        <!-- Duration column (visibility based on task type) -->
-        <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
-          {{ calculateDuration(record) }}
-        </td>
-        <td v-else class="duration-cell" data-test="task-duration">-</td>
-        <td class="actions-cell">
-          <button 
-            v-if="record.task_type !== 'pause' && record.task_type !== 'end'" 
-            class="action-btn replay-btn" 
-            @click="$emit('replayTask', record)" 
-            title="Replay this task for today" 
-            aria-label="Replay this task"
-          >
-            ▶▶︎
-          </button>
-          <button class="action-btn delete-btn" @click="$emit('confirmDeleteTask', record)" title="Delete this task" aria-label="Delete this task">
-            🗑
-          </button>
-        </td>
-      </tr>
-      
-      <!-- Add task form row (always visible at bottom) -->
-      <tr class="add-task-row">
-        <td>
-          <div class="custom-dropdown table-dropdown add-task-dropdown"
-               :class="{ open: showFormCategoryDropdown }">
-            <button 
-              type="button"
-              class="dropdown-trigger" 
-              :id="formDropdownTriggerId"
-              @click="handleFormDropdownToggle"
-              :aria-expanded="showFormCategoryDropdown"
-              :aria-controls="formDropdownMenuId"
-              aria-haspopup="listbox"
+              :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
+              :pattern="!record.start_time.trim() ? '^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$' : ''"
+              :maxlength="!record.start_time.trim() ? 5 : 0"
+            />
+          </td>
+          <!-- Duration column (visibility based on task type) -->
+          <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
+            {{ calculateDuration(record) }}
+          </td>
+          <td v-else class="duration-cell" data-test="task-duration">-</td>
+          <td class="actions-cell">
+            <button
+              v-if="record.task_type !== TASK_TYPE_PAUSE && record.task_type !== TASK_TYPE_END"
+              class="action-btn replay-btn"
+              @click="$emit('replayTask', record)"
+              title="Replay this task for today"
+              aria-label="Replay this task"
             >
-              <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
-              <span class="dropdown-arrow">▼</span>
+              ▶▶︎
             </button>
-            <div 
-              v-if="showFormCategoryDropdown" 
-              class="dropdown-menu"
-              role="listbox"
-              :id="formDropdownMenuId"
-              :aria-labelledby="formDropdownTriggerId"
-              @keydown="handleFormDropdownKeydown"
-              tabindex="-1"
+            <button
+              class="action-btn delete-btn"
+              @click="$emit('confirmDeleteTask', record)"
+              title="Delete this task"
+              aria-label="Delete this task"
             >
+              🗑
+            </button>
+          </td>
+        </tr>
+
+        <!-- Add task form row (always visible at bottom) -->
+        <tr class="add-task-row">
+          <td>
+            <div class="custom-dropdown table-dropdown add-task-dropdown" :class="{ open: showFormCategoryDropdown }">
+              <button
+                type="button"
+                class="dropdown-trigger"
+                :id="formDropdownTriggerId"
+                @click="handleFormDropdownToggle"
+                :aria-expanded="showFormCategoryDropdown"
+                :aria-controls="formDropdownMenuId"
+                aria-haspopup="listbox"
+              >
+                <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
+                <span class="dropdown-arrow">▼</span>
+              </button>
               <div
+                v-if="showFormCategoryDropdown"
+                class="dropdown-menu"
+                role="listbox"
+                :id="formDropdownMenuId"
+                :aria-labelledby="formDropdownTriggerId"
+                @keydown="handleFormDropdownKeydown"
+                tabindex="-1"
+              >
+                <div
                   v-for="(category, index) in categories"
                   :key="category.id ?? `form-cat-${category.name}-${index}`"
                   class="dropdown-item"
@@ -157,61 +172,55 @@
                   :tabindex="formListbox.getActiveIndex('form') === index ? '0' : '-1'"
                   :data-option-index="index"
                   @click="handleFormCategorySelection(category)"
-              >
-                {{ category.name }}
+                >
+                  {{ category.name }}
+                </div>
               </div>
             </div>
-          </div>
-        </td>
-        <td>
-          <input
+          </td>
+          <td>
+            <input
               type="text"
               :value="newTask.name"
               @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
               @keydown.enter.prevent="onAddTaskEnter"
               class="editable-cell add-task-input"
               placeholder="Enter task name..."
-          />
-        </td>
-        <td>
-          <div class="time-input-container">
-            <input
-                type="time"
-                step="60"
-                :value="newTask.time"
-                @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
-                @keydown.enter.prevent="onAddTaskEnter"
-                v-bind="!newTask.time ? { 'aria-describedby': `time-hint-${componentId}` } : {}"
-                class="editable-cell time-input"
             />
-            <span v-if="!newTask.time" class="current-time-hint" :id="`time-hint-${componentId}`">{{ getCurrentTime() }}</span>
-          </div>
-        </td>
-        <td class="duration-cell">-</td>
-        <td class="actions-cell">
-          <button 
-            class="action-btn add-btn" 
-            @click="handleAddTask" 
-            :disabled="!isAddTaskValid"
-            :aria-disabled="!isAddTaskValid"
-            :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
-            :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
-          >
-            ✓
-          </button>
-        </td>
-      </tr>
+          </td>
+          <td>
+            <input
+              type="time"
+              step="60"
+              :value="newTask.time"
+              @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
+              @keydown.enter.prevent="onAddTaskEnter"
+              :class="['editable-cell', 'time-input', { 'empty-time': !newTask.time.trim() }]"
+            />
+          </td>
+          <td class="duration-cell">-</td>
+          <td class="actions-cell">
+            <button
+              class="action-btn add-btn primary-add-btn"
+              @click="handleAddTask"
+              :disabled="!isAddTaskValid"
+              :aria-disabled="!isAddTaskValid"
+              :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
+              :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
+            >
+              + Add Task
+            </button>
+          </td>
+        </tr>
       </tbody>
     </table>
 
     <!-- Special task buttons -->
     <div class="special-task-buttons">
-      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">
-        ⏸ Pause
-      </button>
-      <button 
+      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">⏸ Pause</button>
+      <button
         type="button"
-        class="special-task-btn end-btn" 
+        class="special-task-btn end-btn"
         @click="$emit('addEndTask')"
         :disabled="hasEndTaskForSelectedDate"
         :aria-disabled="hasEndTaskForSelectedDate"
@@ -226,15 +235,14 @@
 <script setup lang="ts">
 import { type PropType, ref, nextTick, computed } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
-import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
+import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
 // Generate unique component instance ID for ARIA references
-const componentId = (typeof globalThis !== 'undefined' && 
-                    globalThis.crypto && 
-                    typeof globalThis.crypto.randomUUID === 'function')
-  ? `tasklist-${globalThis.crypto.randomUUID()}`
-  : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+const componentId =
+  typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
+    ? `tasklist-${globalThis.crypto.randomUUID()}`
+    : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
 const formDropdownMenuId = `form-dropdown-menu-${componentId}`
 const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
@@ -245,31 +253,31 @@ const taskTableRef = ref<HTMLElement>()
 const props = defineProps({
   taskRecords: {
     type: Array as PropType<TaskRecordWithId[]>,
-    required: true
+    required: true,
   },
   categories: {
     type: Array as PropType<Category[]>,
-    required: true
+    required: true,
   },
   isLoadingTasks: {
     type: Boolean,
-    required: true
+    required: true,
   },
   displayDate: {
     type: String,
-    required: true
+    required: true,
   },
   hasEndTaskForSelectedDate: {
     type: Boolean,
-    required: true
+    required: true,
   },
   showInlineDropdown: {
     type: Object as PropType<{ [key: number]: boolean }>,
-    required: true
+    required: true,
   },
   showFormCategoryDropdown: {
     type: Boolean,
-    required: true
+    required: true,
   },
   newTask: {
     type: Object as PropType<{
@@ -277,29 +285,29 @@ const props = defineProps({
       name: string
       time: string
     }>,
-    required: true
+    required: true,
   },
   // Function props
   calculateDuration: {
     type: Function as PropType<(record: TaskRecordWithId) => string>,
-    required: true
+    required: true,
   },
   convertToTimeInput: {
     type: Function as PropType<(timeString: string) => string>,
-    required: true
+    required: true,
   },
   getCurrentTime: {
     type: Function as PropType<() => string>,
-    required: true
+    required: true,
   },
   getSelectedCategoryName: {
     type: Function as PropType<() => string>,
-    required: true
+    required: true,
   },
   isSpecial: {
     type: Function as PropType<(taskType: TaskType) => boolean>,
-    required: true
-  }
+    required: true,
+  },
 })
 
 // Emits
@@ -325,8 +333,8 @@ const categoriesRef = computed(() => props.categories)
 const isAddTaskValid = computed(() => {
   return (
     props.newTask.categoryId != null && // Category must be selected
-    props.newTask.name.trim().length > 0 && // Task name must not be empty/whitespace
-    props.newTask.time.trim().length > 0    // Time must not be empty/whitespace
+    props.newTask.name.trim().length > 0 // Task name must not be empty/whitespace
+    // Time is optional - if empty, current time will be used
   )
 })
 
@@ -346,11 +354,11 @@ const inlineListbox = useListboxNavigation({
       focusTriggerButton(contextId)
     }
   },
-  getOptionSelector: (recordId: string | number, optionIndex: number) => 
-    `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
+  getOptionSelector: (recordId: string | number, optionIndex: number) =>
+    `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`,
 })
 
-// Form dropdown navigation composable  
+// Form dropdown navigation composable
 const formListbox = useListboxNavigation({
   containerRef: taskTableRef,
   items: categoriesRef,
@@ -362,8 +370,8 @@ const formListbox = useListboxNavigation({
     await nextTick()
     focusFormTriggerButton()
   },
-  getOptionSelector: (contextId: string | number, optionIndex: number) => 
-    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
+  getOptionSelector: (contextId: string | number, optionIndex: number) =>
+    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`,
 })
 
 // Keyboard handling for inline dropdown navigation
@@ -375,10 +383,10 @@ const handleDropdownKeydown = (event: KeyboardEvent, recordId: number) => {
 const handleInlineDropdownToggle = async (recordId: number, categoryName: string) => {
   // Capture pre-toggle state to determine if dropdown will open
   const willOpen = !props.showInlineDropdown[recordId]
-  
+
   // Emit the toggle
   emit('toggleInlineDropdown', recordId)
-  
+
   // If opening, wait for DOM update then initialize active option
   if (willOpen) {
     await nextTick()
@@ -390,10 +398,10 @@ const handleInlineDropdownToggle = async (recordId: number, categoryName: string
 const handleCategorySelection = async (recordId: number, categoryName: string) => {
   // 1. Emit the category selection
   emit('selectInlineCategory', recordId, categoryName)
-  
+
   // 2. Close the dropdown
   emit('toggleInlineDropdown', recordId)
-  
+
   // 3. Return focus to the trigger button
   await nextTick()
   focusTriggerButton(recordId)
@@ -401,7 +409,9 @@ const handleCategorySelection = async (recordId: number, categoryName: string) =
 
 // Focus management helpers for trigger buttons
 const focusTriggerButton = (recordId: number) => {
-  const button = taskTableRef.value?.querySelector<HTMLElement>(`[aria-controls="${componentId}-dropdown-menu-${recordId}"]`)
+  const button = taskTableRef.value?.querySelector<HTMLElement>(
+    `[aria-controls="${componentId}-dropdown-menu-${recordId}"]`
+  )
   button?.focus()
 }
 
@@ -414,10 +424,10 @@ const handleFormDropdownKeydown = (event: KeyboardEvent) => {
 const handleFormCategorySelection = async (category: Category) => {
   // 1. Emit the category selection
   emit('selectFormCategory', category)
-  
+
   // 2. Close the dropdown
   emit('toggleFormDropdown')
-  
+
   // 3. Return focus to the trigger button
   await nextTick()
   focusFormTriggerButton()
@@ -433,17 +443,17 @@ const focusFormTriggerButton = () => {
 const handleFormDropdownToggle = async () => {
   // Capture pre-toggle intent to avoid race condition
   const willOpen = !props.showFormCategoryDropdown
-  
+
   // Emit the toggle
   emit('toggleFormDropdown')
-  
+
   // Only initialize when opening and categories exist
   if (willOpen) {
     // Guard against empty/loading categories
     if (!props.categories || props.categories.length === 0) {
       return
     }
-    
+
     await nextTick()
     initializeFormActiveOption()
   }
@@ -499,10 +509,21 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 </script>
 
 <style scoped>
+/* Component-specific CSS custom properties */
+.task-table {
+  --primary-alpha: rgba(87, 189, 175, 0.2);
+  --warning-alpha: rgba(253, 203, 110, 0.1);
+  --success-alpha: rgba(89, 201, 100, 0.1);
+  --emerald-shadow: rgba(86, 179, 114, 0.3);
+  --emerald-shadow-hover: rgba(86, 179, 114, 0.4);
+  --transition-fast: 0.2s ease;
+  --warning-hover: color-mix(in srgb, var(--warning) 80%, var(--text-primary) 20%);
+  --success-hover: color-mix(in srgb, var(--success) 80%, var(--text-primary) 20%);
+}
+
 /* Task table styles */
 .task-table {
   background: var(--bg-primary);
-  border-radius: 12px;
   box-shadow: 0 4px 20px var(--shadow-color);
   overflow: hidden;
   margin-bottom: 1rem;
@@ -511,22 +532,23 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
+  table-layout: fixed;
 }
 
 th {
   background: var(--primary);
   color: white;
-  padding: 16px 12px;
-  text-align: left;
+  padding: 8px 6px;
+  text-align: center;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 td {
-  padding: 12px;
+  padding: 6px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -536,7 +558,8 @@ tr:last-child td {
 }
 
 /* Loading and empty states */
-.loading-cell, .empty-cell {
+.loading-cell,
+.empty-cell {
   text-align: center;
   padding: 32px;
   color: var(--text-muted);
@@ -562,10 +585,14 @@ tr:last-child td {
   .loading-spinner {
     animation: spin 1s linear infinite;
   }
-  
+
   @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 }
 
@@ -583,16 +610,17 @@ tr:last-child td {
 }
 
 .pause-task-row {
-  background: rgba(255, 193, 7, 0.1);
+  background: var(--warning-alpha);
 }
 
 .end-task-row {
-  background: rgba(40, 167, 69, 0.1);
+  background: var(--success-alpha);
 }
 
 .special-task-cell {
   font-weight: 600;
   color: var(--text-primary);
+  text-align: center;
 }
 
 /* Input styles */
@@ -600,21 +628,58 @@ tr:last-child td {
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
   color: var(--text-primary);
-  transition: all 0.2s ease;
+  font-size: 13px;
+  transition: all var(--transition-fast);
 }
 
 .editable-cell:focus {
   outline: none;
   border-color: var(--primary);
   background: var(--bg-primary);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+  box-shadow: 0 0 0 2px var(--primary-alpha);
 }
 
 .time-input {
-  max-width: 120px;
+  width: 70px;
+  max-width: 70px;
+  font-size: 12px;
+}
+
+/* Style placeholder text to appear lighter when empty */
+.time-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* Style empty time inputs to appear lighter */
+.time-input.empty-time {
+  color: var(--text-muted);
+  opacity: 0.7;
+  font-style: normal;
+}
+
+.time-input.empty-time::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* Override browser styling for empty time inputs */
+.time-input.empty-time::-webkit-datetime-edit-text,
+.time-input.empty-time::-webkit-datetime-edit-hour-field,
+.time-input.empty-time::-webkit-datetime-edit-minute-field {
+  color: var(--text-muted);
+  opacity: 0.7;
+  text-decoration: none !important;
+  text-decoration-line: none !important;
+}
+
+.time-input.empty-time::-webkit-datetime-edit {
+  color: var(--text-muted);
+  opacity: 0.7;
+  text-decoration: none !important;
 }
 
 .time-input-container {
@@ -644,12 +709,13 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 4px 8px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   background: transparent;
-  transition: all 0.2s ease;
+  font-size: 13px;
+  transition: all var(--transition-fast);
 }
 
 .dropdown-trigger:hover {
@@ -682,8 +748,9 @@ tr:last-child td {
 }
 
 .dropdown-item {
-  padding: 10px 12px;
+  padding: 6px 8px;
   cursor: pointer;
+  font-size: 13px;
   transition: background-color 0.2s ease;
 }
 
@@ -698,7 +765,7 @@ tr:last-child td {
 
 /* Action buttons */
 .actions-cell {
-  text-align: center;
+  text-align: right;
   white-space: nowrap;
 }
 
@@ -706,10 +773,10 @@ tr:last-child td {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px 8px;
-  margin: 0 2px;
+  padding: 4px 6px;
+  margin: 0 1px;
   border-radius: 4px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   font-size: 14px;
 }
 
@@ -730,6 +797,34 @@ tr:last-child td {
   color: var(--emerald);
 }
 
+.primary-add-btn {
+  background: linear-gradient(135deg, var(--emerald), var(--mantis));
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 80px;
+  border: 1px solid var(--emerald);
+  box-shadow: 0 2px 4px var(--emerald-shadow);
+  transition: all var(--transition-fast);
+}
+
+.primary-add-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--mantis), var(--emerald));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px var(--emerald-shadow-hover);
+}
+
+.primary-add-btn:disabled {
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  border-color: var(--border-color);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Add task row */
 .add-task-row {
   background: var(--bg-secondary);
@@ -746,33 +841,35 @@ tr:last-child td {
   padding: 16px;
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
+  justify-content: center;
 }
 
 .special-task-btn {
+  flex: 1;
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   color: white;
 }
 
 .pause-btn {
-  background: var(--aero);
+  background: var(--warning);
 }
 
 .pause-btn:hover {
-  background: #1a9bd1;
+  background: var(--warning-hover);
   transform: translateY(-2px);
 }
 
 .end-btn {
-  background: var(--emerald);
+  background: var(--success);
 }
 
 .end-btn:hover:not(:disabled) {
-  background: #4a9960;
+  background: var(--success-hover);
   transform: translateY(-2px);
 }
 
@@ -784,9 +881,11 @@ tr:last-child td {
 /* Duration cell specific styles */
 .duration-cell {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   text-align: right;
-  min-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

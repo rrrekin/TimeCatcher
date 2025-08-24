@@ -15,10 +15,10 @@ export interface UseListboxNavigationOptions<T> {
 
 export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>) {
   const { containerRef, items, onSelect, onClose, getOptionSelector } = options
-  
+
   // Reactive state for active option index per context
   const activeIndex = ref<Record<string | number, number>>({})
-  
+
   /**
    * Handle keyboard navigation for listbox
    */
@@ -32,12 +32,12 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
       onClose(contextId)
       return
     }
-    
+
     // Early return for navigation keys when no items available
     if (!items.value.length) return
-    
+
     const currentIndex = getActiveIndex(contextId)
-    
+
     switch (event.key) {
       case 'ArrowDown': {
         event.preventDefault()
@@ -47,7 +47,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         focusOption(contextId, nextIndex)
         break
       }
-        
+
       case 'ArrowUp': {
         event.preventDefault()
         const prevIndex = Math.max(currentIndex - 1, 0)
@@ -56,7 +56,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         focusOption(contextId, prevIndex)
         break
       }
-        
+
       case 'Home': {
         event.preventDefault()
         const targetIndex = 0
@@ -65,7 +65,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         focusOption(contextId, targetIndex)
         break
       }
-        
+
       case 'End': {
         event.preventDefault()
         const targetIndex = items.value.length - 1
@@ -74,7 +74,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
         focusOption(contextId, targetIndex)
         break
       }
-        
+
       case 'Enter':
       case ' ': {
         event.preventDefault()
@@ -86,7 +86,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
       }
     }
   }
-  
+
   /**
    * Focus a specific option by index
    */
@@ -95,7 +95,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     const option = containerRef.value?.querySelector<HTMLElement>(selector)
     option?.focus()
   }
-  
+
   /**
    * Initialize active option when listbox opens
    */
@@ -104,17 +104,17 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     if (!items.value.length) {
       return
     }
-    
+
     const resolvedIndex = Math.max(0, Math.min(selectedIndex, items.value.length - 1))
     activeIndex.value[contextId] = resolvedIndex
-    
+
     // Wait for DOM update to ensure listbox is rendered
     await nextTick()
-    
+
     // Focus the active option
     focusOption(contextId, resolvedIndex)
   }
-  
+
   /**
    * Focus the trigger button that controls this listbox
    */
@@ -122,7 +122,7 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     const button = containerRef.value?.querySelector<HTMLElement>(triggerSelector)
     button?.focus()
   }
-  
+
   /**
    * Get current active index for a specific context
    * Returns -1 when the target list is empty, otherwise clamps to valid range
@@ -132,20 +132,20 @@ export function useListboxNavigation<T>(options: UseListboxNavigationOptions<T>)
     if (!items.value.length) {
       return -1
     }
-    
+
     // Get the current active index or default to 0
     const currentIndex = activeIndex.value[contextId] ?? 0
-    
+
     // Clamp to valid range [0, items.length - 1]
     return Math.max(0, Math.min(currentIndex, items.value.length - 1))
   }
-  
+
   return {
     activeIndex,
     getActiveIndex,
     handleKeydown,
     focusOption,
     initializeActiveOption,
-    focusTrigger
+    focusTrigger,
   }
 }

@@ -12,9 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:coverage:check` - Run tests with coverage and check thresholds for changed files
 - `npm run lint:md` - Check markdown formatting issues
 - `npm run format:md` - Auto-fix markdown formatting issues
-- `npm run format` - Format all source code files with Prettier
-- `npm run format:check` - Check if code formatting is consistent with Prettier
-- `npm run install-hooks` - Install git hooks for automatic markdown and code formatting
+- `npm run install-hooks` - Install git hooks for automatic markdown formatting
 
 ### CI/CD Pipeline
 
@@ -211,7 +209,7 @@ __Git Hooks__: Run `npm run install-hooks` after cloning to enable automatic mar
 
 __Core__: `src/renderer/App.vue`, `src/main/database.ts`, `src/main/main.ts`, `src/shared/types.ts`
 
-__Config__: `vite.config.ts`, `vitest.config.ts`, `.editorconfig`, `.prettierrc.json`
+__Config__: `vite.config.ts`, `vitest.config.ts`
 
 __Composables__: `src/composables/use*.ts` files
 
@@ -226,4 +224,4 @@ __Tests__: `src/**/*.test.ts` files
 Always consider use of sequential thinking and memory-timecatcher MCPs, especially when working with complex code.
 Use other MCPs if this can be useful for a specific task or step.
 
-Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
+Keep the .clinerules/project.md context file up-to-date with the latest changes and as compact as possible.

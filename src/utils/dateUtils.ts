@@ -32,14 +32,14 @@ export const formatDateString = (dateString: string, locale?: string): string =>
   const year = parseInt(yearStr!, 10)
   const month = parseInt(monthStr!, 10)
   const day = parseInt(dayStr!, 10)
-  
+
   // Construct date with explicit year, monthIndex (month - 1), day
   const date = new Date(year, month - 1, day)
-  
+
   return date.toLocaleDateString(locale, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   })
 }
