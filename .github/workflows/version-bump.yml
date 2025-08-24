@@ -68,17 +68,21 @@ jobs:
           shopt -u nocasematch
 
       - name: Bump version
+        env:
+          BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ steps.bump-type.outputs.pr_title }}
         run: |
-          echo "📈 Bumping ${{ steps.bump-type.outputs.bump_type }} version..."
+          echo "📈 Bumping ${BUMP_TYPE} version..."
 
           # Create temporary commit message file to avoid shell injection
           COMMIT_FILE=$(mktemp)
           
           # Write commit message to file with proper escaping
-          cat > "$COMMIT_FILE" << 'EOF'
-          chore: bump ${{ steps.bump-type.outputs.bump_type }} version
+          cat > "$COMMIT_FILE" << EOF
+          chore: bump ${BUMP_TYPE} version
 
-          Merged PR #${{ github.event.pull_request.number }}: ${{ steps.bump-type.outputs.pr_title }}
+          Merged PR #${PR_NUMBER}: ${PR_TITLE}
 
           🤖 Generated with [Claude Code](https://claude.ai/code)
 
@@ -87,7 +91,7 @@ jobs:
 
           # Read commit message from file safely and pass to script
           COMMIT_MSG=$(cat "$COMMIT_FILE")
-          node scripts/bump-version.js ${{ steps.bump-type.outputs.bump_type }} "$COMMIT_MSG"
+          node scripts/bump-version.js "${BUMP_TYPE}" "$COMMIT_MSG"
           
           # Clean up temporary file
           rm -f "$COMMIT_FILE"
