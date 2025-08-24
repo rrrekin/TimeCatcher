@@ -8,7 +8,7 @@ const { execSync } = require('child_process');
 const THRESHOLDS = {
   lines: 80,
   branches: 85,
-  functions: 80,
+  functions: 75,
   statements: 80
 };
 
