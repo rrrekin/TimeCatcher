@@ -1,0 +1,164 @@
+# Semantic Versioning System
+
+TimeCatcher uses a semi-automatic semantic versioning system that automatically bumps version numbers on PR merges.
+
+## Overview
+
+- **Package.json**: Contains full semantic versions (e.g., `0.20.0`, `0.20.1`, `0.20.2`)
+- **Automatic Bumping**: Version incremented on every PR merge based on title
+- **Git Tags**: Created manually during release process (planned for future implementation)
+
+## Automatic Version Bumping
+
+### On PR Merge
+
+When a pull request is merged to the `main` branch, the version is automatically bumped based on the PR title:
+
+- **Default**: Patch version bump (e.g., `0.20.0` → `0.20.1`)
+- **`[MINOR]` or `minor:`**: Minor version bump (e.g., `0.20.0` → `0.21.0`)
+- **`[MAJOR]` or `major:`**: Major version bump (e.g., `0.20.0` → `1.0.0`)
+
+### Examples
+
+```
+feat: add new feature                    → 0.20.0 → 0.20.1 (patch)
+feat: [MINOR] add user authentication    → 0.20.0 → 0.21.0 (minor)
+feat: [MAJOR] breaking API changes      → 0.20.0 → 1.0.0 (major)
+fix: resolve login bug                   → 0.20.0 → 0.20.1 (patch)
+```
+
+## Manual Version Bumping
+
+For local development and testing, you can manually bump versions using npm scripts:
+
+```bash
+# Bump patch version (0.20.0 → 0.20.1)
+npm run version:patch
+
+# Bump minor version (0.20.0 → 0.21.0)  
+npm run version:minor
+
+# Bump major version (0.20.0 → 1.0.0)
+npm run version:major
+```
+
+Each command will:
+1. Update `package.json` with the new version
+2. Create a commit with the version change
+3. **Note**: Git tags will be created separately during release process
+
+## Version Workflow Details
+
+### GitHub Action Workflow
+
+The `.github/workflows/version-bump.yml` workflow:
+
+1. **Triggers**: On PR merge to `main` branch
+2. **Analyzes**: PR title to determine bump type
+3. **Updates**: `package.json` with new version
+4. **Commits**: Version change with automated message
+5. **Pushes**: Changes back to repository
+
+### Version Bump Script
+
+The `scripts/bump-version.js` script handles:
+
+- **Version parsing** and validation
+- **Package.json updates** with new versions
+- **Commit creation** with consistent messaging
+- **PR title analysis** for automatic bump type detection
+
+## Best Practices
+
+### PR Titles
+
+Use clear, descriptive PR titles with version indicators when needed:
+
+```bash
+# Patch (default) - no special indicator needed
+fix: resolve task deletion bug
+feat: improve UI responsiveness
+
+# Minor - add [MINOR] tag for new features
+feat: [MINOR] add data export functionality
+feat: [MINOR] implement dark mode
+
+# Major - add [MAJOR] tag for breaking changes  
+feat: [MAJOR] redesign database schema
+feat: [MAJOR] migrate to Vue 4
+```
+
+### Version History
+
+All version changes are tracked in Git commits with the pattern:
+```
+chore: bump [type] version
+
+Merged PR #123: [PR title]
+```
+
+## Integration with Build Process
+
+The version from `package.json` is automatically used by:
+- **Electron Builder**: App version metadata
+- **Build artifacts**: Version included in built applications
+- **About dialogs**: Can display current version to users
+
+## Checking Version Information
+
+```bash
+# Current version in package.json
+npm version
+
+# View version history
+git log --oneline --grep="chore: bump.*version"
+
+# Check specific version commit
+git show --name-only <commit-hash>
+```
+
+## Future Enhancements
+
+### Planned Release Process
+
+Git tagging will be implemented as part of a separate manual release process that will:
+- Create release tags pointing to specific versions
+- Generate release notes from commit history
+- Build and publish release artifacts
+- Create GitHub releases with proper documentation
+
+## Troubleshooting
+
+### Version Rollback
+
+To rollback a version bump:
+
+```bash
+# Revert the version commit
+git revert HEAD
+
+# Push the revert
+git push origin main
+```
+
+### Manual Version Fix
+
+If you need to manually fix a version:
+
+```bash
+# Edit package.json manually
+# Commit the change
+git add package.json
+git commit -m "fix: correct version number"
+git push origin main
+```
+
+### CI/CD Integration
+
+The version bump happens after CI passes, ensuring only validated code gets versioned. The workflow:
+
+1. PR created → CI runs tests
+2. PR approved and merged → Version bump workflow runs
+3. New version committed automatically
+
+This ensures every version number represents code that has passed all tests and quality checks.
