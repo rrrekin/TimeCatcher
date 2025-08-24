@@ -1,7 +1,7 @@
 import { computed, type Ref } from 'vue'
 import type { TaskRecord } from '@/shared/types'
 import { parseTimeString, formatDurationMinutes, getLastTaskEndTime } from '@/utils/timeUtils'
-import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
+import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_NORMAL } from '@/shared/types'
 
 export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T[]>) {
   // Precomputed parsed times for performance (computed once per render/refresh)
@@ -93,7 +93,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
    * @returns Total tracked minutes
    */
   const getTotalMinutesTracked = (): number => {
-    const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+    const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
     const nextRecordMap = nextRecordByRecord.value
     const timeMap = timeByRecord.value
     let totalMinutes = 0
@@ -133,7 +133,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
    * @returns Array of category breakdowns with minutes and percentages
    */
   const getCategoryBreakdown = () => {
-    const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+    const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
     const nextRecordMap = nextRecordByRecord.value
     const timeMap = timeByRecord.value
     const categoryTotals: { [categoryName: string]: number } = {}
@@ -173,7 +173,7 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
       .map(([categoryName, rawMinutes]) => ({
         categoryName,
         minutes: Math.round(rawMinutes),
-        percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0
+        percentage: totalRawMinutes > 0 ? (rawMinutes / totalRawMinutes) * 100 : 0,
       }))
       .sort((a, b) => b.minutes - a.minutes || a.categoryName.localeCompare(b.categoryName))
   }
@@ -182,6 +182,6 @@ export function useDurationCalculations<T extends TaskRecord>(taskRecords: Ref<T
     sortedTaskRecords,
     calculateDuration,
     getTotalMinutesTracked,
-    getCategoryBreakdown
+    getCategoryBreakdown,
   }
 }

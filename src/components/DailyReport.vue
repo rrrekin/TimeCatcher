@@ -93,6 +93,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TaskRecord } from '@/shared/types'
+import { TASK_TYPE_NORMAL } from '@/shared/types'
 
 interface DailyReportProps {
   taskRecords: TaskRecord[]
@@ -124,7 +125,7 @@ const clampPercent = (p: number): number => {
 
 // Computed properties
 const standardTaskCount = computed(() => {
-  return props.taskRecords.filter(r => r.task_type === 'normal').length
+  return props.taskRecords.filter(r => r.task_type === TASK_TYPE_NORMAL).length
 })
 
 const getStatusText = () => {

@@ -5,9 +5,9 @@ import type {
   TaskRecordUpdate,
   TaskType,
   SpecialTaskType,
-  TaskRecordWithId
+  TaskRecordWithId,
 } from '@/shared/types'
-import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES } from '@/shared/types'
+import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, TASK_TYPE_END } from '@/shared/types'
 import { toYMDLocal } from '@/utils/dateUtils'
 
 // Error message constants
@@ -24,7 +24,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
   }
 
   const hasEndTaskForSelectedDate = computed(() => {
-    return taskRecords.value.some(record => record.task_type === 'end')
+    return taskRecords.value.some(record => record.task_type === TASK_TYPE_END)
   })
 
   /**
@@ -116,7 +116,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     }
 
     // Early guard: prevent creating a second 'end' task
-    if (taskType === 'end' && hasEndTaskForSelectedDate.value) {
+    if (taskType === TASK_TYPE_END && hasEndTaskForSelectedDate.value) {
       throw new Error(DUPLICATE_END_TASK_MSG)
     }
 
@@ -129,7 +129,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
         task_name: taskName,
         start_time: currentTime,
         date: dateString,
-        task_type: taskType
+        task_type: taskType,
       }
 
       await window.electronAPI.addTaskRecord(taskRecord)
@@ -139,7 +139,7 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
 
       // Check if error is due to duplicate end task constraint (only for 'end' tasks)
       const isDuplicateEndTask =
-        taskType === 'end' &&
+        taskType === TASK_TYPE_END &&
         // Primary check: custom error code
         ((error && typeof error === 'object' && 'code' in error && (error as any).code === 'END_DUPLICATE') ||
           // SQLite errno 19 check (SQLITE_CONSTRAINT)
@@ -219,6 +219,6 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
     addTaskRecord,
     addSpecialTask,
     updateTaskRecord,
-    deleteTaskRecord
+    deleteTaskRecord,
   }
 }

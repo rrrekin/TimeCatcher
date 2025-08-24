@@ -35,8 +35,8 @@
           :key="record.id"
           :class="{
             'special-task-row': isSpecial(record.task_type),
-            'pause-task-row': record.task_type === 'pause',
-            'end-task-row': record.task_type === 'end'
+            'pause-task-row': record.task_type === TASK_TYPE_PAUSE,
+            'end-task-row': record.task_type === TASK_TYPE_END,
           }"
         >
           <!-- Special task layout: merged category + task columns -->
@@ -118,7 +118,7 @@
           <td v-else class="duration-cell" data-test="task-duration">-</td>
           <td class="actions-cell">
             <button
-              v-if="record.task_type !== 'pause' && record.task_type !== 'end'"
+              v-if="record.task_type !== TASK_TYPE_PAUSE && record.task_type !== TASK_TYPE_END"
               class="action-btn replay-btn"
               @click="$emit('replayTask', record)"
               title="Replay this task for today"
@@ -235,7 +235,7 @@
 <script setup lang="ts">
 import { type PropType, ref, nextTick, computed } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
-import { DURATION_VISIBLE_BY_TASK_TYPE } from '@/shared/types'
+import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
 // Generate unique component instance ID for ARIA references
@@ -253,31 +253,31 @@ const taskTableRef = ref<HTMLElement>()
 const props = defineProps({
   taskRecords: {
     type: Array as PropType<TaskRecordWithId[]>,
-    required: true
+    required: true,
   },
   categories: {
     type: Array as PropType<Category[]>,
-    required: true
+    required: true,
   },
   isLoadingTasks: {
     type: Boolean,
-    required: true
+    required: true,
   },
   displayDate: {
     type: String,
-    required: true
+    required: true,
   },
   hasEndTaskForSelectedDate: {
     type: Boolean,
-    required: true
+    required: true,
   },
   showInlineDropdown: {
     type: Object as PropType<{ [key: number]: boolean }>,
-    required: true
+    required: true,
   },
   showFormCategoryDropdown: {
     type: Boolean,
-    required: true
+    required: true,
   },
   newTask: {
     type: Object as PropType<{
@@ -285,29 +285,29 @@ const props = defineProps({
       name: string
       time: string
     }>,
-    required: true
+    required: true,
   },
   // Function props
   calculateDuration: {
     type: Function as PropType<(record: TaskRecordWithId) => string>,
-    required: true
+    required: true,
   },
   convertToTimeInput: {
     type: Function as PropType<(timeString: string) => string>,
-    required: true
+    required: true,
   },
   getCurrentTime: {
     type: Function as PropType<() => string>,
-    required: true
+    required: true,
   },
   getSelectedCategoryName: {
     type: Function as PropType<() => string>,
-    required: true
+    required: true,
   },
   isSpecial: {
     type: Function as PropType<(taskType: TaskType) => boolean>,
-    required: true
-  }
+    required: true,
+  },
 })
 
 // Emits
@@ -355,7 +355,7 @@ const inlineListbox = useListboxNavigation({
     }
   },
   getOptionSelector: (recordId: string | number, optionIndex: number) =>
-    `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
+    `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`,
 })
 
 // Form dropdown navigation composable
@@ -371,7 +371,7 @@ const formListbox = useListboxNavigation({
     focusFormTriggerButton()
   },
   getOptionSelector: (contextId: string | number, optionIndex: number) =>
-    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
+    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`,
 })
 
 // Keyboard handling for inline dropdown navigation

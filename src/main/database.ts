@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import { app } from 'electron'
 import { join } from 'path'
 import type { Category, TaskRecord, TaskRecordInsert, TaskRecordUpdate, TaskType } from '../shared/types'
-import { SPECIAL_TASK_CATEGORY } from '../shared/types'
+import { SPECIAL_TASK_CATEGORY, TASK_TYPE_END } from '../shared/types'
 
 class DatabaseService {
   public db: Database.Database
@@ -85,7 +85,9 @@ class DatabaseService {
     this.db.exec(`CREATE INDEX IF NOT EXISTS idx_date_start_time ON task_records(date, start_time)`)
 
     // Create unique index to enforce one end task per day
-    this.db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = 'end'`)
+    this.db.exec(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE task_type = '${TASK_TYPE_END}'`
+    )
   }
 
   private initializeDefaultCategories() {

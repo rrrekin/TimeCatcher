@@ -132,11 +132,12 @@ import {
   SPECIAL_TASK_CATEGORY,
   SPECIAL_TASK_TYPES,
   DURATION_VISIBLE_BY_TASK_TYPE,
+  TASK_TYPE_NORMAL,
   type Category,
   type TaskRecord,
   type TaskType,
   type SpecialTaskType,
-  type TaskRecordWithId
+  type TaskRecordWithId,
 } from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
@@ -170,7 +171,7 @@ const {
   deleteCategory,
   setDefaultCategory,
   getDefaultCategory,
-  categoryExists
+  categoryExists,
 } = useCategories()
 
 const {
@@ -184,7 +185,7 @@ const {
   addTaskRecord,
   addSpecialTask,
   updateTaskRecord,
-  deleteTaskRecord
+  deleteTaskRecord,
 } = useTaskRecords(selectedDate)
 
 const {
@@ -194,7 +195,7 @@ const {
   tempTargetWorkHours,
   applyTheme,
   saveSettings: saveSettingsComposable,
-  initializeTempSettings
+  initializeTempSettings,
 } = useSettings()
 
 const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
@@ -224,7 +225,7 @@ const showAddTaskForm = ref(false)
 const newTask = ref<NewTaskForm>({
   categoryId: null,
   name: '',
-  time: ''
+  time: '',
 })
 // Loading states
 const isDeletingCategory = ref(false)
@@ -262,7 +263,7 @@ const dateTitle = computed(() => {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   }).format(selectedDate.value)
 })
 
@@ -272,7 +273,7 @@ const dateInputValue = computed({
     // Parse as UTC to avoid timezone issues
     const [year, month, day] = value.split('-').map(Number)
     selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
-  }
+  },
 })
 
 const goToPreviousDay = () => {
@@ -491,7 +492,7 @@ const addTask = async () => {
       task_name: newTask.value.name,
       start_time: timeString,
       date: dateString,
-      task_type: 'normal' as TaskType
+      task_type: TASK_TYPE_NORMAL,
     }
 
     await addTaskRecord(taskRecord)
@@ -659,7 +660,7 @@ const replayTask = async (record: TaskRecordWithId) => {
     }
 
     // Prevent replaying special tasks
-    if (record.task_type !== 'normal' || record.category_name === SPECIAL_TASK_CATEGORY) {
+    if (record.task_type !== TASK_TYPE_NORMAL || record.category_name === SPECIAL_TASK_CATEGORY) {
       showToastMessage('Special tasks cannot be replayed.', 'error')
       return
     }
@@ -673,7 +674,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       task_name: record.task_name,
       start_time: timeString,
       date: dateString,
-      task_type: 'normal' as TaskType
+      task_type: TASK_TYPE_NORMAL,
     }
 
     await addTaskRecord(taskRecord)
@@ -981,7 +982,7 @@ const parseDurationToMinutes = (durationStr: string): number => {
 
 // Enhanced category breakdown for the template (includes task summaries)
 const getEnhancedCategoryBreakdown = () => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
   if (standardRecords.length === 0) return []
 
   const categoryMap = new Map()
@@ -993,7 +994,7 @@ const getEnhancedCategoryBreakdown = () => {
         name: record.category_name,
         totalMinutes: 0,
         taskCount: 0,
-        tasks: new Map() // Track individual tasks within category
+        tasks: new Map(), // Track individual tasks within category
       })
     }
 
@@ -1006,7 +1007,7 @@ const getEnhancedCategoryBreakdown = () => {
         name: record.task_name,
         count: 0,
         totalMinutes: 0,
-        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
+        firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime(),
       })
     }
 
@@ -1052,15 +1053,15 @@ const getEnhancedCategoryBreakdown = () => {
             .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
             .map((task: any) => ({
               ...task,
-              totalTime: formatDurationMinutes(task.totalMinutes)
+              totalTime: formatDurationMinutes(task.totalMinutes),
             }))
-        : []
+        : [],
     }
   })
 }
 
 const getUniqueCategoriesCount = (): number => {
-  const standardRecords = taskRecords.value.filter(record => record.task_type === 'normal')
+  const standardRecords = taskRecords.value.filter(record => record.task_type === TASK_TYPE_NORMAL)
   const uniqueCategories = new Set(standardRecords.map(record => record.category_name))
   return uniqueCategories.size
 }
