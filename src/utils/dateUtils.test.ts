@@ -1,16 +1,24 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterAll } from "vitest";
 import { toYMDLocal, isToday, formatDateString } from "./dateUtils";
 
 describe("dateUtils", () => {
+  beforeAll(() => {
+    vi.useFakeTimers();
+    // Set a fixed date/time: 2024-01-15 12:00:00 (midday to avoid timezone issues)
+    vi.setSystemTime(new Date('2024-01-15T12:00:00'));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
   it("should format date to YYYY-MM-DD with toYMDLocal", () => {
     const date = new Date(2025, 0, 5); // Jan 5, 2025
     expect(toYMDLocal(date)).toBe("2025-01-05");
   });
 
   it("should check if date string is today with isToday", () => {
-    const today = new Date();
-    const todayStr = toYMDLocal(today);
-    expect(isToday(todayStr)).toBe(true);
+    // With fake timers set to 2024-01-15, this should be "today"
+    expect(isToday("2024-01-15")).toBe(true);
     expect(isToday("2000-01-01")).toBe(false);
   });
 
@@ -31,7 +39,7 @@ describe("dateUtils", () => {
     expect(formatted).toMatch(/February 29, 2024/);
   });
 
-  it("should handle invalid but parseable date strings gracefully", () => {
+  it("should handle generic valid date strings gracefully", () => {
     const formatted = formatDateString("2025-12-01");
     expect(formatted).toContain("2025");
   });

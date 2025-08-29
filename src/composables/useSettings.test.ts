@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { mount } from "@vue/test-utils";
+import { defineComponent } from "vue";
 import { useSettings } from "./useSettings";
 
 describe("useSettings", () => {
@@ -8,10 +10,10 @@ describe("useSettings", () => {
 
   beforeEach(() => {
     localStorageMock = {};
-    setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem").mockImplementation((k, v) => {
+    setItemSpy = vi.spyOn(Storage.prototype, "setItem").mockImplementation((k, v) => {
       localStorageMock[k] = v;
     });
-    getItemSpy = vi.spyOn(window.localStorage.__proto__, "getItem").mockImplementation((k) => localStorageMock[k] || null);
+    getItemSpy = vi.spyOn(Storage.prototype, "getItem").mockImplementation((k) => localStorageMock[k] ?? null);
   });
 
   afterEach(() => {
@@ -38,10 +40,15 @@ describe("useSettings", () => {
   it("should not applyTheme if window/document undefined", () => {
     const { applyTheme } = useSettings();
     const origDoc = global.document;
+    const setPropertySpy = vi.spyOn(document.documentElement.style, "setProperty");
+
     // @ts-expect-error override
     global.document = undefined;
     expect(() => applyTheme("light")).not.toThrow();
+    expect(setPropertySpy).not.toHaveBeenCalled();
+
     global.document = origDoc;
+    setPropertySpy.mockRestore();
   });
 
   it("should load valid settings from localStorage", () => {
@@ -91,28 +98,75 @@ describe("useSettings", () => {
   });
 
   it("should handle OS theme change when currentTheme is auto", () => {
-    const { currentTheme } = useSettings();
-    currentTheme.value = "auto";
-    const { applyTheme } = useSettings();
-    const spy = vi.spyOn({ applyTheme }, "applyTheme");
-    (useSettings() as any).handleOSThemeChange?.();
-    expect(spy).toHaveBeenCalled;
+    const mockMediaQueryList = {
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as any;
+
+    const matchMediaSpy = vi.spyOn(window, "matchMedia").mockReturnValue(mockMediaQueryList);
+    const setPropertySpy = vi.spyOn(document.documentElement.style, "setProperty");
+
+    const TestComponent = defineComponent({
+      setup() {
+        const settings = useSettings();
+        settings.currentTheme.value = "auto";
+        return { settings };
+      },
+      template: "<div></div>",
+    });
+
+    const wrapper = mount(TestComponent);
+
+    // Clear initial calls from component mount
+    setPropertySpy.mockClear();
+
+    // Simulate OS theme change
+    const changeHandler = mockMediaQueryList.addEventListener.mock.calls[0][1];
+    changeHandler();
+
+    // Verify that applyTheme was called by checking DOM mutations
+    expect(setPropertySpy).toHaveBeenCalled();
+
+    matchMediaSpy.mockRestore();
+    setPropertySpy.mockRestore();
+    wrapper.unmount();
   });
 
   it("should cleanup mediaQuery listeners on unmount (modern API)", () => {
-    const { } = useSettings();
     const mql = { addEventListener: vi.fn(), removeEventListener: vi.fn() } as any;
     vi.spyOn(window, "matchMedia").mockReturnValue(mql);
-    const { } = useSettings();
-    (useSettings() as any).$unmount?.();
-    expect(mql.removeEventListener).toBeDefined();
+    const wrapper = mount(defineComponent({
+      setup() {
+        useSettings();
+        return {};
+      },
+      template: "<div/>",
+    }));
+    // Unmount should remove the registered listener
+    wrapper.unmount();
+    expect(mql.removeEventListener).toHaveBeenCalledTimes(1);
+    expect(mql.removeEventListener.mock.calls[0][0]).toBe("change");
+    expect(typeof mql.removeEventListener.mock.calls[0][1]).toBe("function");
   });
 
   it("should cleanup mediaQuery listeners on unmount (legacy API)", () => {
     const mql = { addListener: vi.fn(), removeListener: vi.fn() } as any;
-    vi.spyOn(window, "matchMedia").mockReturnValue(mql);
-    const { } = useSettings();
-    (useSettings() as any).$unmount?.();
-    expect(mql.removeListener).toBeDefined();
+    const matchMediaSpy = vi.spyOn(window, "matchMedia").mockReturnValue(mql);
+    
+    const TestComponent = defineComponent({
+      setup() {
+        const settings = useSettings();
+        return { settings };
+      },
+      template: "<div></div>",
+    });
+    
+    const wrapper = mount(TestComponent);
+    // Unmount should trigger the legacy removeListener
+    wrapper.unmount();
+    
+    expect(mql.removeListener).toHaveBeenCalled();
+    matchMediaSpy.mockRestore();
   });
 });

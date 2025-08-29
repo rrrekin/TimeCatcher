@@ -95,8 +95,16 @@ describe("useTaskRecords", () => {
   });
 
   it("should get current time in HH:mm format", () => {
+    vi.useFakeTimers();
+    // Set a known local time: 2024-01-15 14:30:25 (local time)
+    vi.setSystemTime(new Date('2024-01-15T14:30:25'));
+    
     const { getCurrentTime } = useTaskRecords(selectedDate);
-    const time = getCurrentTime();
-    expect(time).toMatch(/^\d{2}:\d{2}$/);
+    const currentTime = getCurrentTime();
+    
+    // Should return exact expected time
+    expect(currentTime).toBe("14:30");
+    
+    vi.useRealTimers();
   });
 });

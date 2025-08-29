@@ -49,8 +49,9 @@ describe("useCategories", () => {
   it("should update category", async () => {
     const { updateCategory, categories } = useCategories();
     categories.value = [...mockCategories];
-    await updateCategory(1, "Updated");
+    await updateCategory(1, "  Updated  ");
     expect(categories.value[0].name).toBe("Updated");
+    expect((window as any).electronAPI.updateCategory).toHaveBeenCalledWith(1, "Updated");
   });
 
   it("should not update with empty name", async () => {
@@ -88,8 +89,9 @@ describe("useCategories", () => {
 
   it("should check category existence", async () => {
     const { categoryExists } = useCategories();
-    const exists = await categoryExists("Work");
+    const exists = await categoryExists("  Work  ");
     expect(exists).toBe(true);
+    expect((window as any).electronAPI.categoryExists).toHaveBeenCalledWith("Work");
   });
 
   it("should return false for empty name in categoryExists", async () => {
@@ -105,7 +107,7 @@ describe("useCategories", () => {
     expect(exists).toBe(false);
   });
 
-  it("should throw if electronAPI is missing in loadCategories", async () => {
+  it("should resolve undefined if electronAPI is missing in loadCategories", async () => {
     delete (window as any).electronAPI;
     const { loadCategories } = useCategories();
     await expect(loadCategories()).resolves.toBeUndefined();

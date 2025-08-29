@@ -1,24 +1,29 @@
 // Fixed duplicate imports
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ref } from "vue";
+import { ref, effectScope } from "vue";
 import { useAutoRefresh } from "./useAutoRefresh";
 
 describe("useAutoRefresh", () => {
   let mockCallback: ReturnType<typeof vi.fn>;
-  let selectedDate = ref(new Date());
+  let selectedDate: ReturnType<typeof ref<Date>>;
+  let scope: ReturnType<typeof effectScope>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     mockCallback = vi.fn();
-    selectedDate.value = new Date();
+    selectedDate = ref(new Date());
+    scope = effectScope();
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    scope.stop();
   });
 
   it("should call callback every 15s when date is today", () => {
-    const { startAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback);
+    const { startAutoRefresh, stopAutoRefresh } = scope.run(() => 
+      useAutoRefresh(selectedDate, mockCallback)
+    )!;
     startAutoRefresh();
 
     expect(mockCallback).not.toHaveBeenCalled();
@@ -33,9 +38,16 @@ describe("useAutoRefresh", () => {
   });
 
   it("should not start auto-refresh if date is not today", () => {
-    const { startAutoRefresh } = useAutoRefresh(selectedDate, mockCallback);
-    // set date to yesterday
-    const yesterday = new Date();
+    // Set fixed midday UTC time to avoid midnight boundary issues
+    const fixedTime = new Date('2024-01-15T12:00:00.000Z').getTime();
+    vi.setSystemTime(fixedTime);
+    
+    const { startAutoRefresh } = scope.run(() => 
+      useAutoRefresh(selectedDate, mockCallback)
+    )!;
+    
+    // Create yesterday from fixed time
+    const yesterday = new Date(fixedTime);
     yesterday.setDate(yesterday.getDate() - 1);
     selectedDate.value = yesterday;
 
@@ -45,7 +57,9 @@ describe("useAutoRefresh", () => {
   });
 
   it("should stop refreshing when stopAutoRefresh is called", () => {
-    const { startAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback);
+    const { startAutoRefresh, stopAutoRefresh } = scope.run(() => 
+      useAutoRefresh(selectedDate, mockCallback)
+    )!;
     startAutoRefresh();
 
     vi.advanceTimersByTime(30000);
@@ -57,16 +71,18 @@ describe("useAutoRefresh", () => {
   });
 
   it("should restart when restartAutoRefresh is called", () => {
-    const { startAutoRefresh, restartAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback);
-    startAutoRefresh();
+    scope.run(() => {
+      const { startAutoRefresh, restartAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback);
+      startAutoRefresh();
 
-    vi.advanceTimersByTime(15000);
-    expect(mockCallback).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(15000);
+      expect(mockCallback).toHaveBeenCalledTimes(1);
 
-    restartAutoRefresh();
-    vi.advanceTimersByTime(15000);
-    expect(mockCallback).toHaveBeenCalledTimes(2);
+      restartAutoRefresh();
+      vi.advanceTimersByTime(15000);
+      expect(mockCallback).toHaveBeenCalledTimes(2);
 
-    stopAutoRefresh();
+      stopAutoRefresh();
+    });
   });
 });
