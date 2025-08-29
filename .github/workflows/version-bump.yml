@@ -140,9 +140,9 @@ jobs:
             --base main \
             --head "$BRANCH_NAME"
 
-          # Enable auto-merge if available
+          # Merge PR immediately
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          gh pr merge "$PR_NUMBER" --auto --squash --delete-branch || echo "Auto-merge not available, manual merge required"
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
 
           echo "✅ Created PR for version $NEW_VERSION"
 
