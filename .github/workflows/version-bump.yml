@@ -1,7 +1,7 @@
 name: Version Bump
 
 'on':
-  pull_request:
+  pull_request_target:
     types: [closed]
     branches: [main]
 
@@ -33,7 +33,7 @@ jobs:
           # Use the base branch
           ref: main
           # Use GitHub token with write permissions
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -120,7 +120,7 @@ jobs:
 
       - name: Create version bump branch and PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
           NEW_VERSION: ${{ steps.version-info.outputs.new_version }}
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
         run: |
