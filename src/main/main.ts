@@ -52,10 +52,9 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') {
-    dbService.close()
-    app.quit()
-  }
+  // Always quit when all windows are closed (including on macOS)
+  dbService.close()
+  app.quit()
 })
 
 // IPC handlers for database operations
