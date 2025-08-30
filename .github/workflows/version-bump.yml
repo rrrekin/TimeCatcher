@@ -54,21 +54,27 @@ jobs:
           COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
           echo "Looking for PR associated with commit: $COMMIT_SHA"
           
-          # Try to find the PR by checking recent merged PRs
-          # Look for PRs merged in the last 24 hours to avoid stale results
-          SINCE_DATE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          # Try direct commit-to-pulls API endpoint first
+          PR_INFO=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls \
+            --jq ".[0] | select(. != null) | {number, title}")
           
-          PR_INFO=$(gh api repos/${{ github.repository }}/pulls \
-            --method GET \
-            --field state=closed \
-            --field sort=updated \
-            --field direction=desc \
-            --field per_page=20 \
-            --jq ".[] | select(.merged_at != null and .merged_at > \"$SINCE_DATE\") | select(.merge_commit_sha == \"$COMMIT_SHA\" or .head.sha == \"$COMMIT_SHA\") | {number, title} | select(.number != null)" \
-            | head -1)
+          # If direct API fails, fall back to search method
+          if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
+            echo "Direct API returned no results, trying fallback search..."
+            SINCE_DATE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+            
+            PR_INFO=$(gh api repos/${{ github.repository }}/pulls \
+              --method GET \
+              --field state=closed \
+              --field sort=updated \
+              --field direction=desc \
+              --field per_page=20 \
+              --jq ".[] | select(.merged_at != null and .merged_at > \"$SINCE_DATE\") | select(.merge_commit_sha == \"$COMMIT_SHA\" or .head.sha == \"$COMMIT_SHA\") | {number, title} | select(.number != null)" \
+              | head -1)
+          fi
           
           if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
-            echo "No recent PR found for commit $COMMIT_SHA"
+            echo "No PR found for commit $COMMIT_SHA"
             echo "Will use default patch version bump"
             echo "pr_found=false" >> $GITHUB_OUTPUT
             echo "pr_title=" >> $GITHUB_OUTPUT
@@ -142,20 +148,12 @@ jobs:
           chore: bump ${BUMP_TYPE} version
 
           Automated version bump from merged PR #${PR_NUMBER}: ${PR_TITLE}
-
-          🤖 Generated with [Claude Code](https://claude.ai/code)
-
-          Co-Authored-By: Claude <noreply@anthropic.com>
           EOF
           else
             cat > "$COMMIT_FILE" << EOF
           chore: bump ${BUMP_TYPE} version
 
           Automated version bump after successful CI for commit ${COMMIT_SHA}
-
-          🤖 Generated with [Claude Code](https://claude.ai/code)
-
-          Co-Authored-By: Claude <noreply@anthropic.com>
           EOF
           fi
 

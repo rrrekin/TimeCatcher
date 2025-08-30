@@ -1,22 +1,23 @@
 # Semantic Versioning System
 
-TimeCatcher uses a semi-automatic semantic versioning system that automatically bumps version numbers on PR merges.
+TimeCatcher uses a semi-automatic semantic versioning system that automatically bumps version numbers after successful CI completion.
 
 ## Overview
 
 - **Package.json**: Contains full semantic versions (e.g., `0.20.0`, `0.20.1`, `0.20.2`)
-- **Automatic Bumping**: Version incremented on every PR merge based on title
+- **Automatic Bumping**: Version incremented after successful CI runs based on original PR title
 - **Git Tags**: Created manually during release process (planned for future implementation)
 
 ## Automatic Version Bumping
 
-### On PR Merge
+### After CI Success
 
-When a pull request is merged to the `main` branch, the version is automatically bumped based on the PR title:
+When a pull request is merged to the `main` branch and CI passes successfully, the version is automatically bumped based on the original PR title:
 
 - **Default**: Patch version bump (e.g., `0.20.0` → `0.20.1`)
 - **`[MINOR]` or `minor:`**: Minor version bump (e.g., `0.20.0` → `0.21.0`)
-- **`[MAJOR]` or `major:`**: Major version bump (e.g., `0.20.0` → `1.0.0`)
+- **`[MAJOR]` or `major:` or `!:`**: Major version bump (e.g., `0.20.0` → `1.0.0`)
+- **`breaking change`**: Also triggers major version bump
 
 ### Examples
 
@@ -53,11 +54,12 @@ Each command will:
 
 The `.github/workflows/version-bump.yml` workflow:
 
-1. **Triggers**: On PR merge to `main` branch
-2. **Analyzes**: PR title to determine bump type
-3. **Updates**: `package.json` with new version
-4. **Commits**: Version change with automated message
-5. **Pushes**: Changes back to repository
+1. **Triggers**: On successful CI completion after PR merge to `main` branch
+2. **Detects**: Original PR using commit-to-pulls API with search fallback
+3. **Analyzes**: Original PR title to determine bump type
+4. **Updates**: `package.json` with new version
+5. **Creates**: Version bump PR and merges it automatically
+6. **Commits**: Version change with clean automated message
 
 ### Version Bump Script
 
@@ -94,7 +96,7 @@ All version changes are tracked in Git commits with the pattern:
 ```
 chore: bump [type] version
 
-Merged PR #123: [PR title]
+Automated version bump from merged PR #123: [PR title]
 ```
 
 ## Integration with Build Process
@@ -155,10 +157,10 @@ git push origin main
 
 ### CI/CD Integration
 
-The version bump happens after CI passes, ensuring only validated code gets versioned. The workflow:
+The version bump happens only after CI passes, ensuring only validated code gets versioned. The workflow:
 
 1. PR created → CI runs tests
-2. PR approved and merged → Version bump workflow runs
-3. New version committed automatically
+2. PR approved and merged → CI workflow completes successfully
+3. Version bump workflow triggers → Detects original PR → Creates version bump PR → Auto-merges
 
-This ensures every version number represents code that has passed all tests and quality checks.
+This two-stage approach ensures every version number represents code that has passed all tests and quality checks, with version bumps happening in separate, clean commits.
