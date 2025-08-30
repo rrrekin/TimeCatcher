@@ -18,6 +18,11 @@ concurrency:
 
 jobs:
   test:
+    # Skip CI entirely for version bump PRs and commits
+    if: |
+      !startsWith(github.head_ref, 'version-bump-') &&
+      !startsWith(github.event.pull_request.title, 'chore: bump ') &&
+      !startsWith(github.event.head_commit.message, 'chore: bump ')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -43,24 +48,23 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        if: ${{ !startsWith(github.head_ref, 'version-bump-') }}
         run: mkdir -p test-results && npm run test:coverage
 
       - name: Publish test results
-        if: ${{ always() && !cancelled() && matrix.node-version == 22 && hashFiles('test-results/junit.xml') != '' && !startsWith(github.head_ref, 'version-bump-') }}
+        if: ${{ always() && !cancelled() && matrix.node-version == 22 && hashFiles('test-results/junit.xml') != '' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Enforce coverage thresholds
-        if: ${{ matrix.node-version == 22 && !startsWith(github.head_ref, 'version-bump-') }}
+        if: ${{ matrix.node-version == 22 }}
         run: node scripts/check-coverage.js
 
       - name: Run build
         run: npm run build
 
       - name: Upload coverage to Codecov (Node.js 22 only)
-        if: ${{ always() && matrix.node-version == 22 && !cancelled() && hashFiles('coverage/lcov.info') != '' && !startsWith(github.head_ref, 'version-bump-') }}
+        if: ${{ always() && matrix.node-version == 22 && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
