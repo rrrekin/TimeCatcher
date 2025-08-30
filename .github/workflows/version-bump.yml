@@ -33,7 +33,7 @@ jobs:
           # Use the base branch
           ref: main
           # Use GitHub token with write permissions
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -120,7 +120,7 @@ jobs:
 
       - name: Create version bump branch and PR
         env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ steps.version-info.outputs.new_version }}
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
         run: |
@@ -143,7 +143,7 @@ jobs:
           # Merge PR immediately with head commit verification
           HEAD_SHA=$(git rev-parse HEAD)
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          gh pr merge "$PR_NUMBER" --squash --delete-branch --match-head-commit "$HEAD_SHA"
+          gh pr merge "$PR_NUMBER" --admin --squash --delete-branch --match-head-commit "$HEAD_SHA"
 
           echo "✅ Created PR for version $NEW_VERSION"
 
