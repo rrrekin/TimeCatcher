@@ -68,12 +68,14 @@ if [ ${#staged_src_files[@]} -gt 0 ]; then
   else
     echo "🎨 Running Prettier on staged source files..."
 
-    # Run Prettier directly on staged source files via NUL-delimited pipeline
-    if git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.(ts|js|vue|json|html|css|scss)$' | grep -v node_modules | xargs npx prettier --write; then
+    # Run Prettier on staged source files (NUL-safe)
+    if printf '%s\0' "${staged_src_files[@]}" | xargs -0 npx prettier --write; then
       echo "✅ Code formatting complete"
 
-      # Re-stage any formatted files
-      git diff --cached --name-only -z --diff-filter=ACM | tr '\0' '\n' | grep -E '\.(ts|js|vue|json|html|css|scss)$' | grep -v node_modules | xargs git add
+      # Re-stage any formatted source files (NUL-safe)
+      while IFS= read -r -d '' file; do
+        [ -f "$file" ] && git add -- "$file"
+      done < <(printf '%s\0' "${staged_src_files[@]}")
     else
       echo "❌ Code formatting failed"
       echo "💡 Fix the issues above or run 'npm run format' to format all files"
