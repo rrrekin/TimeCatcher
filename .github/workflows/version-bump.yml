@@ -140,9 +140,10 @@ jobs:
             --base main \
             --head "$BRANCH_NAME"
 
-          # Merge PR immediately
+          # Merge PR immediately with head commit verification
+          HEAD_SHA=$(git rev-parse HEAD)
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          gh pr merge "$PR_NUMBER" --squash --delete-branch
+          gh pr merge "$PR_NUMBER" --squash --delete-branch --match-head-commit "$HEAD_SHA"
 
           echo "✅ Created PR for version $NEW_VERSION"
 
