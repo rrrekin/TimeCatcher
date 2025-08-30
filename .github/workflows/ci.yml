@@ -18,11 +18,13 @@ concurrency:
 
 jobs:
   test:
-    # Skip CI entirely for version bump PRs and commits
+    # Skip CI entirely for version bump PRs and commits (event-aware)
     if: |
-      !startsWith(github.head_ref, 'version-bump-') &&
-      !startsWith(github.event.pull_request.title, 'chore: bump ') &&
-      !startsWith(github.event.head_commit.message, 'chore: bump ')
+      (github.event_name == 'pull_request' && 
+       !startsWith(github.head_ref, 'version-bump-') &&
+       !startsWith(github.event.pull_request.title, 'chore: bump ')) ||
+      (github.event_name == 'push' && 
+       !startsWith(github.event.head_commit.message, 'chore: bump '))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
