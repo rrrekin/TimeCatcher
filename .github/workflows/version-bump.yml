@@ -14,7 +14,7 @@ permissions:
 jobs:
   version-bump:
     # Only run when CI workflow succeeded and it's not a version bump PR
-    if: github.event.workflow_run.conclusion == 'success' && 
+    if: github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       !startsWith(github.event.workflow_run.head_branch, 'version-bump-')
     runs-on: ubuntu-latest
@@ -46,60 +46,15 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Get PR information from workflow run
-        id: pr-info
-        env:
-          GH_TOKEN: ${{ secrets.GH_PAT }}
-        run: |
-          # Get PR information from the workflow run that triggered this
-          PR_DATA=$(gh api repos/${{ github.repository }}/pulls \
-            --jq ".[] | select(.merge_commit_sha == \"${{ github.event.workflow_run.head_sha }}\") | {number, title}")
-          
-          if [ "$PR_DATA" = "null" ] || [ -z "$PR_DATA" ]; then
-            echo "No merged PR found for commit ${{ github.event.workflow_run.head_sha }}"
-            exit 1
-          fi
-          
-          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
-          PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
-          
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-          
       - name: Determine version bump type
         id: bump-type
         env:
-          PR_TITLE: ${{ steps.pr-info.outputs.pr_title }}
-          PR_NUMBER: ${{ steps.pr-info.outputs.pr_number }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Enable strict shell error handling
-          set -euo pipefail
-          IFS=$'\n\t'
-
-          # Set up cleanup trap to restore shell state
-          cleanup() {
-            shopt -u nocasematch 2>/dev/null || true
-          }
-          trap cleanup EXIT
-
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-
-          # Enable case-insensitive pattern matching
-          shopt -s nocasematch
-
-          # Determine bump type from PR title with anchored, grouped patterns
-          # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
-          if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
-            BUMP_TYPE="major"
-            echo "🚀 Detected MAJOR version bump from PR title"
-          elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
-            BUMP_TYPE="minor"
-            echo "📈 Detected MINOR version bump from PR title"
-          else
-            BUMP_TYPE="patch"
-            echo "🔧 Default PATCH version bump"
-          fi
+          # Since we're triggering after CI success, just use patch version bump
+          # For major/minor bumps, they can be done manually or with specific commit messages
+          BUMP_TYPE="patch"
+          echo "🔧 Automatic PATCH version bump after successful CI"
 
           # Export bump type to GitHub output
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
@@ -107,8 +62,7 @@ jobs:
       - name: Bump version
         env:
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ steps.bump-type.outputs.pr_title }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           echo "📈 Bumping ${BUMP_TYPE} version..."
 
@@ -119,7 +73,7 @@ jobs:
           cat > "$COMMIT_FILE" << EOF
           chore: bump ${BUMP_TYPE} version
 
-          Merged PR #${PR_NUMBER}: ${PR_TITLE}
+          Automated version bump after successful CI for commit ${COMMIT_SHA}
 
           🤖 Generated with [Claude Code](https://claude.ai/code)
 
@@ -155,10 +109,10 @@ jobs:
           # Push the branch with force-with-lease and set upstream
           git push --force-with-lease --set-upstream origin "$BRANCH_NAME"
 
-          # Create PR with auto-merge
+          # Create PR
           gh pr create \
             --title "chore: bump $BUMP_TYPE version to $NEW_VERSION" \
-            --body "Automated version bump from merged PR #${{ steps.pr-info.outputs.pr_number }}" \
+            --body "Automated version bump after successful CI for commit ${{ github.event.workflow_run.head_sha }}" \
             --base main \
             --head "$BRANCH_NAME"
 
@@ -172,7 +126,7 @@ jobs:
       - name: Summary
         run: |
           echo "🎉 Version bump completed!"
-          echo "   • Original PR: #${{ steps.pr-info.outputs.pr_number }}"
+          echo "   • Trigger commit: ${{ github.event.workflow_run.head_sha }}"
           echo "   • Bump type: ${{ steps.bump-type.outputs.bump_type }}"
           echo "   • New version: ${{ steps.version-info.outputs.new_version }}"
           echo ""
