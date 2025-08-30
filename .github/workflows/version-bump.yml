@@ -60,7 +60,7 @@ jobs:
           echo "Commit message: $COMMIT_MESSAGE"
 
           # Check if this is a version bump commit
-          if [[ "$COMMIT_MESSAGE" =~ ^"chore: bump " ]]; then
+          if [[ "$COMMIT_MESSAGE" == "chore: bump "* ]]; then
             echo "This is a version bump commit, skipping workflow"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
