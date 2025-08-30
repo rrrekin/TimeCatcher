@@ -1,8 +1,9 @@
 name: Version Bump
 
 'on':
-  pull_request_target:
-    types: [closed]
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main]
 
 permissions:
@@ -12,10 +13,10 @@ permissions:
 
 jobs:
   version-bump:
-    # Only run when PR is merged (not just closed)
-    if: github.event.pull_request.merged == true &&
-      !startsWith(github.event.pull_request.head.ref, 'version-bump-') &&
-      github.event.pull_request.user.login != 'github-actions[bot]'
+    # Only run when CI workflow succeeded and it's not a version bump PR
+    if: github.event.workflow_run.conclusion == 'success' && 
+      github.event.workflow_run.event == 'push' &&
+      !startsWith(github.event.workflow_run.head_branch, 'version-bump-')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -45,11 +46,30 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
+      - name: Get PR information from workflow run
+        id: pr-info
+        run: |
+          # Get PR information from the workflow run that triggered this
+          PR_DATA=$(gh api repos/${{ github.repository }}/pulls \
+            --jq ".[] | select(.merge_commit_sha == \"${{ github.event.workflow_run.head_sha }}\") | {number, title}")
+          
+          if [ "$PR_DATA" = "null" ] || [ -z "$PR_DATA" ]; then
+            echo "No merged PR found for commit ${{ github.event.workflow_run.head_sha }}"
+            exit 1
+          fi
+          
+          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
+          PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
+          
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+          
       - name: Determine version bump type
         id: bump-type
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ steps.pr-info.outputs.pr_title }}
+          PR_NUMBER: ${{ steps.pr-info.outputs.pr_number }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           # Enable strict shell error handling
           set -euo pipefail
@@ -136,7 +156,7 @@ jobs:
           # Create PR with auto-merge
           gh pr create \
             --title "chore: bump $BUMP_TYPE version to $NEW_VERSION" \
-            --body "Automated version bump from merged PR #${{ github.event.pull_request.number }}" \
+            --body "Automated version bump from merged PR #${{ steps.pr-info.outputs.pr_number }}" \
             --base main \
             --head "$BRANCH_NAME"
 
@@ -150,7 +170,7 @@ jobs:
       - name: Summary
         run: |
           echo "🎉 Version bump completed!"
-          echo "   • PR: #${{ github.event.pull_request.number }}"
+          echo "   • Original PR: #${{ steps.pr-info.outputs.pr_number }}"
           echo "   • Bump type: ${{ steps.bump-type.outputs.bump_type }}"
           echo "   • New version: ${{ steps.version-info.outputs.new_version }}"
           echo ""
