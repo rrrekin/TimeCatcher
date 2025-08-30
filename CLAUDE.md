@@ -29,8 +29,9 @@ __GitHub Actions Workflows__:
 - Uploads coverage reports to Codecov from the Node.js 22 job
 
 **Version Bump** (`.github/workflows/version-bump.yml`):
-- Runs automatically when PRs are merged to main
-- Analyzes PR title to determine version bump type ([MAJOR], [MINOR], or patch)
+- Runs automatically after CI completes successfully on main branch
+- Detects original PR using commit-to-pulls API with search fallback
+- Analyzes original PR title to determine version bump type ([MAJOR], [MINOR], breaking changes, or patch)
 - Updates package.json with new semantic version
 - Git tags will be created separately during manual release process
 

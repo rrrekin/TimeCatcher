@@ -2,7 +2,7 @@ name: Version Bump
 
 'on':
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types: [completed]
     branches: [main]
 
@@ -14,7 +14,7 @@ permissions:
 jobs:
   version-bump:
     # Only run when CI workflow succeeded and it's not a version bump PR
-    if: github.event.workflow_run.conclusion == 'success' && 
+    if: github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       !startsWith(github.event.workflow_run.head_branch, 'version-bump-')
     runs-on: ubuntu-latest
@@ -46,32 +46,52 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-      - name: Get PR information from workflow run
-        id: pr-info
+      - name: Find original PR for bump type detection
+        id: find-pr
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Get PR information from the workflow run that triggered this
-          PR_DATA=$(gh api repos/${{ github.repository }}/pulls \
-            --jq ".[] | select(.merge_commit_sha == \"${{ github.event.workflow_run.head_sha }}\") | {number, title}")
-          
-          if [ "$PR_DATA" = "null" ] || [ -z "$PR_DATA" ]; then
-            echo "No merged PR found for commit ${{ github.event.workflow_run.head_sha }}"
-            exit 1
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "Looking for PR associated with commit: $COMMIT_SHA"
+
+          # Try direct commit-to-pulls API endpoint first
+          PR_INFO=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA/pulls \
+            --jq ".[0] | select(. != null) | {number, title}")
+
+          # If direct API fails, fall back to search method
+          if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
+            echo "Direct API returned no results, trying fallback search..."
+            SINCE_DATE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+            
+            PR_INFO=$(gh api repos/${{ github.repository }}/pulls \
+              --method GET \
+              --field state=closed \
+              --field sort=updated \
+              --field direction=desc \
+              --field per_page=20 \
+              --jq ".[] | select(.merged_at != null and .merged_at > \"$SINCE_DATE\") | select(.merge_commit_sha == \"$COMMIT_SHA\" or .head.sha == \"$COMMIT_SHA\") | {number, title} | select(.number != null)" \
+              | head -1)
           fi
-          
-          PR_NUMBER=$(echo "$PR_DATA" | jq -r '.number')
-          PR_TITLE=$(echo "$PR_DATA" | jq -r '.title')
-          
-          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-          
+
+          if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
+            echo "No PR found for commit $COMMIT_SHA"
+            echo "Will use default patch version bump"
+            echo "pr_found=false" >> $GITHUB_OUTPUT
+            echo "pr_title=" >> $GITHUB_OUTPUT
+          else
+            PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number')
+            PR_TITLE=$(echo "$PR_INFO" | jq -r '.title')
+            echo "Found PR #$PR_NUMBER: $PR_TITLE"
+            echo "pr_found=true" >> $GITHUB_OUTPUT
+            echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          fi
+
       - name: Determine version bump type
         id: bump-type
         env:
-          PR_TITLE: ${{ steps.pr-info.outputs.pr_title }}
-          PR_NUMBER: ${{ steps.pr-info.outputs.pr_number }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PR_FOUND: ${{ steps.find-pr.outputs.pr_found }}
+          PR_TITLE: ${{ steps.find-pr.outputs.pr_title }}
         run: |
           # Enable strict shell error handling
           set -euo pipefail
@@ -83,22 +103,27 @@ jobs:
           }
           trap cleanup EXIT
 
-          echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
-
-          # Enable case-insensitive pattern matching
-          shopt -s nocasematch
-
-          # Determine bump type from PR title with anchored, grouped patterns
-          # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
-          if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
-            BUMP_TYPE="major"
-            echo "🚀 Detected MAJOR version bump from PR title"
-          elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
-            BUMP_TYPE="minor"
-            echo "📈 Detected MINOR version bump from PR title"
+          if [ "$PR_FOUND" = "true" ] && [ ! -z "$PR_TITLE" ]; then
+            echo "Analyzing PR title for version bump type: $PR_TITLE"
+            
+            # Enable case-insensitive pattern matching
+            shopt -s nocasematch
+            
+            # Determine bump type from PR title with anchored, grouped patterns
+            # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
+            if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
+              BUMP_TYPE="major"
+              echo "🚀 Detected MAJOR version bump from PR title"
+            elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
+              BUMP_TYPE="minor"
+              echo "📈 Detected MINOR version bump from PR title"
+            else
+              BUMP_TYPE="patch"
+              echo "🔧 Default PATCH version bump"
+            fi
           else
             BUMP_TYPE="patch"
-            echo "🔧 Default PATCH version bump"
+            echo "🔧 Default PATCH version bump (no PR found or analyzed)"
           fi
 
           # Export bump type to GitHub output
@@ -107,8 +132,10 @@ jobs:
       - name: Bump version
         env:
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ steps.bump-type.outputs.pr_title }}
+          COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
+          PR_FOUND: ${{ steps.find-pr.outputs.pr_found }}
+          PR_NUMBER: ${{ steps.find-pr.outputs.pr_number }}
+          PR_TITLE: ${{ steps.find-pr.outputs.pr_title }}
         run: |
           echo "📈 Bumping ${BUMP_TYPE} version..."
 
@@ -116,15 +143,19 @@ jobs:
           COMMIT_FILE=$(mktemp)
 
           # Write commit message to file with proper escaping
-          cat > "$COMMIT_FILE" << EOF
+          if [ "$PR_FOUND" = "true" ]; then
+            cat > "$COMMIT_FILE" << EOF
           chore: bump ${BUMP_TYPE} version
 
-          Merged PR #${PR_NUMBER}: ${PR_TITLE}
-
-          🤖 Generated with [Claude Code](https://claude.ai/code)
-
-          Co-Authored-By: Claude <noreply@anthropic.com>
+          Automated version bump from merged PR #${PR_NUMBER}: ${PR_TITLE}
           EOF
+          else
+            cat > "$COMMIT_FILE" << EOF
+          chore: bump ${BUMP_TYPE} version
+
+          Automated version bump after successful CI for commit ${COMMIT_SHA}
+          EOF
+          fi
 
           # Read commit message from file safely and pass to script
           COMMIT_MSG=$(cat "$COMMIT_FILE")
@@ -155,10 +186,16 @@ jobs:
           # Push the branch with force-with-lease and set upstream
           git push --force-with-lease --set-upstream origin "$BRANCH_NAME"
 
-          # Create PR with auto-merge
+          # Create PR with contextual body
+          if [ "${{ steps.find-pr.outputs.pr_found }}" = "true" ]; then
+            PR_BODY="Automated version bump from merged PR #${{ steps.find-pr.outputs.pr_number }}"
+          else
+            PR_BODY="Automated version bump after successful CI for commit ${{ github.event.workflow_run.head_sha }}"
+          fi
+
           gh pr create \
             --title "chore: bump $BUMP_TYPE version to $NEW_VERSION" \
-            --body "Automated version bump from merged PR #${{ steps.pr-info.outputs.pr_number }}" \
+            --body "$PR_BODY" \
             --base main \
             --head "$BRANCH_NAME"
 
@@ -172,7 +209,12 @@ jobs:
       - name: Summary
         run: |
           echo "🎉 Version bump completed!"
-          echo "   • Original PR: #${{ steps.pr-info.outputs.pr_number }}"
+          if [ "${{ steps.find-pr.outputs.pr_found }}" = "true" ]; then
+            echo "   • Original PR: #${{ steps.find-pr.outputs.pr_number }}"
+            echo "   • PR Title: ${{ steps.find-pr.outputs.pr_title }}"
+          else
+            echo "   • Trigger commit: ${{ github.event.workflow_run.head_sha }}"
+          fi
           echo "   • Bump type: ${{ steps.bump-type.outputs.bump_type }}"
           echo "   • New version: ${{ steps.version-info.outputs.new_version }}"
           echo ""
