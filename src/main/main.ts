@@ -4,7 +4,8 @@ import { dbService } from './database'
 import { TASK_TYPE_END } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
 
-const isDevelopment = process.env.NODE_ENV !== 'production'
+// In packaged apps, NODE_ENV might not be set, so also check if app is packaged
+const isDevelopment = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
 function isDuplicateEndConstraint(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
