@@ -13,8 +13,9 @@ permissions:
 
 jobs:
   version-bump:
-    # Only run when CI workflow succeeded and it's not a version bump PR
-    if: github.event.workflow_run.conclusion == 'success' &&
+    # Only run when CI workflow succeeded and it's not a version bump branch
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
       !startsWith(github.event.workflow_run.head_branch, 'version-bump-')
     runs-on: ubuntu-latest
@@ -26,7 +27,29 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      - name: Check if commit is a version bump
+        id: commit-guard
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          COMMIT_SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "Checking commit message for: $COMMIT_SHA"
+
+          # Get commit message using GitHub API
+          COMMIT_MESSAGE=$(gh api repos/${{ github.repository }}/commits/$COMMIT_SHA --jq '.commit.message')
+          echo "Commit message: $COMMIT_MESSAGE"
+
+          # Check if this is a version bump commit
+          if [[ "$COMMIT_MESSAGE" == "chore: bump "* ]]; then
+            echo "This is a version bump commit, skipping workflow"
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "This is not a version bump commit, proceeding"
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
+        if: steps.commit-guard.outputs.should_skip != 'true'
         uses: actions/checkout@v4
         with:
           # Fetch full history for proper git operations
@@ -37,16 +60,19 @@ jobs:
           token: ${{ secrets.GH_PAT }}
 
       - name: Setup Node.js
+        if: steps.commit-guard.outputs.should_skip != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Configure Git
+        if: steps.commit-guard.outputs.should_skip != 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
       - name: Find original PR for bump type detection
+        if: steps.commit-guard.outputs.should_skip != 'true'
         id: find-pr
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
@@ -88,6 +114,7 @@ jobs:
           fi
 
       - name: Determine version bump type
+        if: steps.commit-guard.outputs.should_skip != 'true'
         id: bump-type
         env:
           PR_FOUND: ${{ steps.find-pr.outputs.pr_found }}
@@ -130,6 +157,7 @@ jobs:
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
 
       - name: Bump version
+        if: steps.commit-guard.outputs.should_skip != 'true'
         env:
           BUMP_TYPE: ${{ steps.bump-type.outputs.bump_type }}
           COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -165,6 +193,7 @@ jobs:
           rm -f "$COMMIT_FILE"
 
       - name: Get new version info
+        if: steps.commit-guard.outputs.should_skip != 'true'
         id: version-info
         run: |
           NEW_VERSION=$(node -p "require('./package.json').version")
@@ -172,6 +201,7 @@ jobs:
           echo "📊 New version: $NEW_VERSION"
 
       - name: Create version bump branch and PR
+        if: steps.commit-guard.outputs.should_skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           NEW_VERSION: ${{ steps.version-info.outputs.new_version }}
@@ -207,6 +237,7 @@ jobs:
           echo "✅ Created PR for version $NEW_VERSION"
 
       - name: Summary
+        if: steps.commit-guard.outputs.should_skip != 'true'
         run: |
           echo "🎉 Version bump completed!"
           if [ "${{ steps.find-pr.outputs.pr_found }}" = "true" ]; then
