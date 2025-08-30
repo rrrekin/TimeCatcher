@@ -70,7 +70,12 @@
     },
     "files": [
       "dist/main/**/*",
-      "dist/renderer/**/*"
+      "dist/renderer/**/*",
+      "dist/shared/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
     ],
     "extraResources": [],
     "mac": {
