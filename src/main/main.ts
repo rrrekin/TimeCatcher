@@ -50,8 +50,13 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('window-all-closed', function () {
-  dbService.close()
+app.on('window-all-closed', async function () {
+  try {
+    dbService.close()
+  } catch (error) {
+    console.error('Failed to close database:', error)
+  }
+
   app.quit()
 })
 

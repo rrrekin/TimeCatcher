@@ -1176,7 +1176,6 @@ body {
   padding: 1rem;
   overflow-y: auto;
   background: var(--bg-secondary);
-  position: relative;
 }
 
 /* Toast Notification Styles */

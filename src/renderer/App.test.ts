@@ -6,6 +6,17 @@ import App from './App.vue'
 import type { Category, TaskRecord } from '@/shared/types'
 import * as timeUtils from '@/utils/timeUtils'
 
+// Helper factory for electronAPI mock
+function createElectronAPIMock(overrides?: Partial<typeof global.window.electronAPI>) {
+  return {
+    updateTaskRecord: vi.fn(),
+    addTaskRecord: vi.fn(),
+    deleteTaskRecord: vi.fn(),
+    getVersion: vi.fn().mockResolvedValue('1.0.0'),
+    ...overrides
+  } as any
+}
+
 // Mock all the composables
 const mockCategories = [
   { id: 1, name: 'Work', is_default: true },
@@ -349,12 +360,7 @@ vi.mock('@/components/SetupModal.vue', () => ({
 }))
 
 // Mock global window objects
-global.window.electronAPI = {
-  updateTaskRecord: vi.fn(),
-  addTaskRecord: vi.fn(),
-  deleteTaskRecord: vi.fn(),
-  getVersion: vi.fn().mockResolvedValue('1.0.0')
-} as any
+global.window.electronAPI = createElectronAPIMock()
 
 global.window.matchMedia = vi.fn(() => ({
   matches: false,
@@ -692,12 +698,7 @@ describe('App Component', () => {
   describe('Task Management', () => {
     beforeEach(() => {
       // Ensure electronAPI is available for task operations
-      global.window.electronAPI = {
-        updateTaskRecord: vi.fn(),
-        addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn(),
-        getVersion: vi.fn().mockResolvedValue('1.0.0')
-      } as any
+      global.window.electronAPI = createElectronAPIMock()
     })
 
     it('should add new task successfully', async () => {
@@ -1026,12 +1027,9 @@ describe('App Component', () => {
   describe('Input Handling', () => {
     beforeEach(() => {
       // Ensure electronAPI is available for input handling tests
-      global.window.electronAPI = {
-        updateTaskRecord: mockUpdateTaskRecord,
-        addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn(),
-        getVersion: vi.fn().mockResolvedValue('1.0.0')
-      } as any
+      global.window.electronAPI = createElectronAPIMock({
+        updateTaskRecord: mockUpdateTaskRecord
+      })
     })
 
     it('should handle blur event for task name input', async () => {
@@ -2029,11 +2027,17 @@ describe('App Component', () => {
 
   describe('App Version Display', () => {
     beforeEach(() => {
+      // Use fake timers for deterministic testing
+      vi.useFakeTimers()
+
       // Ensure getVersion is available in electronAPI
-      global.window.electronAPI = {
-        ...global.window.electronAPI,
+      global.window.electronAPI = createElectronAPIMock({
         getVersion: vi.fn().mockResolvedValue('1.2.3')
-      }
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
     })
 
     it('should fetch and display app version on mount', async () => {
@@ -2042,7 +2046,9 @@ describe('App Component', () => {
 
       // Wait for onMounted to complete
       await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 1100)) // Wait for the 1000ms delay + extra
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
 
       expect(global.window.electronAPI.getVersion).toHaveBeenCalled()
       expect(vm.appVersion).toBe('1.2.3')
@@ -2055,10 +2061,9 @@ describe('App Component', () => {
 
     it('should handle getVersion API error gracefully', async () => {
       const mockGetVersion = vi.fn().mockRejectedValue(new Error('API error'))
-      global.window.electronAPI = {
-        ...global.window.electronAPI,
+      global.window.electronAPI = createElectronAPIMock({
         getVersion: mockGetVersion
-      }
+      })
 
       const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
@@ -2067,7 +2072,9 @@ describe('App Component', () => {
 
       // Wait for onMounted to complete
       await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
 
       expect(mockGetVersion).toHaveBeenCalled()
       expect(vm.appVersion).toBe('')
@@ -2081,14 +2088,15 @@ describe('App Component', () => {
     })
 
     it('should not render version element when appVersion is empty', async () => {
-      global.window.electronAPI = {
-        ...global.window.electronAPI,
+      global.window.electronAPI = createElectronAPIMock({
         getVersion: vi.fn().mockResolvedValue('')
-      }
+      })
 
       const wrapper = mount(App)
       await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
 
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(false)

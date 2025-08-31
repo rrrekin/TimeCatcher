@@ -199,9 +199,10 @@ Uses Vitest with @vitest/coverage-v8. Test types:
 __Test Patterns__:
 
 - Parameterized tests with `it.each()`
-- Fresh instances in `beforeEach` for isolation
-- Vitest fake timers for date/time testing
+- Fresh instances in `beforeEach` for isolation  
+- Vitest fake timers for date/time testing and avoiding real delays (`vi.useFakeTimers()`, `vi.advanceTimersByTimeAsync()`)
 - Mock complex dependencies for focused testing
+- `createElectronAPIMock()` factory function for consistent electronAPI mocking with overrides
 
 ## Common Development Tasks
 
