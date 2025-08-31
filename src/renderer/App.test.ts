@@ -352,7 +352,8 @@ vi.mock('@/components/SetupModal.vue', () => ({
 global.window.electronAPI = {
   updateTaskRecord: vi.fn(),
   addTaskRecord: vi.fn(),
-  deleteTaskRecord: vi.fn()
+  deleteTaskRecord: vi.fn(),
+  getVersion: vi.fn().mockResolvedValue('1.0.0')
 } as any
 
 global.window.matchMedia = vi.fn(() => ({
@@ -693,7 +694,8 @@ describe('App Component', () => {
       global.window.electronAPI = {
         updateTaskRecord: vi.fn(),
         addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn()
+        deleteTaskRecord: vi.fn(),
+        getVersion: vi.fn().mockResolvedValue('1.0.0')
       } as any
     })
 
@@ -1026,7 +1028,8 @@ describe('App Component', () => {
       global.window.electronAPI = {
         updateTaskRecord: mockUpdateTaskRecord,
         addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn()
+        deleteTaskRecord: vi.fn(),
+        getVersion: vi.fn().mockResolvedValue('1.0.0')
       } as any
     })
 
@@ -2020,6 +2023,74 @@ describe('App Component', () => {
 
       // Restore original date
       vm.selectedDate = originalDate
+    })
+  })
+
+  describe('App Version Display', () => {
+    beforeEach(() => {
+      // Ensure getVersion is available in electronAPI
+      global.window.electronAPI = {
+        ...global.window.electronAPI,
+        getVersion: vi.fn().mockResolvedValue('1.2.3')
+      }
+    })
+
+    it('should fetch and display app version on mount', async () => {
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+
+      // Wait for onMounted to complete
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 1100)) // Wait for the 1000ms delay + extra
+
+      expect(global.window.electronAPI.getVersion).toHaveBeenCalled()
+      expect(vm.appVersion).toBe('1.2.3')
+
+      // Check that version is rendered in template
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(true)
+      expect(versionElement.text()).toBe('v1.2.3')
+    })
+
+    it('should handle getVersion API error gracefully', async () => {
+      const mockGetVersion = vi.fn().mockRejectedValue(new Error('API error'))
+      global.window.electronAPI = {
+        ...global.window.electronAPI,
+        getVersion: mockGetVersion
+      }
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+
+      // Wait for onMounted to complete
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      expect(mockGetVersion).toHaveBeenCalled()
+      expect(vm.appVersion).toBe('')
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to get app version:', expect.any(Error))
+
+      // Version should not be displayed when empty
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(false)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should not render version element when appVersion is empty', async () => {
+      global.window.electronAPI = {
+        ...global.window.electronAPI,
+        getVersion: vi.fn().mockResolvedValue('')
+      }
+
+      const wrapper = mount(App)
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(false)
     })
   })
 })

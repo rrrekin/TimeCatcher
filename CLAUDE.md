@@ -186,6 +186,8 @@ __Window__: 1200x800 default, 1050x750 minimum, context isolation enabled
 
 ## Testing
 
+ALWAYS add tests with any new feature.
+
 Uses Vitest with @vitest/coverage-v8. Test types:
 
 - Unit tests (`*.test.ts`) for utilities and composables

@@ -43,6 +43,9 @@ export type TaskRecordInsert = Omit<TaskRecord, 'id' | 'created_at'>
 export type TaskRecordUpdate = Partial<Omit<TaskRecord, 'id' | 'created_at' | 'task_type'>>
 
 export interface ElectronAPI {
+  // Application info
+  getVersion: () => Promise<string>
+  // Database operations
   getCategories: () => Promise<Category[]>
   addCategory: (name: string) => Promise<Category>
   deleteCategory: (id: number) => Promise<void>

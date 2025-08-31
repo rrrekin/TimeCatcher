@@ -51,6 +51,9 @@
           :total-minutes-tracked="getTotalMinutesTracked()"
           :category-breakdown="getEnhancedCategoryBreakdown"
         />
+
+        <!-- Application version positioned near window border -->
+        <div class="app-version" v-if="appVersion">v{{ appVersion }}</div>
       </div>
     </div>
 
@@ -241,6 +244,9 @@ const isDeletingTask = ref(false)
 const showFormCategoryDropdown = ref(false)
 const showInlineDropdown = ref<{ [key: number]: boolean }>({})
 const selectedCategoryForForm = ref('')
+
+// Application version
+const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
@@ -616,6 +622,13 @@ onMounted(async () => {
   const selectedDateString = toYMDLocalUtil(selectedDate.value)
   if (selectedDateString === todayString) {
     startAutoRefresh()
+  }
+
+  // Fetch app version
+  try {
+    appVersion.value = await window.electronAPI.getVersion()
+  } catch (error) {
+    console.warn('Failed to get app version:', error)
   }
 
   // Add click outside listener for custom dropdown
@@ -1163,6 +1176,7 @@ body {
   padding: 1rem;
   overflow-y: auto;
   background: var(--bg-secondary);
+  position: relative;
 }
 
 /* Toast Notification Styles */
@@ -1446,5 +1460,20 @@ body {
 .delete-confirm-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* App Version Styles */
+.app-version {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  font-size: 10px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  color: var(--text-muted);
+  opacity: 0.3;
+  font-weight: 400;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
 }
 </style>
