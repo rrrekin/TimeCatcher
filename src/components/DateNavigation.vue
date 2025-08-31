@@ -1,6 +1,9 @@
 <template>
   <nav class="time-navigation" aria-label="Date navigation">
     <div class="nav-controls">
+      <div class="app-icon" data-testid="app-logo" aria-hidden="true">
+        <img src="/logo.svg" alt="" class="icon" />
+      </div>
       <button
         type="button"
         class="nav-btn"
@@ -188,5 +191,21 @@ const dateInputId = useId()
 
 .setup-icon {
   font-size: 16px;
+}
+
+.app-icon {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+  transition: transform 0.2s ease;
+}
+
+.icon:hover {
+  transform: scale(1.1);
 }
 </style>

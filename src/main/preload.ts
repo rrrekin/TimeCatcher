@@ -2,6 +2,9 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { TaskRecordInsert, TaskRecordUpdate } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // Application info
+  getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
+
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
   addCategory: (name: string) => ipcRenderer.invoke('db:add-category', name),

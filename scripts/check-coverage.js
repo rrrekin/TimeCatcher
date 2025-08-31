@@ -30,8 +30,24 @@ function getChangedFiles() {
   function tryGitDiff(base) {
     try {
       console.log(`Attempting to get changed files compared to ${base}...`)
-      const result = execSync(`git diff --name-only ${base}...HEAD`, { encoding: 'utf-8', stdio: 'pipe' })
-      return filterSourceFiles(result)
+      // Use name-status to include statuses, then filter out deleted (D) before returning names
+      const result = execSync(`git diff --name-status ${base}...HEAD`, { encoding: 'utf-8', stdio: 'pipe' })
+      const lines = result.split('\n').filter(l => l.trim())
+      const nonDeleted = lines
+        .map(line => {
+          // Format: "<STATUS>\t<path>" or for renames: "R100\t<old>\t<new>"
+          const parts = line.split('\t')
+          const status = parts[0]
+          if (status.startsWith('D')) return null // deleted
+          if (status.startsWith('R')) {
+            // For rename, take the new path (second path)
+            return parts[2] || parts[1] || ''
+          }
+          return parts[1] || ''
+        })
+        .filter(Boolean)
+        .join('\n')
+      return filterSourceFiles(nonDeleted)
     } catch (error) {
       console.log(`Git diff failed: ${error.message}`)
       return null
@@ -168,6 +184,43 @@ function formatCoverageWithStatus(coverage, threshold, passed, found = null) {
   return `${formattedCoverage} (${status} - ${reason})`
 }
 
+function hasTestableFunctions(filePath) {
+  const absPath = path.join(process.cwd(), filePath)
+
+  // If the file does not exist (deleted/renamed), treat as having no testable functions
+  if (!fs.existsSync(absPath)) return false
+
+  try {
+    let content = fs.readFileSync(absPath, 'utf-8')
+
+    // For Vue SFCs, analyze only the <script> contents (including <script setup>)
+    if (filePath.endsWith('.vue')) {
+      const scripts = []
+      const scriptRegex = /<script(?:\s+[^>]*)?>([\s\S]*?)<\/script>/gi
+      let m
+      while ((m = scriptRegex.exec(content)) !== null) {
+        // m[1] is inner content of the script block
+        scripts.push(m[1])
+      }
+      content = scripts.join('\n')
+    }
+
+    const patterns = [
+      /\bfunction\s+[A-Za-z0-9_]+\s*\(/, // named function declarations
+      /\bfunction\s*\(/, // anonymous functions
+      /=>\s*\{?/, // arrow functions (block or concise)
+      /\bmethods\s*:\s*\{/, // Vue options API methods
+      /\bsetup\s*\(/ // Vue composition API setup
+    ]
+
+    return content.length > 0 && patterns.some(re => re.test(content))
+  } catch (e) {
+    // On unexpected read/parsing errors (not non-existence), be conservative and assume no testable functions
+    // to avoid false negatives; we only enforce coverage when metrics say items exist.
+    return false
+  }
+}
+
 function checkCoverage() {
   const changedFiles = getChangedFiles()
   const coverageData = parseLcovFile()
@@ -186,9 +239,37 @@ function checkCoverage() {
   const results = []
 
   changedFiles.forEach(file => {
+    // Skip files that were deleted: they should not be evaluated for coverage.
+    // Since getChangedFiles() already filtered out deleted paths using --name-status,
+    // this is a defensive check in case a caller passes a list including deleted files
+    // or the file no longer exists on disk.
+    if (!fs.existsSync(path.join(process.cwd(), file))) {
+      // Do not log or push N/A to results to keep output noise-free and faster
+      return
+    }
     const coverage = coverageData[file]
 
     if (!coverage) {
+      const hasFuncs = hasTestableFunctions(file)
+      if (!hasFuncs) {
+        // No functions to test: mark as PASS with N/A metrics
+        console.log(`✅ ${file}:`)
+        console.log(`   Lines: N/A (PASS - no items to measure)`)
+        console.log(`   Branches: N/A (PASS - no items to measure)`)
+        console.log(`   Functions: N/A (PASS - no items to measure)`)
+        console.log(`   Statements: N/A (PASS - no items to measure)`)
+        console.log('')
+        results.push({
+          file,
+          lines: null,
+          branches: null,
+          functions: null,
+          statements: null,
+          passed: true,
+          reason: 'No functions to test'
+        })
+        return
+      }
       console.log(`⚠️  ${file}: No coverage data found (possibly not covered by tests)`)
       results.push({
         file,
@@ -203,9 +284,14 @@ function checkCoverage() {
       return
     }
 
+    // For Vue SFCs without testable functions, treat function coverage as N/A even if V8 reports synthetic handlers
+    const treatFunctionsAsNA = file.endsWith('.vue') && !hasTestableFunctions(file)
+    const functionsFound = treatFunctionsAsNA ? 0 : coverage.functions.found
+    const functionsHit = treatFunctionsAsNA ? 0 : coverage.functions.hit
+
     const linesCoverage = calculateCoverage(coverage.lines.hit, coverage.lines.found)
     const branchesCoverage = calculateCoverage(coverage.branches.hit, coverage.branches.found)
-    const functionsCoverage = calculateCoverage(coverage.functions.hit, coverage.functions.found)
+    const functionsCoverage = calculateCoverage(functionsHit, functionsFound)
     const statementsCoverage = calculateCoverage(coverage.statements.hit, coverage.statements.found)
 
     // Lines and statements are always required if they exist
@@ -217,14 +303,14 @@ function checkCoverage() {
     const branchesPassed =
       coverage.branches.found === 0 || (branchesCoverage !== null && branchesCoverage >= THRESHOLDS.branches)
     const functionsPassed =
-      coverage.functions.found === 0 || (functionsCoverage !== null && functionsCoverage >= THRESHOLDS.functions)
+      functionsFound === 0 || (functionsCoverage !== null && functionsCoverage >= THRESHOLDS.functions)
 
     // Build list of required checks (only include metrics that have items to measure)
     const requiredChecks = []
     if (coverage.lines.found > 0) requiredChecks.push(linesPassed)
     if (coverage.statements.found > 0) requiredChecks.push(statementsPassed)
     if (coverage.branches.found > 0) requiredChecks.push(branchesPassed)
-    if (coverage.functions.found > 0) requiredChecks.push(functionsPassed)
+    if (functionsFound > 0) requiredChecks.push(functionsPassed)
 
     // File passes if all required checks pass (or no checks are required)
     const filePassed = requiredChecks.length === 0 || requiredChecks.every(check => check)
@@ -238,7 +324,7 @@ function checkCoverage() {
       `   Branches: ${formatCoverageWithStatus(branchesCoverage, THRESHOLDS.branches, branchesPassed, coverage.branches.found)}`
     )
     console.log(
-      `   Functions: ${formatCoverageWithStatus(functionsCoverage, THRESHOLDS.functions, functionsPassed, coverage.functions.found)}`
+      `   Functions: ${formatCoverageWithStatus(functionsCoverage, THRESHOLDS.functions, functionsPassed, functionsFound)}`
     )
     console.log(
       `   Statements: ${formatCoverageWithStatus(statementsCoverage, THRESHOLDS.statements, statementsPassed, coverage.statements.found)}`

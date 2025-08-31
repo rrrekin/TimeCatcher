@@ -185,6 +185,7 @@ const formatTaskTime = (timeString: string): string => {
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 20px var(--shadow-color);
+  position: relative;
 }
 
 .daily-report h2 {

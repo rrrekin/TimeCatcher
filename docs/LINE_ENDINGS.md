@@ -1,6 +1,6 @@
 # Line Endings Policy
 
-This repository enforces **LF (`\n`) line endings** for all text files.
+This repository enforces __LF (`\n`) line endings__ for all text files.
 
 ## Why?
 
@@ -20,7 +20,7 @@ This ensures Git normalizes line endings to LF on checkout and commit.
 
 ## Contributor Notes
 
-- Do **not** rely on `core.autocrlf` to manage line endings.  
+- Do __not__ rely on `core.autocrlf` to manage line endings.  
   Instead, let `.gitattributes` handle normalization.
 - If you previously committed files with CRLF endings, run:
 

@@ -6,6 +6,17 @@ import App from './App.vue'
 import type { Category, TaskRecord } from '@/shared/types'
 import * as timeUtils from '@/utils/timeUtils'
 
+// Helper factory for electronAPI mock
+function createElectronAPIMock(overrides?: Partial<typeof global.window.electronAPI>) {
+  return {
+    updateTaskRecord: vi.fn(),
+    addTaskRecord: vi.fn(),
+    deleteTaskRecord: vi.fn(),
+    getVersion: vi.fn().mockResolvedValue('1.0.0'),
+    ...overrides
+  } as any
+}
+
 // Mock all the composables
 const mockCategories = [
   { id: 1, name: 'Work', is_default: true },
@@ -349,11 +360,7 @@ vi.mock('@/components/SetupModal.vue', () => ({
 }))
 
 // Mock global window objects
-global.window.electronAPI = {
-  updateTaskRecord: vi.fn(),
-  addTaskRecord: vi.fn(),
-  deleteTaskRecord: vi.fn()
-} as any
+global.window.electronAPI = createElectronAPIMock()
 
 global.window.matchMedia = vi.fn(() => ({
   matches: false,
@@ -445,16 +452,17 @@ describe('App Component', () => {
       vi.setSystemTime(fixedDate)
 
       const vm = wrapper.vm as any
-      const initialDate = new Date(vm.selectedDate)
+      // Explicitly set selectedDate to the fixed date to avoid month boundary issues
+      vm.selectedDate = new Date(fixedDate)
 
       vm.goToPreviousDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate() - 1)
+      expect(vm.selectedDate.getDate()).toBe(14) // Jan 14th
 
       vm.goToNextDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate())
+      expect(vm.selectedDate.getDate()).toBe(15) // Back to Jan 15th
 
       vm.goToNextDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate() + 1)
+      expect(vm.selectedDate.getDate()).toBe(16) // Jan 16th
 
       vm.goToToday()
       // Should be exactly the fixed date
@@ -690,11 +698,7 @@ describe('App Component', () => {
   describe('Task Management', () => {
     beforeEach(() => {
       // Ensure electronAPI is available for task operations
-      global.window.electronAPI = {
-        updateTaskRecord: vi.fn(),
-        addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn()
-      } as any
+      global.window.electronAPI = createElectronAPIMock()
     })
 
     it('should add new task successfully', async () => {
@@ -974,21 +978,25 @@ describe('App Component', () => {
     })
 
     it('should handle delete task when electronAPI is not available', async () => {
-      // Save original electronAPI
-      const originalElectronAPI = global.window.electronAPI
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
-      vm.taskToDelete = mockTaskRecords[0]
+        const vm = wrapper.vm as any
+        vm.taskToDelete = mockTaskRecords[0]
 
-      await vm.confirmDeleteTaskFinal()
+        await vm.confirmDeleteTaskFinal()
 
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
-
-      // Restore electronAPI
-      global.window.electronAPI = originalElectronAPI
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
+      }
     })
 
     it('should handle delete task when delete function is not available', async () => {
@@ -1023,11 +1031,9 @@ describe('App Component', () => {
   describe('Input Handling', () => {
     beforeEach(() => {
       // Ensure electronAPI is available for input handling tests
-      global.window.electronAPI = {
-        updateTaskRecord: mockUpdateTaskRecord,
-        addTaskRecord: vi.fn(),
-        deleteTaskRecord: vi.fn()
-      } as any
+      global.window.electronAPI = createElectronAPIMock({
+        updateTaskRecord: mockUpdateTaskRecord
+      })
     })
 
     it('should handle blur event for task name input', async () => {
@@ -1127,26 +1133,30 @@ describe('App Component', () => {
     })
 
     it('should handle update task when electronAPI is not available', async () => {
-      // Save original electronAPI
-      const originalElectronAPI = global.window.electronAPI
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
-      // Create a proper HTMLInputElement mock
-      const inputElement = document.createElement('input')
-      inputElement.value = 'Updated Task'
-      const mockInputEvent = {
-        target: inputElement
-      } as any
+        const vm = wrapper.vm as any
+        // Create a proper HTMLInputElement mock
+        const inputElement = document.createElement('input')
+        inputElement.value = 'Updated Task'
+        const mockInputEvent = {
+          target: inputElement
+        } as any
 
-      await vm.handleBlur(1, 'task_name', mockInputEvent)
+        await vm.handleBlur(1, 'task_name', mockInputEvent)
 
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
-
-      // Restore electronAPI
-      global.window.electronAPI = originalElectronAPI
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
+      }
     })
 
     it('should handle update task when update function is not available', async () => {
@@ -1494,26 +1504,34 @@ describe('App Component', () => {
     })
 
     it('should handle electron API unavailable scenarios', async () => {
-      // Remove electronAPI to simulate unavailable state
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
+        const vm = wrapper.vm as any
 
-      // Test task replay without electronAPI
-      const record = {
-        id: 1,
-        category_name: 'Work',
-        task_name: 'Test Task',
-        start_time: '09:00',
-        date: '2024-01-15',
-        task_type: 'normal'
+        // Test task replay without electronAPI
+        const record = {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Test Task',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+
+        await vm.replayTask(record)
+
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
       }
-
-      await vm.replayTask(record)
-
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
     })
 
     it('should handle invalid time format errors', async () => {
@@ -2020,6 +2038,122 @@ describe('App Component', () => {
 
       // Restore original date
       vm.selectedDate = originalDate
+    })
+  })
+
+  describe('App Version Display', () => {
+    beforeEach(() => {
+      // Use fake timers for deterministic testing
+      vi.useFakeTimers()
+
+      // Ensure getVersion is available in electronAPI
+      global.window.electronAPI = createElectronAPIMock({
+        getVersion: vi.fn().mockResolvedValue('1.2.3')
+      })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should fetch and display app version on mount', async () => {
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+
+      // Wait for onMounted to complete
+      await nextTick()
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
+
+      expect(global.window.electronAPI.getVersion).toHaveBeenCalled()
+      expect(vm.appVersion).toBe('1.2.3')
+
+      // Check that version is rendered in template
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(true)
+      expect(versionElement.text()).toBe('v1.2.3')
+
+      // Tear down
+      wrapper.unmount()
+    })
+
+    it('should handle getVersion API error gracefully', async () => {
+      const mockGetVersion = vi.fn().mockRejectedValue(new Error('API error'))
+      global.window.electronAPI = createElectronAPIMock({
+        getVersion: mockGetVersion
+      })
+
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+
+      // Wait for onMounted to complete
+      await nextTick()
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
+
+      expect(mockGetVersion).toHaveBeenCalled()
+      expect(vm.appVersion).toBe('')
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to get app version:', expect.any(Error))
+
+      // Version should not be displayed when empty
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(false)
+
+      // Tear down
+      wrapper.unmount()
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should not render version element when appVersion is empty', async () => {
+      global.window.electronAPI = createElectronAPIMock({
+        getVersion: vi.fn().mockResolvedValue('')
+      })
+
+      const wrapper = mount(App)
+      await nextTick()
+
+      // Advance fake timers by 1000ms to trigger the delayed version fetch
+      await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
+
+      const versionElement = wrapper.find('.app-version')
+      expect(versionElement.exists()).toBe(false)
+
+      // Tear down
+      wrapper.unmount()
+    })
+
+    it('skips version fetch when electronAPI is unavailable', async () => {
+      const original = global.window?.electronAPI
+      try {
+        // Temporarily remove electronAPI for this test
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global.window as any).electronAPI = undefined
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const wrapper = mount(App)
+        await nextTick()
+        await vi.advanceTimersByTimeAsync(1000)
+        await nextTick()
+        expect(wrapper.find('.app-version').exists()).toBe(false)
+        // Tear down
+        wrapper.unmount()
+        warnSpy.mockRestore()
+      } finally {
+        // Restore original value to avoid leaking state across tests
+        if (typeof original === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(global.window as any).electronAPI = original
+        }
+      }
     })
   })
 })

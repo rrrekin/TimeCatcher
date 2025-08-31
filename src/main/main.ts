@@ -4,7 +4,7 @@ import { dbService } from './database'
 import { TASK_TYPE_END } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
 
-const isDevelopment = process.env.NODE_ENV !== 'production'
+const isDevelopment = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
 function isDuplicateEndConstraint(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -50,11 +50,14 @@ app.whenReady().then(() => {
   })
 })
 
-app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') {
+app.on('window-all-closed', async function () {
+  try {
     dbService.close()
-    app.quit()
+  } catch (error) {
+    console.error('Failed to close database:', error)
   }
+
+  app.quit()
 })
 
 // IPC handlers for database operations
@@ -187,6 +190,11 @@ ipcMain.handle('db:delete-task-record', async (_, id: number) => {
     console.error('Failed to delete task record:', error)
     throw new Error(`Failed to delete task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
+})
+
+// Application info handler
+ipcMain.handle('app:get-version', async () => {
+  return app.getVersion()
 })
 
 // Debug handler to view all data - only available in development

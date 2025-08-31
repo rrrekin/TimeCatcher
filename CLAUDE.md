@@ -22,13 +22,15 @@ See docs/VERSIONING.md for the full versioning workflow and npm commands.
 
 __GitHub Actions Workflows__:
 
-**CI Pipeline** (`.github/workflows/ci.yml`):
+__CI Pipeline__ (`.github/workflows/ci.yml`):
+
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
 - Uploads coverage reports to Codecov from the Node.js 22 job
 
-**Version Bump** (`.github/workflows/version-bump.yml`):
+__Version Bump__ (`.github/workflows/version-bump.yml`):
+
 - Runs automatically after CI completes successfully on main branch
 - Detects original PR using commit-to-pulls API with search fallback
 - Analyzes original PR title to determine version bump type ([MAJOR], [MINOR], breaking changes, or patch)
@@ -186,6 +188,8 @@ __Window__: 1200x800 default, 1050x750 minimum, context isolation enabled
 
 ## Testing
 
+ALWAYS add tests with any new feature.
+
 Uses Vitest with @vitest/coverage-v8. Test types:
 
 - Unit tests (`*.test.ts`) for utilities and composables
@@ -195,9 +199,10 @@ Uses Vitest with @vitest/coverage-v8. Test types:
 __Test Patterns__:
 
 - Parameterized tests with `it.each()`
-- Fresh instances in `beforeEach` for isolation
-- Vitest fake timers for date/time testing
+- Fresh instances in `beforeEach` for isolation  
+- Vitest fake timers for date/time testing and avoiding real delays (`vi.useFakeTimers()`, `vi.advanceTimersByTimeAsync()`)
 - Mock complex dependencies for focused testing
+- `createElectronAPIMock()` factory function for consistent electronAPI mocking with overrides
 
 ## Common Development Tasks
 

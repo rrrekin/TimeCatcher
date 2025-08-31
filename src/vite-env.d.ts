@@ -11,3 +11,29 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Electron API types
+import type { TaskRecordInsert, TaskRecordUpdate } from './shared/types'
+
+declare global {
+  interface Window {
+    electronAPI: {
+      // Application info
+      getVersion(): Promise<string>
+
+      // Database operations
+      getCategories(): Promise<any[]>
+      addCategory(name: string): Promise<any>
+      deleteCategory(id: number): Promise<any>
+      updateCategory(id: number, name: string): Promise<any>
+      categoryExists(name: string): Promise<boolean>
+      setDefaultCategory(id: number): Promise<any>
+      getDefaultCategory(): Promise<any>
+      addTaskRecord(record: TaskRecordInsert): Promise<any>
+      getTaskRecordsByDate(date: string): Promise<any[]>
+      updateTaskRecord(id: number, record: TaskRecordUpdate): Promise<any>
+      deleteTaskRecord(id: number): Promise<any>
+      debugAll(): Promise<any>
+    }
+  }
+}

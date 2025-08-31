@@ -70,7 +70,8 @@
     },
     "files": [
       "dist/main/**/*",
-      "dist/renderer/**/*"
+      "dist/renderer/**/*",
+      "dist/shared/**/*"
     ],
     "extraResources": [],
     "mac": {
