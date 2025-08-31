@@ -203,9 +203,14 @@ function checkCoverage() {
       return
     }
 
+    // For Vue SFCs without testable functions, treat function coverage as N/A even if V8 reports synthetic handlers
+    const treatFunctionsAsNA = file.endsWith('.vue') && !hasTestableFunctions(file)
+    const functionsFound = treatFunctionsAsNA ? 0 : coverage.functions.found
+    const functionsHit = treatFunctionsAsNA ? 0 : coverage.functions.hit
+
     const linesCoverage = calculateCoverage(coverage.lines.hit, coverage.lines.found)
     const branchesCoverage = calculateCoverage(coverage.branches.hit, coverage.branches.found)
-    const functionsCoverage = calculateCoverage(coverage.functions.hit, coverage.functions.found)
+    const functionsCoverage = calculateCoverage(functionsHit, functionsFound)
     const statementsCoverage = calculateCoverage(coverage.statements.hit, coverage.statements.found)
 
     // Lines and statements are always required if they exist
@@ -217,14 +222,14 @@ function checkCoverage() {
     const branchesPassed =
       coverage.branches.found === 0 || (branchesCoverage !== null && branchesCoverage >= THRESHOLDS.branches)
     const functionsPassed =
-      coverage.functions.found === 0 || (functionsCoverage !== null && functionsCoverage >= THRESHOLDS.functions)
+      functionsFound === 0 || (functionsCoverage !== null && functionsCoverage >= THRESHOLDS.functions)
 
     // Build list of required checks (only include metrics that have items to measure)
     const requiredChecks = []
     if (coverage.lines.found > 0) requiredChecks.push(linesPassed)
     if (coverage.statements.found > 0) requiredChecks.push(statementsPassed)
     if (coverage.branches.found > 0) requiredChecks.push(branchesPassed)
-    if (coverage.functions.found > 0) requiredChecks.push(functionsPassed)
+    if (functionsFound > 0) requiredChecks.push(functionsPassed)
 
     // File passes if all required checks pass (or no checks are required)
     const filePassed = requiredChecks.length === 0 || requiredChecks.every(check => check)
@@ -238,7 +243,7 @@ function checkCoverage() {
       `   Branches: ${formatCoverageWithStatus(branchesCoverage, THRESHOLDS.branches, branchesPassed, coverage.branches.found)}`
     )
     console.log(
-      `   Functions: ${formatCoverageWithStatus(functionsCoverage, THRESHOLDS.functions, functionsPassed, coverage.functions.found)}`
+      `   Functions: ${formatCoverageWithStatus(functionsCoverage, THRESHOLDS.functions, functionsPassed, functionsFound)}`
     )
     console.log(
       `   Statements: ${formatCoverageWithStatus(statementsCoverage, THRESHOLDS.statements, statementsPassed, coverage.statements.found)}`
