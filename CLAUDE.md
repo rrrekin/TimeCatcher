@@ -22,13 +22,15 @@ See docs/VERSIONING.md for the full versioning workflow and npm commands.
 
 __GitHub Actions Workflows__:
 
-**CI Pipeline** (`.github/workflows/ci.yml`):
+__CI Pipeline__ (`.github/workflows/ci.yml`):
+
 - Runs on pull requests and pushes to main branch
 - Tests on Node.js 20 (Maintenance) and 22 (Active LTS)
 - Executes `npm run test:coverage` and `npm run build`
 - Uploads coverage reports to Codecov from the Node.js 22 job
 
-**Version Bump** (`.github/workflows/version-bump.yml`):
+__Version Bump__ (`.github/workflows/version-bump.yml`):
+
 - Runs automatically after CI completes successfully on main branch
 - Detects original PR using commit-to-pulls API with search fallback
 - Analyzes original PR title to determine version bump type ([MAJOR], [MINOR], breaking changes, or patch)
