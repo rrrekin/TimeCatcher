@@ -42,21 +42,18 @@ describe('DateNavigation', () => {
     expect(nextBtn.exists()).toBe(true)
   })
 
-  it('emits goToPreviousDay when previous button is clicked', async () => {
+  it.each([
+    { label: 'Previous day', eventName: 'goToPreviousDay' },
+    { label: 'Next day', eventName: 'goToNextDay' }
+  ])('emits %s when the %s button is clicked', async ({ label, eventName }) => {
     const wrapper = mount(DateNavigation, { props: minimalProps })
-    const prevBtn = wrapper.get('button[aria-label="Previous day"]')
+    const btn = wrapper.get(`button[aria-label="${label}"]`)
 
-    await prevBtn.trigger('click')
+    await btn.trigger('click')
 
-    expect(wrapper.emitted()).toHaveProperty('goToPreviousDay')
-  })
-
-  it('emits goToNextDay when next button is clicked', async () => {
-    const wrapper = mount(DateNavigation, { props: minimalProps })
-    const nextBtn = wrapper.get('button[aria-label="Next day"]')
-
-    await nextBtn.trigger('click')
-
-    expect(wrapper.emitted()).toHaveProperty('goToNextDay')
+    const emitted = wrapper.emitted()
+    expect(emitted).toHaveProperty(eventName)
+    // Ensure only a single emission occurred for this click
+    expect(emitted[eventName]?.length).toBe(1)
   })
 })
