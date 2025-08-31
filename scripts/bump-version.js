@@ -176,15 +176,28 @@ Co-Authored-By: Claude <noreply@anthropic.com>`
 function getBumpTypeFromPRTitle(prTitle) {
   if (!prTitle) return 'patch'
 
-  const title = prTitle.toLowerCase()
+  const lower = prTitle.toLowerCase().trim()
 
-  if (title.includes('[major]') || title.includes('major:')) {
-    return 'major'
-  }
+  // Conventional Commits: type(scope)!: ... or type!:
+  const conventionalMajorBang = /^[a-z]+(?:\([^\)]+\))?!:/
 
-  if (title.includes('[minor]') || title.includes('minor:')) {
-    return 'minor'
-  }
+  const isMajor =
+    lower.includes('[major]') ||
+    lower.startsWith('major:') ||
+    lower.includes('breaking change') ||
+    conventionalMajorBang.test(prTitle) ||
+    lower.includes('semver-major') ||
+    lower.includes('semver: major') ||
+    lower.includes('[breaking]') ||
+    lower.startsWith('breaking:')
+  if (isMajor) return 'major'
+
+  const isMinor =
+    lower.includes('[minor]') ||
+    lower.startsWith('minor:') ||
+    // Treat Conventional Commit feat (without !) as MINOR
+    /^feat(?:\([^\)]+\))?: /i.test(prTitle)
+  if (isMinor) return 'minor'
 
   return 'patch'
 }
@@ -206,7 +219,10 @@ Bump types:
   patch  - Increment patch version (1.2.3 → 1.2.4), moves existing major.minor tag
 
 PR title mode:
-  --pr-title - Determines bump type from PR title ([MAJOR], [MINOR], or default patch)
+  --pr-title - Determines bump type from PR title. Markers:
+    - MAJOR: [MAJOR], major:, type!:, breaking change, semver-major, semver: major, [breaking], breaking:
+    - MINOR: [MINOR], minor:, feat:
+    - Default: patch
 
 Examples:
   node bump-version.js patch

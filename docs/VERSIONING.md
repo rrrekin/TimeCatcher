@@ -15,16 +15,16 @@ TimeCatcher uses a semi-automatic semantic versioning system that automatically 
 When a pull request is merged to the `main` branch and CI passes successfully, the version is automatically bumped based on the original PR title:
 
 - __Default__: Patch version bump (e.g., `0.20.0` → `0.20.1`)
-- __`[MINOR]` or `minor:`__: Minor version bump (e.g., `0.20.0` → `0.21.0`)
-- __`[MAJOR]` or `major:` or `!:`__: Major version bump (e.g., `0.20.0` → `1.0.0`)
-- __`breaking change`__: Also triggers major version bump
+- __Minor__: `[MINOR]`, `minor:`, or Conventional Commits `feat:` (e.g., `0.20.0` → `0.21.0`)
+- __Major__: `[MAJOR]`, `major:`, Conventional Commits `type!:` (e.g., `feat!: ...`), or `breaking change` (e.g., `0.20.0` → `1.0.0`)
 
 ### Examples
 
 ```
-feat: add new feature                    → 0.20.0 → 0.20.1 (patch)
-feat: [MINOR] add user authentication    → 0.20.0 → 0.21.0 (minor)
-feat: [MAJOR] breaking API changes      → 0.20.0 → 1.0.0 (major)
+feat: add new feature                    → 0.20.0 → 0.21.0 (minor)
+feat(ui): introduce new theme            → 0.20.0 → 0.21.0 (minor)
+feat!: breaking API changes              → 0.20.0 → 1.0.0 (major)
+refactor(core)!: remove legacy ipc       → 0.20.0 → 1.0.0 (major)
 fix: resolve login bug                   → 0.20.0 → 0.20.1 (patch)
 ```
 
@@ -82,9 +82,9 @@ Use clear, descriptive PR titles with version indicators when needed:
 fix: resolve task deletion bug
 feat: improve UI responsiveness
 
-# Minor - add [MINOR] tag for new features
-feat: [MINOR] add data export functionality
-feat: [MINOR] implement dark mode
+# Minor - you can rely on `feat:` or add [MINOR] tag explicitly
+feat: add data export functionality
+feat: implement dark mode
 
 # Major - add [MAJOR] tag for breaking changes  
 feat: [MAJOR] redesign database schema
