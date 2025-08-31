@@ -978,21 +978,25 @@ describe('App Component', () => {
     })
 
     it('should handle delete task when electronAPI is not available', async () => {
-      // Save original electronAPI
-      const originalElectronAPI = global.window.electronAPI
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
-      vm.taskToDelete = mockTaskRecords[0]
+        const vm = wrapper.vm as any
+        vm.taskToDelete = mockTaskRecords[0]
 
-      await vm.confirmDeleteTaskFinal()
+        await vm.confirmDeleteTaskFinal()
 
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
-
-      // Restore electronAPI
-      global.window.electronAPI = originalElectronAPI
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
+      }
     })
 
     it('should handle delete task when delete function is not available', async () => {
@@ -1129,26 +1133,30 @@ describe('App Component', () => {
     })
 
     it('should handle update task when electronAPI is not available', async () => {
-      // Save original electronAPI
-      const originalElectronAPI = global.window.electronAPI
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
-      // Create a proper HTMLInputElement mock
-      const inputElement = document.createElement('input')
-      inputElement.value = 'Updated Task'
-      const mockInputEvent = {
-        target: inputElement
-      } as any
+        const vm = wrapper.vm as any
+        // Create a proper HTMLInputElement mock
+        const inputElement = document.createElement('input')
+        inputElement.value = 'Updated Task'
+        const mockInputEvent = {
+          target: inputElement
+        } as any
 
-      await vm.handleBlur(1, 'task_name', mockInputEvent)
+        await vm.handleBlur(1, 'task_name', mockInputEvent)
 
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
-
-      // Restore electronAPI
-      global.window.electronAPI = originalElectronAPI
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
+      }
     })
 
     it('should handle update task when update function is not available', async () => {
@@ -1496,26 +1504,34 @@ describe('App Component', () => {
     })
 
     it('should handle electron API unavailable scenarios', async () => {
-      // Remove electronAPI to simulate unavailable state
-      delete global.window.electronAPI
+      const originalElectronAPI = global.window?.electronAPI
+      try {
+        delete (global.window as any).electronAPI
 
-      const vm = wrapper.vm as any
+        const vm = wrapper.vm as any
 
-      // Test task replay without electronAPI
-      const record = {
-        id: 1,
-        category_name: 'Work',
-        task_name: 'Test Task',
-        start_time: '09:00',
-        date: '2024-01-15',
-        task_type: 'normal'
+        // Test task replay without electronAPI
+        const record = {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Test Task',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+
+        await vm.replayTask(record)
+
+        // Should show error toast about API unavailable
+        expect(wrapper.find('.toast').exists()).toBe(true)
+        expect(wrapper.find('.toast').classes()).toContain('toast-error')
+      } finally {
+        if (typeof originalElectronAPI === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          ;(global.window as any).electronAPI = originalElectronAPI
+        }
       }
-
-      await vm.replayTask(record)
-
-      // Should show error toast about API unavailable
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      expect(wrapper.find('.toast').classes()).toContain('toast-error')
     })
 
     it('should handle invalid time format errors', async () => {
@@ -2106,14 +2122,27 @@ describe('App Component', () => {
     })
 
     it('skips version fetch when electronAPI is unavailable', async () => {
-      delete global.window.electronAPI
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      const wrapper = mount(App)
-      await nextTick()
-      await vi.advanceTimersByTimeAsync(1000)
-      await nextTick()
-      expect(wrapper.find('.app-version').exists()).toBe(false)
-      warnSpy.mockRestore()
+      const original = global.window?.electronAPI
+      try {
+        // Temporarily remove electronAPI for this test
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(global.window as any).electronAPI = undefined
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+        const wrapper = mount(App)
+        await nextTick()
+        await vi.advanceTimersByTimeAsync(1000)
+        await nextTick()
+        expect(wrapper.find('.app-version').exists()).toBe(false)
+        warnSpy.mockRestore()
+      } finally {
+        // Restore original value to avoid leaking state across tests
+        if (typeof original === 'undefined') {
+          delete (global.window as any).electronAPI
+        } else {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ;(global.window as any).electronAPI = original
+        }
+      }
     })
   })
 })
