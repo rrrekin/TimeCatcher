@@ -1,8 +1,8 @@
 <template>
   <nav class="time-navigation" aria-label="Date navigation">
     <div class="nav-controls">
-      <div class="app-icon">
-        <img src="/logo.svg" alt="TimeCatcher" class="icon" />
+      <div class="app-icon" data-testid="app-logo" aria-hidden="true">
+        <img src="/logo.svg" alt="" class="icon" />
       </div>
       <button
         type="button"

@@ -2101,5 +2101,15 @@ describe('App Component', () => {
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(false)
     })
+
+    it('skips version fetch when electronAPI is unavailable', async () => {
+      delete global.window.electronAPI
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const wrapper = mount(App)
+      await nextTick()
+      await vi.advanceTimersByTimeAsync(1000)
+      expect(wrapper.find('.app-version').exists()).toBe(false)
+      warnSpy.mockRestore()
+    })
   })
 })
