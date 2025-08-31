@@ -2074,6 +2074,9 @@ describe('App Component', () => {
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(true)
       expect(versionElement.text()).toBe('v1.2.3')
+
+      // Tear down
+      wrapper.unmount()
     })
 
     it('should handle getVersion API error gracefully', async () => {
@@ -2102,6 +2105,9 @@ describe('App Component', () => {
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(false)
 
+      // Tear down
+      wrapper.unmount()
+
       consoleSpy.mockRestore()
     })
 
@@ -2119,6 +2125,9 @@ describe('App Component', () => {
 
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(false)
+
+      // Tear down
+      wrapper.unmount()
     })
 
     it('skips version fetch when electronAPI is unavailable', async () => {
@@ -2133,6 +2142,8 @@ describe('App Component', () => {
         await vi.advanceTimersByTimeAsync(1000)
         await nextTick()
         expect(wrapper.find('.app-version').exists()).toBe(false)
+        // Tear down
+        wrapper.unmount()
         warnSpy.mockRestore()
       } finally {
         // Restore original value to avoid leaking state across tests
