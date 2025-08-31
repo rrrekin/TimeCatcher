@@ -2049,6 +2049,7 @@ describe('App Component', () => {
 
       // Advance fake timers by 1000ms to trigger the delayed version fetch
       await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
 
       expect(global.window.electronAPI.getVersion).toHaveBeenCalled()
       expect(vm.appVersion).toBe('1.2.3')
@@ -2075,6 +2076,7 @@ describe('App Component', () => {
 
       // Advance fake timers by 1000ms to trigger the delayed version fetch
       await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
 
       expect(mockGetVersion).toHaveBeenCalled()
       expect(vm.appVersion).toBe('')
@@ -2097,6 +2099,7 @@ describe('App Component', () => {
 
       // Advance fake timers by 1000ms to trigger the delayed version fetch
       await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
 
       const versionElement = wrapper.find('.app-version')
       expect(versionElement.exists()).toBe(false)
@@ -2108,6 +2111,7 @@ describe('App Component', () => {
       const wrapper = mount(App)
       await nextTick()
       await vi.advanceTimersByTimeAsync(1000)
+      await nextTick()
       expect(wrapper.find('.app-version').exists()).toBe(false)
       warnSpy.mockRestore()
     })
