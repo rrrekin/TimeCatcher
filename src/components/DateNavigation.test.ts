@@ -41,4 +41,22 @@ describe('DateNavigation', () => {
     expect(prevBtn.exists()).toBe(true)
     expect(nextBtn.exists()).toBe(true)
   })
+
+  it('emits goToPreviousDay when previous button is clicked', async () => {
+    const wrapper = mount(DateNavigation, { props: minimalProps })
+    const prevBtn = wrapper.get('button[aria-label="Previous day"]')
+
+    await prevBtn.trigger('click')
+
+    expect(wrapper.emitted()).toHaveProperty('goToPreviousDay')
+  })
+
+  it('emits goToNextDay when next button is clicked', async () => {
+    const wrapper = mount(DateNavigation, { props: minimalProps })
+    const nextBtn = wrapper.get('button[aria-label="Next day"]')
+
+    await nextBtn.trigger('click')
+
+    expect(wrapper.emitted()).toHaveProperty('goToNextDay')
+  })
 })

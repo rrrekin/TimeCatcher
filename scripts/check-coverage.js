@@ -168,6 +168,33 @@ function formatCoverageWithStatus(coverage, threshold, passed, found = null) {
   return `${formattedCoverage} (${status} - ${reason})`
 }
 
+function hasTestableFunctions(filePath) {
+  try {
+    const absPath = path.join(process.cwd(), filePath)
+    if (!fs.existsSync(absPath)) return true // be conservative: if we can't read, assume there could be functions
+    let content = fs.readFileSync(absPath, 'utf-8')
+
+    // If it's a Vue SFC, try to extract the <script> content
+    if (filePath.endsWith('.vue')) {
+      const match = content.match(/<script[\s\S]*?>[\s\S]*?<\/script>/i)
+      content = match ? match[0] : ''
+    }
+
+    const patterns = [
+      /\bfunction\s+[A-Za-z0-9_]+\s*\(/, // named function declarations
+      /\bfunction\s*\(/, // anonymous functions
+      /=>\s*\{?/, // arrow functions
+      /\bmethods\s*:\s*\{/, // Vue options API methods
+      /\bsetup\s*\(/ // Vue composition API setup
+    ]
+
+    return patterns.some(re => re.test(content))
+  } catch (e) {
+    // If any error occurs, be conservative and assume functions exist
+    return true
+  }
+}
+
 function checkCoverage() {
   const changedFiles = getChangedFiles()
   const coverageData = parseLcovFile()
@@ -189,6 +216,26 @@ function checkCoverage() {
     const coverage = coverageData[file]
 
     if (!coverage) {
+      const hasFuncs = hasTestableFunctions(file)
+      if (!hasFuncs) {
+        // No functions to test: mark as PASS with N/A metrics
+        console.log(`✅ ${file}:`)
+        console.log(`   Lines: N/A (PASS - no items to measure)`)
+        console.log(`   Branches: N/A (PASS - no items to measure)`)
+        console.log(`   Functions: N/A (PASS - no items to measure)`)
+        console.log(`   Statements: N/A (PASS - no items to measure)`)
+        console.log('')
+        results.push({
+          file,
+          lines: null,
+          branches: null,
+          functions: null,
+          statements: null,
+          passed: true,
+          reason: 'No functions to test'
+        })
+        return
+      }
       console.log(`⚠️  ${file}: No coverage data found (possibly not covered by tests)`)
       results.push({
         file,
