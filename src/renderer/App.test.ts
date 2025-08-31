@@ -446,16 +446,17 @@ describe('App Component', () => {
       vi.setSystemTime(fixedDate)
 
       const vm = wrapper.vm as any
-      const initialDate = new Date(vm.selectedDate)
+      // Explicitly set selectedDate to the fixed date to avoid month boundary issues
+      vm.selectedDate = new Date(fixedDate)
 
       vm.goToPreviousDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate() - 1)
+      expect(vm.selectedDate.getDate()).toBe(14) // Jan 14th
 
       vm.goToNextDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate())
+      expect(vm.selectedDate.getDate()).toBe(15) // Back to Jan 15th
 
       vm.goToNextDay()
-      expect(vm.selectedDate.getDate()).toBe(initialDate.getDate() + 1)
+      expect(vm.selectedDate.getDate()).toBe(16) // Jan 16th
 
       vm.goToToday()
       // Should be exactly the fixed date
