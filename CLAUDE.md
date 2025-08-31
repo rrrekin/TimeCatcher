@@ -33,7 +33,10 @@ __Version Bump__ (`.github/workflows/version-bump.yml`):
 
 - Runs automatically after CI completes successfully on main branch
 - Detects original PR using commit-to-pulls API with search fallback
-- Analyzes original PR title to determine version bump type ([MAJOR], [MINOR], breaking changes, or patch)
+- Analyzes original PR title to determine version bump type (MAJOR, MINOR, or patch) using markers:
+  - MAJOR: [MAJOR], major:, Conventional Commits type! (e.g., feat!: ...), breaking change, semver-major, semver: major, [breaking], breaking:
+  - MINOR: [MINOR], minor:, Conventional Commits feat:
+  - Default: patch
 - Updates package.json with new semantic version
 - Git tags will be created separately during manual release process
 
