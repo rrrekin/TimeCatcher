@@ -345,6 +345,11 @@ const emit = defineEmits<{
   addEndTask: []
 }>()
 
+// Expose scrollToBottom method to parent
+defineExpose({
+  scrollToBottom
+})
+
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
 

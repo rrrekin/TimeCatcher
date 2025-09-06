@@ -257,9 +257,10 @@ const taskListRef = ref<{ scrollToBottom: () => Promise<void> } | null>(null)
 const safeScrollToBottom = async () => {
   await nextTick()
   try {
-    // Check that the ref exists and scrollToBottom is a function before calling
-    if (taskListRef.value && typeof taskListRef.value.scrollToBottom === 'function') {
-      await taskListRef.value.scrollToBottom()
+    const inst = taskListRef.value as any
+    const fn = inst && inst.scrollToBottom
+    if (typeof fn === 'function') {
+      await fn.call(inst)
     }
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
@@ -650,7 +651,9 @@ onMounted(async () => {
 
   // Fetch app version
   try {
-    appVersion.value = await window.electronAPI.getVersion()
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.getVersion) {
+      appVersion.value = await (window as any).electronAPI.getVersion()
+    }
   } catch (error) {
     console.warn('Failed to get app version:', error)
   }
@@ -999,10 +1002,7 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
-let autoRefreshInterval: number | null = null
-
-// Auto-refresh functions
+// (auto-refresh handled by useAutoRefresh composable)
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {

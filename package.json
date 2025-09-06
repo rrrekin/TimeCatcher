@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k -s first -n \"vite,electron\" \"npm:dev:vite\" \"wait-on http://localhost:5173 && npm run dev:electron\"",
     "dev:vite": "vite --strictPort --port 5173",
-    "dev:electron": "tsc --project tsconfig.main.json && electron .",
+    "dev:electron": "electron-rebuild -f -w better-sqlite3 && tsc --project tsconfig.main.json && electron .",
     "build": "vue-tsc --noEmit && vite build && tsc --project tsconfig.main.json",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
@@ -23,7 +23,8 @@
     "install-hooks": "cp scripts/git-hooks/* .git/hooks/ && chmod +x .git/hooks/*",
     "version:major": "node scripts/bump-version.js major",
     "version:minor": "node scripts/bump-version.js minor",
-    "version:patch": "node scripts/bump-version.js patch"
+    "version:patch": "node scripts/bump-version.js patch",
+    "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "repository": {
     "type": "git",
@@ -32,6 +33,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/rrrekin/TimeCatcher/issues"
