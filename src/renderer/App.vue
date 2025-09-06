@@ -13,6 +13,7 @@
     <div class="layout">
       <div class="task-table-pane">
         <TaskList
+          ref="taskListRef"
           :task-records="taskRecords"
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
@@ -250,6 +251,7 @@ const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
+const taskListRef = ref<{ scrollToBottom: () => Promise<void> } | null>(null)
 
 // Helper functions
 
@@ -504,6 +506,9 @@ const addTask = async () => {
     await addTaskRecord(taskRecord)
     showToastMessage('Task added successfully!', 'success')
 
+    // Scroll to bottom to show the new task
+    taskListRef.value?.scrollToBottom()
+
     // Reset form
     initializeNewTask()
     showAddTaskForm.value = false
@@ -518,6 +523,9 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
   try {
     await addSpecialTask(taskType, taskName)
     showToastMessage(successMessage, 'success')
+
+    // Scroll to bottom to show the new special task
+    taskListRef.value?.scrollToBottom()
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -571,6 +579,9 @@ watch(
 
     // Await loading the new task records
     await loadTaskRecordsWrapper()
+
+    // Scroll to bottom after loading new tasks
+    taskListRef.value?.scrollToBottom()
 
     // Start auto-refresh if we're viewing today
     const todayString = toYMDLocalUtil(new Date())
@@ -711,6 +722,9 @@ const replayTask = async (record: TaskRecordWithId) => {
     } else {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+
+      // Scroll to bottom to show the replayed task
+      taskListRef.value?.scrollToBottom()
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
@@ -1169,6 +1183,27 @@ body {
   box-shadow: 1px 0 3px var(--shadow-color);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Auto-hide scrollbar styles for task table pane */
+.task-table-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-table-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-table-pane::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.task-table-pane:hover::-webkit-scrollbar-thumb {
+  opacity: 1;
 }
 
 .reports-pane {
