@@ -530,11 +530,6 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
     target.blur()
   }
 }
-
-// Expose methods to parent component
-defineExpose({
-  scrollToBottom
-})
 </script>
 
 <style scoped>
