@@ -1289,4 +1289,60 @@ describe('TaskList Component', () => {
       expect(blurSpy).not.toHaveBeenCalled()
     })
   })
+
+  describe('Scroll Functionality', () => {
+    it('should expose scrollToBottom method', () => {
+      expect(wrapper.vm).toHaveProperty('scrollToBottom')
+      expect(typeof wrapper.vm.scrollToBottom).toBe('function')
+    })
+
+    it('should call scrollTo on parent container when scrollToBottom is called', async () => {
+      // Create a mock parent element with the task-table-pane class
+      const scrollToSpy = vi.fn()
+      const mockScrollableParent = {
+        className: 'task-table-pane',
+        scrollTo: scrollToSpy,
+        scrollHeight: 1000
+      }
+
+      // Mock the closest method to return our mock parent
+      const closestSpy = vi.fn().mockReturnValue(mockScrollableParent)
+      const mockTaskTableRef = { closest: closestSpy }
+
+      // Access the component instance and mock its ref
+      const vm = wrapper.vm as any
+      vm.taskTableRef = mockTaskTableRef
+
+      // Call scrollToBottom
+      await vm.scrollToBottom()
+
+      // Verify the correct methods were called
+      expect(closestSpy).toHaveBeenCalledWith('.task-table-pane')
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: 1000,
+        behavior: 'smooth'
+      })
+    })
+
+    it('should handle scrollToBottom gracefully when no parent container is found', async () => {
+      // Mock taskTableRef with closest returning null
+      const closestSpy = vi.fn().mockReturnValue(null)
+      const mockTaskTableRef = { closest: closestSpy }
+
+      const vm = wrapper.vm as any
+      vm.taskTableRef = mockTaskTableRef
+
+      // Call scrollToBottom - should not throw
+      await expect(vm.scrollToBottom()).resolves.toBeUndefined()
+      expect(closestSpy).toHaveBeenCalledWith('.task-table-pane')
+    })
+
+    it('should handle scrollToBottom gracefully when taskTableRef is null', async () => {
+      const vm = wrapper.vm as any
+      vm.taskTableRef = null
+
+      // Call scrollToBottom - should not throw
+      await expect(vm.scrollToBottom()).resolves.toBeUndefined()
+    })
+  })
 })
