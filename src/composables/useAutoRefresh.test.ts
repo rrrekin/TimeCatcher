@@ -16,6 +16,7 @@ describe('useAutoRefresh', () => {
   })
 
   afterEach(() => {
+    vi.clearAllTimers()
     vi.useRealTimers()
     scope.stop()
   })

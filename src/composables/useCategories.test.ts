@@ -1,11 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useCategories } from './useCategories'
 import type { Category } from '../shared/types'
 
 describe('useCategories', () => {
   let mockCategories: Category[]
+  let originalConsoleError: typeof console.error
 
   beforeEach(() => {
+    // Stub console.error to reduce noise in test output
+    originalConsoleError = console.error
+    console.error = vi.fn()
+
+    // Reset all mocks
+    vi.resetAllMocks()
     mockCategories = [
       { id: 1, name: 'Work', is_default: true },
       { id: 2, name: 'Personal', is_default: false }
@@ -19,6 +26,14 @@ describe('useCategories', () => {
       getDefaultCategory: vi.fn().mockResolvedValue(mockCategories[0]),
       categoryExists: vi.fn().mockResolvedValue(true)
     }
+  })
+
+  afterEach(() => {
+    // Restore original console.error
+    console.error = originalConsoleError
+
+    // Restore all mocks
+    vi.restoreAllMocks()
   })
 
   it('should load categories', async () => {

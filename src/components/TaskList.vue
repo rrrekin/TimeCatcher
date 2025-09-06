@@ -253,14 +253,18 @@ const taskTableRef = ref<HTMLElement>()
 const scrollToBottom = async () => {
   await nextTick()
   if (taskTableRef.value) {
+    // Check user's motion preferences for accessibility
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth'
+
     // Find the parent scrollable container (task-table-pane)
     const scrollableParent = taskTableRef.value.closest('.task-table-pane') as HTMLElement
-    if (scrollableParent) {
-      scrollableParent.scrollTo({
-        top: scrollableParent.scrollHeight,
-        behavior: 'smooth'
-      })
-    }
+    const targetElement = scrollableParent || taskTableRef.value
+
+    targetElement.scrollTo({
+      top: targetElement.scrollHeight,
+      behavior: scrollBehavior
+    })
   }
 }
 

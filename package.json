@@ -15,7 +15,7 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:coverage:check": "npm run test:coverage; node scripts/check-coverage.js",
+    "test:coverage:check": "npm run test:coverage && node scripts/check-coverage.js",
     "lint:md": "markdownlint-cli2",
     "format:md": "markdownlint-cli2 --fix",
     "format": "prettier --write \"{src,scripts,.github}/**/*.{ts,js,vue,json,html,css,scss,yaml,yml}\"",

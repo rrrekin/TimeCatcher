@@ -253,6 +253,19 @@ const appVersion = ref<string>('')
 const categoriesListRef = ref<HTMLElement | null>(null)
 const taskListRef = ref<{ scrollToBottom: () => Promise<void> } | null>(null)
 
+// Safe scroller helper
+const safeScrollToBottom = async () => {
+  await nextTick()
+  try {
+    // Check that the ref exists and scrollToBottom is a function before calling
+    if (taskListRef.value && typeof taskListRef.value.scrollToBottom === 'function') {
+      await taskListRef.value.scrollToBottom()
+    }
+  } catch (error) {
+    console.warn('Failed to scroll to bottom:', error)
+  }
+}
+
 // Helper functions
 
 const formattedDate = computed(() => {
@@ -507,7 +520,7 @@ const addTask = async () => {
     showToastMessage('Task added successfully!', 'success')
 
     // Scroll to bottom to show the new task
-    taskListRef.value?.scrollToBottom()
+    await safeScrollToBottom()
 
     // Reset form
     initializeNewTask()
@@ -525,7 +538,7 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
     showToastMessage(successMessage, 'success')
 
     // Scroll to bottom to show the new special task
-    taskListRef.value?.scrollToBottom()
+    await safeScrollToBottom()
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -581,7 +594,7 @@ watch(
     await loadTaskRecordsWrapper()
 
     // Scroll to bottom after loading new tasks
-    taskListRef.value?.scrollToBottom()
+    await safeScrollToBottom()
 
     // Start auto-refresh if we're viewing today
     const todayString = toYMDLocalUtil(new Date())
@@ -724,7 +737,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
 
       // Scroll to bottom to show the replayed task
-      taskListRef.value?.scrollToBottom()
+      await safeScrollToBottom()
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
