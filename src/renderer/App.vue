@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, type ComponentPublicInstance } from 'vue'
 import {
   SPECIAL_TASK_CATEGORY,
   SPECIAL_TASK_TYPES,
@@ -251,7 +251,7 @@ const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
-const taskListRef = ref<{ scrollToBottom: () => Promise<void> } | null>(null)
+const taskListRef = ref<ComponentPublicInstance<{ scrollToBottom?: () => Promise<void> }> | null>(null)
 
 // Safe scroller helper
 const safeScrollToBottom = async () => {
@@ -1197,6 +1197,9 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
 }
 
 /* Auto-hide scrollbar styles for task table pane */
@@ -1209,14 +1212,12 @@ body {
 }
 
 .task-table-pane::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: transparent;
   border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
 .task-table-pane:hover::-webkit-scrollbar-thumb {
-  opacity: 1;
+  background: var(--border-color);
 }
 
 .reports-pane {

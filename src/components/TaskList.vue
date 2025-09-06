@@ -250,21 +250,24 @@ const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 const taskTableRef = ref<HTMLElement>()
 
 // Scroll to bottom method
-const scrollToBottom = async () => {
+const scrollToBottom = async (): Promise<void> => {
   await nextTick()
-  if (taskTableRef.value) {
-    // Check user's motion preferences for accessibility
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth'
+  const el = taskTableRef.value
+  if (!el) return
 
-    // Find the parent scrollable container (task-table-pane)
-    const scrollableParent = taskTableRef.value.closest('.task-table-pane') as HTMLElement
-    const targetElement = scrollableParent || taskTableRef.value
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const behavior: ScrollBehavior = prefersReduced ? 'auto' : 'smooth'
 
-    targetElement.scrollTo({
-      top: targetElement.scrollHeight,
-      behavior: scrollBehavior
-    })
+  const wrapper = el.closest('.task-table-pane') as HTMLElement | null
+  const container = (wrapper ?? el) as HTMLElement
+
+  if (typeof (container as any).scrollTo === 'function') {
+    container.scrollTo({ top: container.scrollHeight, behavior })
+  } else {
+    ;(container as any).scrollTop = container.scrollHeight
   }
 }
 
