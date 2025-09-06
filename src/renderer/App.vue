@@ -254,14 +254,11 @@ const categoriesListRef = ref<HTMLElement | null>(null)
 const taskListRef = ref<ComponentPublicInstance<{ scrollToBottom?: () => Promise<void> }> | null>(null)
 
 // Safe scroller helper
-const safeScrollToBottom = async () => {
+const safeScrollToBottom = async (): Promise<void> => {
   await nextTick()
   try {
-    const inst = taskListRef.value as any
-    const fn = inst && inst.scrollToBottom
-    if (typeof fn === 'function') {
-      await fn.call(inst)
-    }
+    const fn = taskListRef.value?.scrollToBottom
+    if (typeof fn === 'function') await fn()
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
   }
@@ -520,8 +517,10 @@ const addTask = async () => {
     await addTaskRecord(taskRecord)
     showToastMessage('Task added successfully!', 'success')
 
-    // Scroll to bottom to show the new task
-    await safeScrollToBottom()
+    // Scroll only when viewing today
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
 
     // Reset form
     initializeNewTask()
@@ -538,8 +537,9 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
     await addSpecialTask(taskType, taskName)
     showToastMessage(successMessage, 'success')
 
-    // Scroll to bottom to show the new special task
-    await safeScrollToBottom()
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -594,8 +594,9 @@ watch(
     // Await loading the new task records
     await loadTaskRecordsWrapper()
 
-    // Scroll to bottom after loading new tasks
-    await safeScrollToBottom()
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
 
     // Start auto-refresh if we're viewing today
     const todayString = toYMDLocalUtil(new Date())
@@ -739,8 +740,9 @@ const replayTask = async (record: TaskRecordWithId) => {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
 
-      // Scroll to bottom to show the replayed task
-      await safeScrollToBottom()
+      if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+        await safeScrollToBottom()
+      }
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
