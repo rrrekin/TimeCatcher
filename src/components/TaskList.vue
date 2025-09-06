@@ -249,6 +249,28 @@ const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
 
+// Scroll to bottom method
+const scrollToBottom = async (): Promise<void> => {
+  await nextTick()
+  const el = taskTableRef.value
+  if (!el) return
+
+  const prefersReduced =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const behavior: ScrollBehavior = prefersReduced ? 'auto' : 'smooth'
+
+  const wrapper = el.closest('.task-table-pane') as HTMLElement | null
+  const container = (wrapper ?? el) as HTMLElement
+
+  if (typeof (container as any).scrollTo === 'function') {
+    container.scrollTo({ top: container.scrollHeight, behavior })
+  } else {
+    ;(container as any).scrollTop = container.scrollHeight
+  }
+}
+
 // Props
 const props = defineProps({
   taskRecords: {
@@ -325,6 +347,11 @@ const emit = defineEmits<{
   addPauseTask: []
   addEndTask: []
 }>()
+
+// Expose scrollToBottom method to parent
+defineExpose({
+  scrollToBottom
+})
 
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
@@ -525,7 +552,6 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 .task-table {
   background: var(--bg-primary);
   box-shadow: 0 4px 20px var(--shadow-color);
-  overflow: hidden;
   margin-bottom: 1rem;
 }
 

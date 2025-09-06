@@ -13,6 +13,7 @@
     <div class="layout">
       <div class="task-table-pane">
         <TaskList
+          ref="taskListRef"
           :task-records="taskRecords"
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
@@ -130,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, type ComponentPublicInstance } from 'vue'
 import {
   SPECIAL_TASK_CATEGORY,
   SPECIAL_TASK_TYPES,
@@ -250,6 +251,18 @@ const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
+const taskListRef = ref<ComponentPublicInstance<{ scrollToBottom?: () => Promise<void> }> | null>(null)
+
+// Safe scroller helper
+const safeScrollToBottom = async (): Promise<void> => {
+  await nextTick()
+  try {
+    const fn = taskListRef.value?.scrollToBottom
+    if (typeof fn === 'function') await fn()
+  } catch (error) {
+    console.warn('Failed to scroll to bottom:', error)
+  }
+}
 
 // Helper functions
 
@@ -504,6 +517,11 @@ const addTask = async () => {
     await addTaskRecord(taskRecord)
     showToastMessage('Task added successfully!', 'success')
 
+    // Scroll only when viewing today
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
+
     // Reset form
     initializeNewTask()
     showAddTaskForm.value = false
@@ -518,6 +536,10 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
   try {
     await addSpecialTask(taskType, taskName)
     showToastMessage(successMessage, 'success')
+
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -571,6 +593,10 @@ watch(
 
     // Await loading the new task records
     await loadTaskRecordsWrapper()
+
+    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      await safeScrollToBottom()
+    }
 
     // Start auto-refresh if we're viewing today
     const todayString = toYMDLocalUtil(new Date())
@@ -626,7 +652,9 @@ onMounted(async () => {
 
   // Fetch app version
   try {
-    appVersion.value = await window.electronAPI.getVersion()
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.getVersion) {
+      appVersion.value = await (window as any).electronAPI.getVersion()
+    }
   } catch (error) {
     console.warn('Failed to get app version:', error)
   }
@@ -711,6 +739,10 @@ const replayTask = async (record: TaskRecordWithId) => {
     } else {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+
+      if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+        await safeScrollToBottom()
+      }
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
@@ -972,10 +1004,7 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
-let autoRefreshInterval: number | null = null
-
-// Auto-refresh functions
+// (auto-refresh handled by useAutoRefresh composable)
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {
@@ -1169,6 +1198,28 @@ body {
   box-shadow: 1px 0 3px var(--shadow-color);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Auto-hide scrollbar styles for task table pane */
+.task-table-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-table-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-table-pane::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.task-table-pane:hover::-webkit-scrollbar-thumb {
+  background: var(--border-color);
 }
 
 .reports-pane {
