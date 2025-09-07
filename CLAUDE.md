@@ -59,6 +59,7 @@ __Environment Variables__:
 - Always use `npm run dev` for development (not `npm start`)
 - Vite dev server runs on port 5173 and must be ready before Electron launches
 - Main process TypeScript compiles to `dist/` directory
+- Always use IDE diagnostics to validate code after implementation
 
 ## Architecture Overview
 

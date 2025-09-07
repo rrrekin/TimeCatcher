@@ -11,7 +11,7 @@
     />
 
     <div class="layout">
-      <div class="task-table-pane">
+      <div class="task-table-pane" ref="taskTablePaneRef">
         <TaskList
           ref="taskListRef"
           :task-records="taskRecords"
@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch, type ComponentPublicInstance } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, type ComponentPublicInstance, type Ref } from 'vue'
 import {
   SPECIAL_TASK_CATEGORY,
   SPECIAL_TASK_TYPES,
@@ -251,14 +251,17 @@ const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
-const taskListRef = ref<ComponentPublicInstance<{ scrollToBottom?: () => Promise<void> }> | null>(null)
+const taskTablePaneRef = ref<HTMLElement | undefined>(undefined)
+const taskListRef = ref<ComponentPublicInstance<{
+  scrollToBottom?: (parentPaneRef?: Ref<HTMLElement | undefined>) => Promise<void>
+}> | null>(null)
 
 // Safe scroller helper
 const safeScrollToBottom = async (): Promise<void> => {
   await nextTick()
   try {
     const fn = taskListRef.value?.scrollToBottom
-    if (typeof fn === 'function') await fn()
+    if (typeof fn === 'function') await fn(taskTablePaneRef)
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
   }
