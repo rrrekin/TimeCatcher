@@ -959,7 +959,7 @@ const handleDeleteModalKeydown = (event: KeyboardEvent) => {
   if (event.key === 'Enter' && !isDeletingTask.value) {
     event.preventDefault()
     confirmDeleteTaskFinal()
-  } else if (event.key === 'Escape') {
+  } else if (event.key === 'Escape' && !isDeletingTask.value) {
     event.preventDefault()
     cancelDeleteTask()
   }

@@ -1091,6 +1091,20 @@ describe('App Component', () => {
 
       expect(confirmDeleteSpy).not.toHaveBeenCalled()
     })
+
+    it('should ignore Escape key when task is being deleted', () => {
+      const vm = wrapper.vm as any
+      vm.taskToDelete = mockTaskRecords[0]
+      vm.showDeleteModal = true
+      vm.isDeletingTask = true
+      const cancelDeleteSpy = vi.spyOn(vm, 'cancelDeleteTask')
+
+      // Simulate Escape key press while deleting
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      vm.handleDeleteModalKeydown(escapeEvent)
+
+      expect(cancelDeleteSpy).not.toHaveBeenCalled()
+    })
   })
 
   describe('Input Handling', () => {
