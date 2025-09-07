@@ -665,6 +665,7 @@ onMounted(async () => {
   // Add click outside listener for custom dropdown
   if (typeof document !== 'undefined') {
     document.addEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleDeleteModalKeydown)
   }
 })
 
@@ -675,6 +676,7 @@ onUnmounted(() => {
   // Clean up click outside event listener
   if (typeof document !== 'undefined') {
     document.removeEventListener('click', handleClickOutside)
+    document.removeEventListener('keydown', handleDeleteModalKeydown)
   }
 
   // Clean up media query listener with fallback for older browsers
@@ -947,6 +949,19 @@ const confirmDeleteTaskFinal = async () => {
     showToastMessage('Failed to delete task. Please try again.', 'error')
   } finally {
     isDeletingTask.value = false
+  }
+}
+
+// Delete modal keyboard handler
+const handleDeleteModalKeydown = (event: KeyboardEvent) => {
+  if (!showDeleteModal.value) return
+
+  if (event.key === 'Enter' && !isDeletingTask.value) {
+    event.preventDefault()
+    confirmDeleteTaskFinal()
+  } else if (event.key === 'Escape' && !isDeletingTask.value) {
+    event.preventDefault()
+    cancelDeleteTask()
   }
 }
 

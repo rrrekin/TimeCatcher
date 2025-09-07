@@ -1026,6 +1026,85 @@ describe('App Component', () => {
       // Should not crash and should not call delete function
       expect(mockDeleteTaskRecord).not.toHaveBeenCalled()
     })
+
+    it('should handle Enter key to confirm delete when modal is open', async () => {
+      mockDeleteTaskRecord.mockResolvedValue(undefined)
+      const vm = wrapper.vm as any
+      vm.taskToDelete = mockTaskRecords[0]
+      vm.showDeleteModal = true
+      vm.isDeletingTask = false
+
+      // Simulate Enter key press
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' })
+      const preventDefaultSpy = vi.spyOn(enterEvent, 'preventDefault')
+
+      vm.handleDeleteModalKeydown(enterEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+      expect(mockDeleteTaskRecord).toHaveBeenCalledWith(mockTaskRecords[0].id)
+    })
+
+    it('should handle Escape key to cancel delete when modal is open', () => {
+      const vm = wrapper.vm as any
+      vm.taskToDelete = mockTaskRecords[0]
+      vm.showDeleteModal = true
+
+      // Simulate Escape key press
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      const preventDefaultSpy = vi.spyOn(escapeEvent, 'preventDefault')
+
+      vm.handleDeleteModalKeydown(escapeEvent)
+
+      expect(preventDefaultSpy).toHaveBeenCalled()
+      expect(vm.showDeleteModal).toBe(false)
+      expect(vm.taskToDelete).toBe(null)
+    })
+
+    it('should ignore keyboard events when delete modal is closed', () => {
+      const vm = wrapper.vm as any
+      vm.showDeleteModal = false
+      const confirmDeleteSpy = vi.spyOn(vm, 'confirmDeleteTaskFinal')
+      const cancelDeleteSpy = vi.spyOn(vm, 'cancelDeleteTask')
+
+      // Simulate Enter key press
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' })
+      vm.handleDeleteModalKeydown(enterEvent)
+
+      // Simulate Escape key press
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      vm.handleDeleteModalKeydown(escapeEvent)
+
+      expect(confirmDeleteSpy).not.toHaveBeenCalled()
+      expect(cancelDeleteSpy).not.toHaveBeenCalled()
+    })
+
+    it('should ignore Enter key when task is being deleted', () => {
+      const vm = wrapper.vm as any
+      vm.taskToDelete = mockTaskRecords[0]
+      vm.showDeleteModal = true
+      vm.isDeletingTask = true
+      const confirmDeleteSpy = vi.spyOn(vm, 'confirmDeleteTaskFinal')
+
+      // Simulate Enter key press while deleting
+      const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' })
+      vm.handleDeleteModalKeydown(enterEvent)
+
+      expect(confirmDeleteSpy).not.toHaveBeenCalled()
+    })
+
+    it('should ignore Escape key when task is being deleted', () => {
+      const vm = wrapper.vm as any
+      vm.taskToDelete = mockTaskRecords[0]
+      vm.showDeleteModal = true
+      vm.isDeletingTask = true
+      const cancelDeleteSpy = vi.spyOn(vm, 'cancelDeleteTask')
+
+      // Simulate Escape key press while deleting
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      vm.handleDeleteModalKeydown(escapeEvent)
+
+      expect(cancelDeleteSpy).not.toHaveBeenCalled()
+    })
   })
 
   describe('Input Handling', () => {

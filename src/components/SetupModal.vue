@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType, ref, nextTick, computed } from 'vue'
+import { type PropType, ref, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import type { Category } from '@/shared/types'
 
 // Props
@@ -248,6 +248,30 @@ function handleBlurSave(category: Category) {
     emit('saveEditCategory', category)
   }
 }
+
+// Setup modal keyboard handler
+const handleSetupModalKeydown = (event: KeyboardEvent) => {
+  if (!props.isOpen) return
+
+  if (event.key === 'Escape' && canClose.value) {
+    event.preventDefault()
+    emit('close')
+  }
+  // Note: Enter key is intentionally not handled to keep modal open
+}
+
+// Lifecycle hooks for keyboard event listeners
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('keydown', handleSetupModalKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('keydown', handleSetupModalKeydown)
+  }
+})
 </script>
 
 <style scoped>
