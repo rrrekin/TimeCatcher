@@ -11,8 +11,9 @@
     />
 
     <div class="layout">
-      <div class="task-table-pane">
+      <div class="task-table-pane" ref="taskTablePaneRef">
         <TaskList
+          ref="taskListRef"
           :task-records="taskRecords"
           :categories="categories"
           :is-loading-tasks="isLoadingTasks"
@@ -130,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, type ComponentPublicInstance, type Ref } from 'vue'
 import {
   SPECIAL_TASK_CATEGORY,
   SPECIAL_TASK_TYPES,
@@ -250,6 +251,21 @@ const appVersion = ref<string>('')
 
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
+const taskTablePaneRef = ref<HTMLElement | undefined>(undefined)
+const taskListRef = ref<ComponentPublicInstance<{
+  scrollToBottom?: (parentPaneRef?: Ref<HTMLElement | undefined>) => Promise<void>
+}> | null>(null)
+
+// Safe scroller helper
+const safeScrollToBottom = async (): Promise<void> => {
+  await nextTick()
+  try {
+    const fn = taskListRef.value?.scrollToBottom
+    if (typeof fn === 'function') await fn(taskTablePaneRef)
+  } catch (error) {
+    console.warn('Failed to scroll to bottom:', error)
+  }
+}
 
 // Helper functions
 
@@ -280,6 +296,10 @@ const dateInputValue = computed({
     const [year, month, day] = value.split('-').map(Number)
     selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
   }
+})
+
+const isToday = computed(() => {
+  return toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())
 })
 
 const goToPreviousDay = () => {
@@ -504,6 +524,11 @@ const addTask = async () => {
     await addTaskRecord(taskRecord)
     showToastMessage('Task added successfully!', 'success')
 
+    // Scroll only when viewing today
+    if (isToday.value) {
+      await safeScrollToBottom()
+    }
+
     // Reset form
     initializeNewTask()
     showAddTaskForm.value = false
@@ -518,6 +543,10 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
   try {
     await addSpecialTask(taskType, taskName)
     showToastMessage(successMessage, 'success')
+
+    if (isToday.value) {
+      await safeScrollToBottom()
+    }
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -572,10 +601,12 @@ watch(
     // Await loading the new task records
     await loadTaskRecordsWrapper()
 
+    if (isToday.value) {
+      await safeScrollToBottom()
+    }
+
     // Start auto-refresh if we're viewing today
-    const todayString = toYMDLocalUtil(new Date())
-    const selectedDateString = toYMDLocalUtil(selectedDate.value)
-    if (selectedDateString === todayString) {
+    if (isToday.value) {
       startAutoRefresh()
     }
   },
@@ -618,15 +649,15 @@ onMounted(async () => {
   }
 
   // Start auto-refresh for today's tasks
-  const todayString = toYMDLocalUtil(new Date())
-  const selectedDateString = toYMDLocalUtil(selectedDate.value)
-  if (selectedDateString === todayString) {
+  if (isToday.value) {
     startAutoRefresh()
   }
 
   // Fetch app version
   try {
-    appVersion.value = await window.electronAPI.getVersion()
+    if (typeof window !== 'undefined' && (window as any).electronAPI?.getVersion) {
+      appVersion.value = await (window as any).electronAPI.getVersion()
+    }
   } catch (error) {
     console.warn('Failed to get app version:', error)
   }
@@ -711,6 +742,10 @@ const replayTask = async (record: TaskRecordWithId) => {
     } else {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
+
+      if (isToday.value) {
+        await safeScrollToBottom()
+      }
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
@@ -972,10 +1007,7 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
-// Auto-refresh state (using DOM timer type to avoid Node.js/DOM conflicts)
-let autoRefreshInterval: number | null = null
-
-// Auto-refresh functions
+// (auto-refresh handled by useAutoRefresh composable)
 
 // Daily report functions
 const getTotalTimeTracked = (): string => {
@@ -1169,6 +1201,30 @@ body {
   box-shadow: 1px 0 3px var(--shadow-color);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Auto-hide scrollbar styles for task table pane */
+.task-table-pane::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-table-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-table-pane::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.task-table-pane:hover::-webkit-scrollbar-thumb {
+  background: var(--border-color);
 }
 
 .reports-pane {

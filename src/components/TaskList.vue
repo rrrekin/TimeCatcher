@@ -233,7 +233,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType, ref, nextTick, computed } from 'vue'
+import { type PropType, ref, nextTick, computed, type Ref } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
@@ -248,6 +248,27 @@ const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
+
+// Scroll to bottom method
+const scrollToBottom = async (parentPaneRef?: Ref<HTMLElement | undefined>): Promise<void> => {
+  await nextTick()
+
+  // Use provided parent pane ref or fall back to finding closest pane or use component element
+  const container =
+    parentPaneRef?.value ||
+    (taskTableRef.value?.closest('.task-table-pane') as HTMLElement | null) ||
+    taskTableRef.value
+  if (!container) return
+
+  // Use immediate scrolling for fastest performance
+  const behavior: ScrollBehavior = 'auto'
+
+  if (typeof (container as any).scrollTo === 'function') {
+    container.scrollTo({ top: container.scrollHeight, behavior })
+  } else {
+    ;(container as any).scrollTop = container.scrollHeight
+  }
+}
 
 // Props
 const props = defineProps({
@@ -325,6 +346,11 @@ const emit = defineEmits<{
   addPauseTask: []
   addEndTask: []
 }>()
+
+// Expose scrollToBottom method to parent
+defineExpose({
+  scrollToBottom
+})
 
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
@@ -525,7 +551,6 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 .task-table {
   background: var(--bg-primary);
   box-shadow: 0 4px 20px var(--shadow-color);
-  overflow: hidden;
   margin-bottom: 1rem;
 }
 

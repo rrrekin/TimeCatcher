@@ -50,11 +50,16 @@ __Coverage Requirements for PRs__:
 - CI fails if any changed file doesn't meet thresholds
 - Use `npm run test:coverage:check` to verify locally
 
+__Environment Variables__:
+
+- `ELECTRON_SKIP_REBUILD=1` - Skips electron-rebuild during postinstall for faster CI test runs (set in CI workflow)
+
 ### Important Notes
 
 - Always use `npm run dev` for development (not `npm start`)
 - Vite dev server runs on port 5173 and must be ready before Electron launches
 - Main process TypeScript compiles to `dist/` directory
+- Always use IDE diagnostics to validate code after implementation
 
 ## Architecture Overview
 
