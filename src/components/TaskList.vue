@@ -255,11 +255,8 @@ const scrollToBottom = async (): Promise<void> => {
   const el = taskTableRef.value
   if (!el) return
 
-  const prefersReduced =
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const behavior: ScrollBehavior = prefersReduced ? 'auto' : 'smooth'
+  // Use immediate scrolling for fastest performance
+  const behavior: ScrollBehavior = 'auto'
 
   const wrapper = el.closest('.task-table-pane') as HTMLElement | null
   const container = (wrapper ?? el) as HTMLElement

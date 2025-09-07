@@ -1304,7 +1304,7 @@ describe('TaskList Component', () => {
       expect(typeof wrapper.vm.scrollToBottom).toBe('function')
     })
 
-    it('should call scrollTo on parent container with smooth behavior when motion not reduced', async () => {
+    it('should call scrollTo on parent container with immediate behavior for fast scrolling', async () => {
       // Mock matchMedia to return false for prefers-reduced-motion
       const matchMediaMock = vi.fn().mockReturnValue({ matches: false })
       Object.defineProperty(window, 'matchMedia', { value: matchMediaMock })
@@ -1325,18 +1325,17 @@ describe('TaskList Component', () => {
       await vm.scrollToBottom()
 
       // Verify the correct methods were called
-      expect(matchMediaMock).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
       expect(closestSpy).toHaveBeenCalledWith('.task-table-pane')
       expect(scrollToSpy).toHaveBeenCalledWith({
         top: 1000,
-        behavior: 'smooth'
+        behavior: 'auto'
       })
 
       // Restore the spy
       closestSpy.mockRestore()
     })
 
-    it('should use auto behavior when prefers-reduced-motion is enabled', async () => {
+    it('should always use immediate auto behavior for fastest scrolling', async () => {
       // Mock matchMedia to return true for prefers-reduced-motion
       const matchMediaMock = vi.fn().mockReturnValue({ matches: true })
       Object.defineProperty(window, 'matchMedia', { value: matchMediaMock })
@@ -1355,7 +1354,6 @@ describe('TaskList Component', () => {
       const vm = wrapper.vm as any
       await vm.scrollToBottom()
 
-      expect(matchMediaMock).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
       expect(scrollToSpy).toHaveBeenCalledWith({
         top: 1000,
         behavior: 'auto'
@@ -1399,7 +1397,7 @@ describe('TaskList Component', () => {
       expect(closestSpy).toHaveBeenCalledWith('.task-table-pane')
       expect(scrollToSpy).toHaveBeenCalledWith({
         top: 800,
-        behavior: 'smooth'
+        behavior: 'auto'
       })
 
       // Restore spies

@@ -603,9 +603,7 @@ watch(
     }
 
     // Start auto-refresh if we're viewing today
-    const todayString = toYMDLocalUtil(new Date())
-    const selectedDateString = toYMDLocalUtil(selectedDate.value)
-    if (selectedDateString === todayString) {
+    if (isToday.value) {
       startAutoRefresh()
     }
   },
@@ -648,9 +646,7 @@ onMounted(async () => {
   }
 
   // Start auto-refresh for today's tasks
-  const todayString = toYMDLocalUtil(new Date())
-  const selectedDateString = toYMDLocalUtil(selectedDate.value)
-  if (selectedDateString === todayString) {
+  if (isToday.value) {
     startAutoRefresh()
   }
 
@@ -1203,6 +1199,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
   /* Firefox */
   scrollbar-width: thin;
