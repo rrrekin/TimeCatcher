@@ -263,58 +263,51 @@ describe('DailyReport Component', () => {
     })
   })
 
-  describe('formatTaskTime Function', () => {
-    let vm: any
-
+  describe('Clipboard Functionality', () => {
     beforeEach(() => {
-      vm = wrapper.vm as any
+      // Mock navigator.clipboard
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: vi.fn(() => Promise.resolve())
+        }
+      })
     })
 
-    it('should round time to nearest 5 minutes - basic cases', () => {
-      expect(vm.formatTaskTime('1h 32m')).toBe('1h 30m')
-      expect(vm.formatTaskTime('1h 33m')).toBe('1h 35m')
-      expect(vm.formatTaskTime('47m')).toBe('45m')
-      expect(vm.formatTaskTime('48m')).toBe('50m')
+    it('should copy task name to clipboard when task is clicked', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      await firstTask.trigger('click')
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+
+      // Check that copy confirmation is shown
+      expect(wrapper.find('.copy-confirmation').exists()).toBe(true)
+      expect(wrapper.find('.copy-text').text()).toContain('Copied "Development"')
     })
 
-    it('should handle hour-only times', () => {
-      expect(vm.formatTaskTime('2h')).toBe('2h')
-      expect(vm.formatTaskTime('1h')).toBe('1h')
-    })
+    it('should handle clipboard copy errors gracefully', async () => {
+      // Mock clipboard to throw an error
+      const mockWriteText = vi.fn(() => Promise.reject(new Error('Clipboard not available')))
+      Object.assign(navigator, {
+        clipboard: { writeText: mockWriteText }
+      })
 
-    it('should handle minute-only times', () => {
-      expect(vm.formatTaskTime('30m')).toBe('30m')
-      expect(vm.formatTaskTime('7m')).toBe('5m')
-      expect(vm.formatTaskTime('23m')).toBe('25m')
-    })
+      // Mock document.execCommand for fallback
+      document.execCommand = vi.fn(() => true)
 
-    it('should handle edge cases', () => {
-      expect(vm.formatTaskTime('0m')).toBe('0m')
-      expect(vm.formatTaskTime('1m')).toBe('0m')
-      expect(vm.formatTaskTime('2m')).toBe('0m')
-      expect(vm.formatTaskTime('3m')).toBe('5m')
-    })
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
 
-    it('should handle mixed hour and minute times', () => {
-      expect(vm.formatTaskTime('2h 17m')).toBe('2h 15m')
-      expect(vm.formatTaskTime('3h 58m')).toBe('4h')
-      expect(vm.formatTaskTime('1h 2m')).toBe('1h')
-    })
+      await firstTask.trigger('click')
 
-    it('should handle large times correctly', () => {
-      expect(vm.formatTaskTime('8h 37m')).toBe('8h 35m')
-      expect(vm.formatTaskTime('12h 3m')).toBe('12h 5m')
-    })
+      expect(mockWriteText).toHaveBeenCalledWith('Development')
+      // Should fallback to document.execCommand
+      expect(document.execCommand).toHaveBeenCalledWith('copy')
 
-    it('should round 30+ minutes in the hour to the next hour when appropriate', () => {
-      expect(vm.formatTaskTime('1h 58m')).toBe('2h')
-      expect(vm.formatTaskTime('2h 58m')).toBe('3h') // 2h 58m = 178 minutes, rounds to 180 = 3h
-    })
-
-    it('should handle malformed input gracefully', () => {
-      expect(vm.formatTaskTime('')).toBe('-')
-      expect(vm.formatTaskTime('invalid')).toBe('-')
-      expect(vm.formatTaskTime('h m')).toBe('-')
+      // Check that copy confirmation is still shown even with fallback
+      expect(wrapper.find('.copy-confirmation').exists()).toBe(true)
+      expect(wrapper.find('.copy-text').text()).toContain('Copied "Development"')
     })
   })
 

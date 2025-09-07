@@ -169,9 +169,9 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 - Category breakdown with progress bars
 - Status indicators: ⚠️ (missing end task), 😊 (target reached)
 - Configurable target work hours (default: 8)
-- **Dual time display**: Shows both actual time and rounded time (5-minute increments) in format: `ActualTime (RoundedTime)`
-- **Two-line header layout**: Title and status icons on first line, combined time totals on second line
-- **Interactive hover tooltips**: Hover over any task entry to see individual appearances with start/end times and durations
+- __Dual time display__: Shows both actual time and rounded time (5-minute increments) in format: `ActualTime (RoundedTime)`
+- __Two-line header layout__: Title and status icons on first line, combined time totals on second line
+- __Interactive hover tooltips__: Hover over any task entry to see individual appearances with start/end times and durations
 
 ### Duration Calculation Logic
 
@@ -179,14 +179,14 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 - Last task duration based on date context (past: until midnight, today: until current time, future: zero)
 - Consistent rounding: `Math.floor()` per-task before aggregation
 - Auto-refresh for real-time updates when viewing today
-- **Dual totaling**: Calculates both plain sum (actual minutes) and rounded sum (each task rounded to nearest 5 minutes)
+- __Dual totaling__: Calculates both plain sum (actual minutes) and rounded sum (each task rounded to nearest 5 minutes)
 
 ### Report Display Structure
 
-- **Day Summary**: Two-line layout with "Daily Report" title + icons, then combined time display showing `ActualTotal (RoundedTotal)`
-- **Category Summary**: Each category shows dual time format with actual and rounded totals in brackets
-- **Task Entries**: Individual tasks display combined format with actual time and rounded time in parentheses
-- **Hover Tooltips**: Show detailed breakdown of each task appearance including start time, end time, and individual duration
+- __Day Summary__: Two-line layout with "Daily Report" title + icons, then combined time display showing `ActualTotal (RoundedTotal)`
+- __Category Summary__: Each category shows dual time format with actual and rounded totals in brackets
+- __Task Entries__: Individual tasks display combined format with actual time and rounded time in parentheses
+- __Hover Tooltips__: Show detailed breakdown of each task appearance including start time, end time, and individual duration
 
 ## Design System
 
