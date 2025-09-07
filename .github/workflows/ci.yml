@@ -50,6 +50,8 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
+        env:
+          ELECTRON_SKIP_REBUILD: '1'
         run: mkdir -p test-results && npm run test:coverage
 
       - name: Publish test results

@@ -295,6 +295,10 @@ const dateInputValue = computed({
   }
 })
 
+const isToday = computed(() => {
+  return toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())
+})
+
 const goToPreviousDay = () => {
   const newDate = new Date(selectedDate.value)
   newDate.setDate(newDate.getDate() - 1)
@@ -518,7 +522,7 @@ const addTask = async () => {
     showToastMessage('Task added successfully!', 'success')
 
     // Scroll only when viewing today
-    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+    if (isToday.value) {
       await safeScrollToBottom()
     }
 
@@ -537,7 +541,7 @@ const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string
     await addSpecialTask(taskType, taskName)
     showToastMessage(successMessage, 'success')
 
-    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+    if (isToday.value) {
       await safeScrollToBottom()
     }
   } catch (error) {
@@ -594,7 +598,7 @@ watch(
     // Await loading the new task records
     await loadTaskRecordsWrapper()
 
-    if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+    if (isToday.value) {
       await safeScrollToBottom()
     }
 
@@ -740,7 +744,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
 
-      if (toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())) {
+      if (isToday.value) {
         await safeScrollToBottom()
       }
     }
@@ -1199,6 +1203,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   /* Firefox */
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
