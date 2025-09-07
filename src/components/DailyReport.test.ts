@@ -43,18 +43,69 @@ describe('DailyReport Component', () => {
       name: 'Work',
       taskCount: 2,
       totalTime: '3h 30m',
+      totalTimeRounded: '3h 30m',
+      totalTimeCombined: '3h 30m (3h 30m)',
       percentage: 70,
       taskSummaries: [
-        { name: 'Development', count: 1, totalTime: '2h 15m' },
-        { name: 'Meeting', count: 1, totalTime: '1h 15m' }
+        {
+          name: 'Development',
+          count: 1,
+          totalTime: '2h 15m',
+          totalTimeRounded: '2h 15m',
+          totalTimeCombined: '2h 15m (2h 15m)',
+          appearances: [
+            {
+              startTime: '09:00',
+              endTime: '11:15',
+              duration: 135,
+              durationFormatted: '2h 15m',
+              date: '2024-01-15'
+            }
+          ]
+        },
+        {
+          name: 'Meeting',
+          count: 1,
+          totalTime: '1h 15m',
+          totalTimeRounded: '1h 15m',
+          totalTimeCombined: '1h 15m (1h 15m)',
+          appearances: [
+            {
+              startTime: '14:00',
+              endTime: '15:15',
+              duration: 75,
+              durationFormatted: '1h 15m',
+              date: '2024-01-15'
+            }
+          ]
+        }
       ]
     },
     {
       name: 'Personal',
       taskCount: 1,
       totalTime: '1h 30m',
+      totalTimeRounded: '1h 30m',
+      totalTimeCombined: '1h 30m (1h 30m)',
       percentage: 30,
-      taskSummaries: [{ name: 'Exercise', count: 1, totalTime: '1h 30m' }]
+      taskSummaries: [
+        {
+          name: 'Exercise',
+          count: 1,
+          totalTime: '1h 30m',
+          totalTimeRounded: '1h 30m',
+          totalTimeCombined: '1h 30m (1h 30m)',
+          appearances: [
+            {
+              startTime: '18:00',
+              endTime: '19:30',
+              duration: 90,
+              durationFormatted: '1h 30m',
+              date: '2024-01-15'
+            }
+          ]
+        }
+      ]
     }
   ]
 
@@ -66,6 +117,8 @@ describe('DailyReport Component', () => {
         hasEndTaskForSelectedDate: true,
         targetWorkHours: 8,
         totalTimeTracked: '5h 0m',
+        totalTimeTrackedRounded: '5h 0m',
+        totalTimeTrackedCombined: '5h 0m (5h 0m)',
         totalMinutesTracked: 300,
         categoryBreakdown: mockCategoryBreakdown
       }
@@ -75,7 +128,10 @@ describe('DailyReport Component', () => {
   describe('Component Rendering', () => {
     it('should render the report header with total time', () => {
       const header = wrapper.find('[data-testid="report-header-title"]')
-      expect(header.text()).toContain('Daily Report: 5h 0m')
+      expect(header.text()).toContain('Daily Report')
+
+      const totalTime = wrapper.find('[data-testid="total-time-display"]')
+      expect(totalTime.text()).toContain('5h 0m (5h 0m)')
     })
 
     it('should display the date title', () => {
@@ -146,7 +202,7 @@ describe('DailyReport Component', () => {
       expect(categoryTasks.text()).toBe('2 tasks')
 
       const categoryTime = workCategory.find('.category-time')
-      expect(categoryTime.text()).toBe('3h 30m')
+      expect(categoryTime.text()).toBe('3h 30m (3h 30m)')
     })
 
     it('should display singular "task" for single task count', () => {
@@ -179,16 +235,14 @@ describe('DailyReport Component', () => {
       expect(firstTask.find('.task-count').text()).toBe('1x')
     })
 
-    it('should display rounded time and actual time for each task', () => {
+    it('should display combined time for each task', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const firstTask = workCategory.findAll('.task-summary')[0]
 
-      const roundedTime = firstTask.find('.task-time-rounded')
-      const actualTime = firstTask.find('.task-time-actual')
+      const combinedTime = firstTask.find('.task-time-combined')
 
-      expect(roundedTime.exists()).toBe(true)
-      expect(actualTime.exists()).toBe(true)
-      expect(actualTime.text()).toBe('2h 15m') // Actual time from props
+      expect(combinedTime.exists()).toBe(true)
+      expect(combinedTime.text()).toBe('2h 15m (2h 15m)') // Combined time from props
     })
   })
 

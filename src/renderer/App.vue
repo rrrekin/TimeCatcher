@@ -48,7 +48,9 @@
           :date-title="dateTitle"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :target-work-hours="targetWorkHours"
-          :total-time-tracked="getTotalTimeTracked()"
+          :total-time-tracked="getTotalTimeTracked().plain"
+          :total-time-tracked-rounded="getTotalTimeTracked().rounded"
+          :total-time-tracked-combined="getTotalTimeTracked().combined"
           :total-minutes-tracked="getTotalMinutesTracked()"
           :category-breakdown="getEnhancedCategoryBreakdown"
         />
@@ -1025,8 +1027,34 @@ const handleClickOutside = (event: Event) => {
 // (auto-refresh handled by useAutoRefresh composable)
 
 // Daily report functions
-const getTotalTimeTracked = (): string => {
-  return formatDurationMinutes(getTotalMinutesTracked())
+// Helper function to round minutes to nearest 5-minute increment
+const roundToFiveMinutes = (minutes: number): number => {
+  return Math.round(minutes / 5) * 5
+}
+
+// Helper function to format dual time display (plain + rounded in brackets)
+const formatDualTime = (plainMinutes: number, roundedMinutes: number): string => {
+  const plainFormatted = formatDurationMinutes(plainMinutes)
+  const roundedFormatted = formatDurationMinutes(roundedMinutes)
+  return `${plainFormatted} (${roundedFormatted})`
+}
+
+// Helper function to format minutes back to time string
+const formatTimeFromMinutes = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = Math.round(totalMinutes % 60)
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
+}
+
+// Updated function to return both plain and rounded total time
+const getTotalTimeTracked = (): { plain: string; rounded: string; combined: string } => {
+  const plainMinutes = getTotalMinutesTracked()
+  const roundedMinutes = roundToFiveMinutes(plainMinutes)
+  return {
+    plain: formatDurationMinutes(plainMinutes),
+    rounded: formatDurationMinutes(roundedMinutes),
+    combined: formatDualTime(plainMinutes, roundedMinutes)
+  }
 }
 
 // Helper function to parse duration strings back to minutes
@@ -1072,6 +1100,8 @@ const getEnhancedCategoryBreakdown = computed(() => {
         name: record.task_name,
         count: 0,
         totalMinutes: 0,
+        totalMinutesRounded: 0,
+        appearances: [],
         firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
       })
     }
@@ -1085,17 +1115,34 @@ const getEnhancedCategoryBreakdown = computed(() => {
       const nextRecord = i < taskRecords.value.length - 1 ? taskRecords.value[i + 1] : null
 
       let durationMinutes = 0
+      let endTime: number
       if (nextRecord) {
         const nextTime = parseTimeString(nextRecord.start_time)
         if (nextTime !== null && nextTime > currentTime) {
           durationMinutes = nextTime - currentTime
+          endTime = nextTime
+        } else {
+          endTime = currentTime
         }
       } else {
-        const endTime = getLastTaskEndTime(record.date, currentTime)
+        endTime = getLastTaskEndTime(record.date, currentTime)
         durationMinutes = Math.max(0, endTime - currentTime)
       }
 
-      task.totalMinutes += Math.floor(durationMinutes)
+      const flooredDuration = Math.floor(durationMinutes)
+      const roundedDuration = roundToFiveMinutes(durationMinutes)
+
+      task.totalMinutes += flooredDuration
+      task.totalMinutesRounded += roundedDuration
+
+      // Add appearance data for hover tooltips
+      task.appearances.push({
+        startTime: record.start_time,
+        endTime: formatTimeFromMinutes(endTime),
+        duration: flooredDuration,
+        durationFormatted: formatDurationMinutes(flooredDuration),
+        date: record.date
+      })
     }
   }
 
@@ -1104,10 +1151,15 @@ const getEnhancedCategoryBreakdown = computed(() => {
 
   return baseCategoryBreakdown.map(category => {
     const categoryData = categoryMap.get(category.categoryName)
+    const plainMinutes = category.minutes
+    const roundedMinutes = roundToFiveMinutes(plainMinutes)
+
     return {
       ...category,
       name: category.categoryName,
-      totalTime: formatDurationMinutes(category.minutes),
+      totalTime: formatDurationMinutes(plainMinutes),
+      totalTimeRounded: formatDurationMinutes(roundedMinutes),
+      totalTimeCombined: formatDualTime(plainMinutes, roundedMinutes),
       taskCount: categoryData
         ? Array.from(categoryData.tasks.values()).reduce((sum: number, task: any) => sum + (task.count || 0), 0)
         : 0,
@@ -1116,7 +1168,9 @@ const getEnhancedCategoryBreakdown = computed(() => {
             .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
             .map((task: any) => ({
               ...task,
-              totalTime: formatDurationMinutes(task.totalMinutes)
+              totalTime: formatDurationMinutes(task.totalMinutes),
+              totalTimeRounded: formatDurationMinutes(task.totalMinutesRounded),
+              totalTimeCombined: formatDualTime(task.totalMinutes, task.totalMinutesRounded)
             }))
         : []
     }

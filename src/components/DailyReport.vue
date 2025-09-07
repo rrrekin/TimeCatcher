@@ -1,28 +1,33 @@
 <template>
   <div class="daily-report">
     <div class="report-header">
-      <h2 data-testid="report-header-title">Daily Report: {{ totalTimeTracked }}</h2>
-      <div class="status-emojis" aria-live="polite" aria-atomic="true">
-        <span
-          v-if="!hasEndTaskForSelectedDate"
-          class="status-emoji"
-          role="img"
-          aria-label="Missing end task"
-          title="Missing end task"
-          >⚠️</span
-        >
-        <span
-          v-if="totalMinutesTracked >= targetWorkHours * 60"
-          class="status-emoji"
-          role="img"
-          aria-label="Target reached"
-          title="Target reached"
-          >😊</span
-        >
-        <!-- Screen reader accessible status text -->
-        <span class="sr-only">
-          {{ getStatusText() }}
-        </span>
+      <div class="header-line-1">
+        <h2 data-testid="report-header-title">Daily Report</h2>
+        <div class="status-emojis" aria-live="polite" aria-atomic="true">
+          <span
+            v-if="!hasEndTaskForSelectedDate"
+            class="status-emoji"
+            role="img"
+            aria-label="Missing end task"
+            title="Missing end task"
+            >⚠️</span
+          >
+          <span
+            v-if="totalMinutesTracked >= targetWorkHours * 60"
+            class="status-emoji"
+            role="img"
+            aria-label="Target reached"
+            title="Target reached"
+            >😊</span
+          >
+          <!-- Screen reader accessible status text -->
+          <span class="sr-only">
+            {{ getStatusText() }}
+          </span>
+        </div>
+      </div>
+      <div class="header-line-2" data-testid="total-time-display">
+        {{ totalTimeTrackedCombined }}
       </div>
     </div>
     <p data-testid="report-date">
@@ -48,7 +53,7 @@
                 >{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span
               >
             </div>
-            <div class="category-time">{{ categoryData.totalTime }}</div>
+            <div class="category-time">{{ categoryData.totalTimeCombined }}</div>
             <div class="category-bar">
               <div
                 class="category-progress"
@@ -69,21 +74,39 @@
               v-for="(task, index) in categoryData.taskSummaries"
               :key="task.name ? `${task.name}-${index}` : index"
               class="task-summary"
+              @mouseenter="showTooltip(task, $event)"
+              @mouseleave="hideTooltip"
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
               <span
-                class="task-time-rounded"
-                :title="`Rounded (nearest 5m)`"
-                :aria-label="`Rounded (nearest 5m): ${formatTaskTime(task.totalTime)}`"
+                class="task-time-combined"
+                :title="`Actual time (Rounded to nearest 5m)`"
+                :aria-label="`Time: ${task.totalTimeCombined}`"
               >
-                {{ formatTaskTime(task.totalTime) }}
-              </span>
-              <span class="task-time-actual" :title="`Actual`" :aria-label="`Actual: ${task.totalTime}`">
-                {{ task.totalTime }}
+                {{ task.totalTimeCombined }}
               </span>
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tooltip for task appearances -->
+    <div
+      v-if="tooltipVisible && tooltipContent"
+      class="task-tooltip"
+      :style="{
+        position: 'fixed',
+        left: tooltipPosition.x + 'px',
+        top: tooltipPosition.y + 'px'
+      }"
+    >
+      <div class="tooltip-header">{{ tooltipTaskName }}</div>
+      <div class="tooltip-content">
+        <div v-for="(appearance, index) in tooltipContent" :key="index" class="appearance-item">
+          <div class="appearance-time">{{ appearance.startTime }} - {{ appearance.endTime }}</div>
+          <div class="appearance-duration">{{ appearance.durationFormatted }}</div>
         </div>
       </div>
     </div>
@@ -91,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TaskRecord } from '@/shared/types'
 import { TASK_TYPE_NORMAL } from '@/shared/types'
 
@@ -101,16 +124,29 @@ interface DailyReportProps {
   hasEndTaskForSelectedDate: boolean
   targetWorkHours: number
   totalTimeTracked: string
+  totalTimeTrackedRounded: string
+  totalTimeTrackedCombined: string
   totalMinutesTracked: number
   categoryBreakdown: Array<{
     name: string
     taskCount: number
     totalTime: string
+    totalTimeRounded: string
+    totalTimeCombined: string
     percentage: number
     taskSummaries: Array<{
       name: string
       count: number
       totalTime: string
+      totalTimeRounded: string
+      totalTimeCombined: string
+      appearances?: Array<{
+        startTime: string
+        endTime: string
+        duration: number
+        durationFormatted: string
+        date: string
+      }>
     }>
   }>
 }
@@ -118,9 +154,64 @@ interface DailyReportProps {
 // Props
 const props = defineProps<DailyReportProps>()
 
+// Tooltip state
+const tooltipVisible = ref(false)
+const tooltipContent = ref<any>(null)
+const tooltipTaskName = ref('')
+const tooltipPosition = ref({ x: 0, y: 0 })
+
 // Helper function
 const clampPercent = (p: number): number => {
   return Math.max(0, Math.min(100, p))
+}
+
+// Tooltip methods
+const showTooltip = (task: any, event: MouseEvent) => {
+  if (task.appearances && task.appearances.length > 0) {
+    tooltipContent.value = task.appearances
+    tooltipTaskName.value = task.name || 'Task'
+
+    // Calculate tooltip dimensions (approximate)
+    const tooltipWidth = 390 // max-width from CSS
+    const tooltipHeight = Math.min(200 + 50, task.appearances.length * 30 + 50) // estimated height
+
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    // Calculate initial position
+    let x = event.clientX + 10
+    let y = event.clientY - 10
+
+    // Adjust horizontal position if tooltip would go off-screen
+    if (x + tooltipWidth > viewportWidth) {
+      x = event.clientX - tooltipWidth - 10 // Position to the left of cursor
+    }
+
+    // Adjust vertical position if tooltip would go off-screen
+    if (y + tooltipHeight > viewportHeight) {
+      y = event.clientY - tooltipHeight - 10 // Position above cursor
+    }
+
+    // Ensure tooltip doesn't go off the left edge
+    if (x < 10) {
+      x = 10
+    }
+
+    // Ensure tooltip doesn't go off the top edge
+    if (y < 10) {
+      y = 10
+    }
+
+    tooltipPosition.value = { x, y }
+    tooltipVisible.value = true
+  }
+}
+
+const hideTooltip = () => {
+  tooltipVisible.value = false
+  tooltipContent.value = null
+  tooltipTaskName.value = ''
 }
 
 // Computed properties
@@ -199,10 +290,22 @@ const formatTaskTime = (timeString: string): string => {
 }
 
 .report-header {
+  margin-bottom: 8px;
+}
+
+.header-line-1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.header-line-2 {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-left: 4px;
 }
 
 .status-emojis {
@@ -314,7 +417,7 @@ const formatTaskTime = (timeString: string): string => {
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr minmax(50px, auto) minmax(50px, auto) minmax(50px, auto);
+  grid-template-columns: 1fr minmax(50px, auto) minmax(100px, auto);
   gap: 12px;
   align-items: center;
   padding: 8px 12px;
@@ -339,22 +442,79 @@ const formatTaskTime = (timeString: string): string => {
   text-align: center;
 }
 
-.task-time-rounded {
-  color: var(--text-secondary);
+.task-time-combined {
+  color: var(--text-primary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-size: 12px;
   font-weight: 500;
-  min-width: 50px;
+  min-width: 100px;
   text-align: right;
 }
 
-.task-time-actual {
-  color: var(--text-muted);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+/* Tooltip styles */
+.task-tooltip {
+  z-index: 1000;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow-color);
+  padding: 0;
+  min-width: 260px;
+  max-width: 390px;
+  pointer-events: none;
+}
+
+.tooltip-header {
+  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px 4px 12px;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tooltip-content {
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.appearance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  margin-bottom: 2px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
   font-size: 11px;
+}
+
+.appearance-time {
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-weight: 500;
+}
+
+.appearance-duration {
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-weight: 400;
-  opacity: 0.8;
-  min-width: 50px;
+  min-width: 40px;
   text-align: right;
+}
+
+/* Add hover cursor to indicate interactivity */
+.task-summary {
+  cursor: default;
+}
+
+.task-summary:hover {
+  background: var(--bg-secondary);
 }
 </style>

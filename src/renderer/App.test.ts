@@ -902,8 +902,15 @@ describe('App Component', () => {
       const vm = wrapper.vm as any
       const totalTime = vm.getTotalTimeTracked()
 
-      expect(typeof totalTime).toBe('string')
-      expect(totalTime).toMatch(/^\d+h \d+m$|^\d+m$|^0m$/) // Should match time format
+      expect(typeof totalTime).toBe('object')
+      expect(totalTime).toHaveProperty('plain')
+      expect(totalTime).toHaveProperty('rounded')
+      expect(totalTime).toHaveProperty('combined')
+      expect(typeof totalTime.plain).toBe('string')
+      expect(typeof totalTime.rounded).toBe('string')
+      expect(typeof totalTime.combined).toBe('string')
+      expect(totalTime.plain).toMatch(/^\d+h \d+m$|^\d+m$|^0m$/) // Should match time format
+      expect(totalTime.rounded).toMatch(/^\d+h \d+m$|^\d+m$|^0m$/) // Should match time format
     })
 
     it('should get unique categories count', () => {
