@@ -281,9 +281,8 @@ describe('DailyReport Component', () => {
 
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
 
-      // Check that copy confirmation is shown
-      expect(wrapper.find('.copy-confirmation').exists()).toBe(true)
-      expect(wrapper.find('.copy-text').text()).toContain('Copied "Development"')
+      // Check that task is highlighted as copied
+      expect(firstTask.classes()).toContain('task-summary-copied')
     })
 
     it('should handle clipboard copy errors gracefully', async () => {
@@ -305,9 +304,24 @@ describe('DailyReport Component', () => {
       // Should fallback to document.execCommand
       expect(document.execCommand).toHaveBeenCalledWith('copy')
 
-      // Check that copy confirmation is still shown even with fallback
-      expect(wrapper.find('.copy-confirmation').exists()).toBe(true)
-      expect(wrapper.find('.copy-text').text()).toContain('Copied "Development"')
+      // Check that task is highlighted as copied even with fallback
+      expect(firstTask.classes()).toContain('task-summary-copied')
+    })
+
+    it('should only highlight one task at a time', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+      const secondTask = workCategory.findAll('.task-summary')[1]
+
+      // Click first task
+      await firstTask.trigger('click')
+      expect(firstTask.classes()).toContain('task-summary-copied')
+      expect(secondTask.classes()).not.toContain('task-summary-copied')
+
+      // Click second task
+      await secondTask.trigger('click')
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+      expect(secondTask.classes()).toContain('task-summary-copied')
     })
   })
 

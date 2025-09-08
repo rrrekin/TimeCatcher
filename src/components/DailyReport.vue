@@ -74,6 +74,7 @@
               v-for="(task, index) in categoryData.taskSummaries"
               :key="task.name ? `${task.name}-${index}` : index"
               class="task-summary"
+              :class="{ 'task-summary-copied': copiedTaskName === task.name }"
               @mouseenter="showTooltip(task, $event)"
               @mouseleave="hideTooltip"
               @click="copyTaskNameToClipboard(task.name)"
@@ -109,14 +110,6 @@
           <div class="appearance-time">{{ appearance.startTime }} - {{ appearance.endTime }}</div>
           <div class="appearance-duration">{{ appearance.durationFormatted }}</div>
         </div>
-      </div>
-    </div>
-
-    <!-- Copy confirmation notification -->
-    <div v-if="copyConfirmationVisible" class="copy-confirmation">
-      <div class="copy-confirmation-content">
-        <span class="copy-icon">📋</span>
-        <span class="copy-text">Copied "{{ copiedTaskName }}"</span>
       </div>
     </div>
   </div>
@@ -169,9 +162,8 @@ const tooltipContent = ref<any>(null)
 const tooltipTaskName = ref('')
 const tooltipPosition = ref({ x: 0, y: 0 })
 
-// Copy confirmation state
+// Copy state - track which task was last copied
 const copiedTaskName = ref('')
-const copyConfirmationVisible = ref(false)
 
 // Helper function
 const clampPercent = (p: number): number => {
@@ -231,7 +223,7 @@ const hideTooltip = () => {
 const copyTaskNameToClipboard = async (taskName: string) => {
   try {
     await navigator.clipboard.writeText(taskName)
-    showCopyConfirmation(taskName)
+    copiedTaskName.value = taskName
   } catch (error) {
     console.error('Failed to copy task name to clipboard:', error)
     // Fallback for older browsers or when clipboard API is not available
@@ -246,22 +238,11 @@ const copyTaskNameToClipboard = async (taskName: string) => {
       textArea.select()
       document.execCommand('copy')
       textArea.remove()
-      showCopyConfirmation(taskName)
+      copiedTaskName.value = taskName
     } catch (fallbackError) {
       console.error('Clipboard fallback also failed:', fallbackError)
     }
   }
-}
-
-// Show copy confirmation with brief animation
-const showCopyConfirmation = (taskName: string) => {
-  copiedTaskName.value = taskName
-  copyConfirmationVisible.value = true
-
-  // Hide confirmation after 1.5 seconds
-  setTimeout(() => {
-    copyConfirmationVisible.value = false
-  }, 1500)
 }
 
 // Computed properties
@@ -545,62 +526,10 @@ const getStatusText = () => {
   background: var(--bg-secondary);
 }
 
-/* Copy confirmation notification */
-.copy-confirmation {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1100;
-  pointer-events: none;
-  animation:
-    copySlideIn 0.3s ease-out,
-    copyFadeOut 0.3s ease-in 1.2s forwards;
-}
-
-.copy-confirmation-content {
-  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
-  color: white;
-  padding: 12px 16px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.copy-icon {
-  font-size: 16px;
-  filter: grayscale(1) brightness(2);
-}
-
-.copy-text {
-  white-space: nowrap;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-@keyframes copySlideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes copyFadeOut {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(20px);
-  }
+/* Copied task highlighting */
+.task-summary-copied {
+  background: linear-gradient(90deg, rgba(87, 189, 175, 0.15), rgba(86, 179, 114, 0.15)) !important;
+  border-color: var(--verdigris) !important;
+  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
 }
 </style>
