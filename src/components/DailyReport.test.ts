@@ -271,6 +271,11 @@ describe('DailyReport Component', () => {
           writeText: vi.fn(() => Promise.resolve())
         }
       })
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
     })
 
     it('should copy task name to clipboard when task is clicked', async () => {
@@ -322,6 +327,171 @@ describe('DailyReport Component', () => {
       await secondTask.trigger('click')
       expect(firstTask.classes()).not.toContain('task-summary-copied')
       expect(secondTask.classes()).toContain('task-summary-copied')
+    })
+
+    it('should handle both clipboard API and fallback failing', async () => {
+      // Mock clipboard to throw an error
+      const mockWriteText = vi.fn(() => Promise.reject(new Error('Clipboard not available')))
+      Object.assign(navigator, {
+        clipboard: { writeText: mockWriteText }
+      })
+
+      // Mock document.execCommand to also fail
+      document.execCommand = vi.fn(() => {
+        throw new Error('execCommand also failed')
+      })
+
+      // Spy on console.error to verify error logging
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      await firstTask.trigger('click')
+
+      expect(mockWriteText).toHaveBeenCalledWith('Development')
+      expect(document.execCommand).toHaveBeenCalledWith('copy')
+
+      // Should log both errors
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to copy task name to clipboard:', expect.any(Error))
+      expect(consoleSpy).toHaveBeenCalledWith('Clipboard fallback also failed:', expect.any(Error))
+
+      // Task should not be highlighted since copy failed
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Tooltip Functionality', () => {
+    it('should show tooltip on mouseenter and hide on mouseleave', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Initially tooltip should be hidden
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+
+      // Trigger mouseenter to show tooltip
+      await firstTask.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should be visible
+      expect(wrapper.find('.task-tooltip').exists()).toBe(true)
+      expect(wrapper.find('.tooltip-header').text()).toBe('Development')
+
+      // Trigger mouseleave to hide tooltip
+      await firstTask.trigger('mouseleave')
+
+      // Tooltip should be hidden again
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+    })
+
+    it('should not show tooltip for tasks without appearances', async () => {
+      // Create props with task that has no appearances
+      await wrapper.setProps({
+        ...wrapper.props(),
+        categoryBreakdown: [
+          {
+            name: 'Work',
+            taskCount: 1,
+            totalTime: '2h 15m',
+            totalTimeRounded: '2h 15m',
+            totalTimeCombined: '2h 15m (2h 15m)',
+            percentage: 70,
+            taskSummaries: [
+              {
+                name: 'TaskWithoutAppearances',
+                count: 1,
+                totalTime: '2h 15m',
+                totalTimeRounded: '2h 15m',
+                totalTimeCombined: '2h 15m (2h 15m)'
+                // Note: no appearances property
+              }
+            ]
+          }
+        ]
+      })
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const taskWithoutAppearances = workCategory.findAll('.task-summary')[0]
+
+      // Trigger mouseenter
+      await taskWithoutAppearances.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should not be visible
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+    })
+
+    it('should position tooltip correctly when near screen edges', async () => {
+      // Mock window dimensions
+      Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
+      Object.defineProperty(window, 'innerHeight', { value: 600, writable: true })
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Test tooltip positioning near left edge (should adjust to x = 10)
+      await firstTask.trigger('mouseenter', {
+        clientX: -100, // Far left, would cause negative positioning
+        clientY: 100
+      })
+
+      // Should clamp to minimum left position of 10px
+      const tooltip = wrapper.find('.task-tooltip')
+      expect(tooltip.exists()).toBe(true)
+      expect(tooltip.attributes('style')).toContain('left: 10px')
+
+      await firstTask.trigger('mouseleave')
+
+      // Test tooltip positioning near top edge (should adjust to y = 10)
+      await firstTask.trigger('mouseenter', {
+        clientX: 100,
+        clientY: -100 // Far up, would cause negative positioning
+      })
+
+      // Should clamp to minimum top position of 10px
+      const tooltipAfter = wrapper.find('.task-tooltip')
+      expect(tooltipAfter.exists()).toBe(true)
+      expect(tooltipAfter.attributes('style')).toContain('top: 10px')
+    })
+
+    it('should reposition tooltip when it would go off right or bottom edge', async () => {
+      // Mock window dimensions
+      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true })
+      Object.defineProperty(window, 'innerHeight', { value: 400, writable: true })
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Test tooltip repositioning when near right edge
+      await firstTask.trigger('mouseenter', {
+        clientX: 450, // Close to right edge (500-390 = 110, so 450 > 110)
+        clientY: 200
+      })
+
+      // Should position to the left of cursor instead (450 - 390 - 10 = 50)
+      let tooltip = wrapper.find('.task-tooltip')
+      expect(tooltip.exists()).toBe(true)
+      expect(tooltip.attributes('style')).toContain('left: 50px')
+
+      await firstTask.trigger('mouseleave')
+
+      // Test tooltip repositioning when near bottom edge
+      await firstTask.trigger('mouseenter', {
+        clientX: 200,
+        clientY: 350 // Close to bottom edge (tooltip height ~100, so 350+100 > 400)
+      })
+
+      // Should position above cursor instead
+      tooltip = wrapper.find('.task-tooltip')
+      expect(tooltip.exists()).toBe(true)
+      // The exact top value depends on estimated tooltip height, just ensure it's repositioned
+      expect(parseInt(tooltip.attributes('style')?.match(/top: (\d+)px/)?.[1] || '0')).toBeLessThan(350)
     })
   })
 

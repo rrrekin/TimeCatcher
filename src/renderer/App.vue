@@ -48,9 +48,9 @@
           :date-title="dateTitle"
           :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :target-work-hours="targetWorkHours"
-          :total-time-tracked="getTotalTimeTracked().plain"
-          :total-time-tracked-rounded="getTotalTimeTracked().rounded"
-          :total-time-tracked-combined="getTotalTimeTracked().combined"
+          :total-time-tracked="totalTimeTracked.plain"
+          :total-time-tracked-rounded="totalTimeTracked.rounded"
+          :total-time-tracked-combined="totalTimeTracked.combined"
           :total-minutes-tracked="getTotalMinutesTracked()"
           :category-breakdown="getEnhancedCategoryBreakdown"
         />
@@ -302,6 +302,10 @@ const dateInputValue = computed({
 
 const isToday = computed(() => {
   return toYMDLocalUtil(selectedDate.value) === toYMDLocalUtil(new Date())
+})
+
+const totalTimeTracked = computed(() => {
+  return getTotalTimeTracked()
 })
 
 const goToPreviousDay = () => {
@@ -1041,8 +1045,9 @@ const formatDualTime = (plainMinutes: number, roundedMinutes: number): string =>
 
 // Helper function to format minutes back to time string
 const formatTimeFromMinutes = (totalMinutes: number): string => {
-  const hours = Math.floor(totalMinutes / 60)
-  const minutes = Math.round(totalMinutes % 60)
+  const totalMinutesInt = Math.floor(totalMinutes)
+  const hours = Math.floor(totalMinutesInt / 60)
+  const minutes = totalMinutesInt % 60
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`
 }
 

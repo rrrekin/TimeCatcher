@@ -911,6 +911,7 @@ describe('App Component', () => {
       expect(typeof totalTime.combined).toBe('string')
       expect(totalTime.plain).toMatch(/^\d+h \d+m$|^\d+m$|^0m$/) // Should match time format
       expect(totalTime.rounded).toMatch(/^\d+h \d+m$|^\d+m$|^0m$/) // Should match time format
+      expect(totalTime.combined).toMatch(/^(\d+h \d+m|\d+m|0m) \((\d+h \d+m|\d+m|0m)\)$/) // Should match "primaryTime (secondaryTime)" format
     })
 
     it('should get unique categories count', () => {

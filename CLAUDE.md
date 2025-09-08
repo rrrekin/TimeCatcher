@@ -169,7 +169,7 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 - Category breakdown with progress bars
 - Status indicators: ⚠️ (missing end task), 😊 (target reached)
 - Configurable target work hours (default: 8)
-- __Dual time display__: Shows both actual time and rounded time (5-minute increments) in format: `ActualTime (RoundedTime)`
+- __Dual time display__: Shows both actual time and rounded time in format: `ActualTime (RoundedTime)`. Rounding policy: each task's duration is first floored to the nearest whole minute, then the floored duration is rounded to the nearest 5-minute increment (e.g., 2m floored → 2m → 0m rounded; 7m floored → 7m → 5m rounded). Per-task floors occur before 5-minute rounding for the rounded totals.
 - __Two-line header layout__: Title and status icons on first line, combined time totals on second line
 - __Interactive hover tooltips__: Hover over any task entry to see individual appearances with start/end times and durations
 
@@ -179,7 +179,7 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 - Last task duration based on date context (past: until midnight, today: until current time, future: zero)
 - Consistent rounding: `Math.floor()` per-task before aggregation
 - Auto-refresh for real-time updates when viewing today
-- __Dual totaling__: Calculates both plain sum (actual minutes) and rounded sum (each task rounded to nearest 5 minutes)
+- __Dual totaling__: Calculates both plain sum (actual minutes) and rounded sum (sum of per-task rounded durations). The rounded total is computed by rounding each individual task duration to the nearest 5 minutes, then summing those rounded values—this differs from taking the full-precision total and rounding it once.
 
 ### Report Display Structure
 
@@ -222,6 +222,18 @@ __Test Patterns__:
 - Vitest fake timers for date/time testing and avoiding real delays (`vi.useFakeTimers()`, `vi.advanceTimersByTimeAsync()`)
 - Mock complex dependencies for focused testing
 - `createElectronAPIMock()` factory function for consistent electronAPI mocking with overrides
+
+__Test Coverage Best Practices__:
+
+- Always aim for high test coverage on new features and changed code
+- Test edge cases and boundary conditions (e.g., screen edge positioning for tooltips)
+- Cover error paths and fallback scenarios (e.g., clipboard API failures with document.execCommand fallback)
+- Test component lifecycle methods and cleanup (e.g., onUnmounted callbacks)
+- Verify both success and failure states for async operations
+- Use specific assertions rather than broad existence checks (e.g., test exact CSS class presence, specific function calls)
+- Test user interactions and their visual feedback (e.g., click handlers, hover states, keyboard events)
+- Mock external dependencies appropriately while testing real logic paths
+- Test computed properties with various input scenarios to ensure reactive updates work correctly
 
 ## Common Development Tasks
 

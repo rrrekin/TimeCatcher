@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onUnmounted } from 'vue'
 import type { TaskRecord } from '@/shared/types'
 import { TASK_TYPE_NORMAL } from '@/shared/types'
 
@@ -164,6 +164,17 @@ const tooltipPosition = ref({ x: 0, y: 0 })
 
 // Copy state - track which task was last copied
 const copiedTaskName = ref('')
+
+// Timer cleanup
+let activeTimer: number | null = null
+
+// Component cleanup
+onUnmounted(() => {
+  if (activeTimer) {
+    clearTimeout(activeTimer)
+    activeTimer = null
+  }
+})
 
 // Helper function
 const clampPercent = (p: number): number => {
