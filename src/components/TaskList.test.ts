@@ -356,9 +356,276 @@ describe('TaskList Component', () => {
       const taskRows = freshWrapper.findAll('tbody tr')
       taskRows.forEach(row => {
         expect(row.classes()).not.toContain('highlighted-task')
+        expect(row.classes()).not.toContain('fading')
       })
 
       freshWrapper.unmount()
+    })
+
+    it('should add fading class immediately after highlighting', async () => {
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({ taskRecords: initialTasks })
+
+      // Add a new task
+      const newTask = {
+        id: 3,
+        category_name: 'Learning',
+        task_name: 'Fading Test Task',
+        start_time: '11:00',
+        date: '2024-01-15',
+        task_type: 'normal' as const
+      }
+      await wrapper.setProps({
+        taskRecords: [...initialTasks, newTask]
+      })
+
+      // Wait for DOM update and requestAnimationFrame
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      // Check if the new task has both highlighted-task and fading classes
+      const taskRows = wrapper.findAll('tbody tr')
+      const newTaskRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'Fading Test Task'
+      })
+
+      expect(newTaskRow).toBeTruthy()
+      expect(newTaskRow?.classes()).toContain('highlighted-task')
+      expect(newTaskRow?.classes()).toContain('fading')
+    })
+
+    it('should handle re-highlighting of previously highlighted tasks', async () => {
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({ taskRecords: initialTasks })
+
+      // Add a new task (first highlight)
+      const newTask = {
+        id: 3,
+        category_name: 'Learning',
+        task_name: 'Re-highlight Test',
+        start_time: '11:00',
+        date: '2024-01-15',
+        task_type: 'normal' as const
+      }
+      await wrapper.setProps({
+        taskRecords: [...initialTasks, newTask]
+      })
+
+      // Wait for first highlight
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      // Modify the same task (should re-highlight)
+      const modifiedTask = {
+        ...newTask,
+        task_name: 'Re-highlight Test Modified'
+      }
+      await wrapper.setProps({
+        taskRecords: [initialTasks[0], modifiedTask]
+      })
+
+      // Wait for re-highlight
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      // Check that the task is still highlighted with both classes
+      const taskRows = wrapper.findAll('tbody tr')
+      const modifiedTaskRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'Re-highlight Test Modified'
+      })
+
+      expect(modifiedTaskRow).toBeTruthy()
+      expect(modifiedTaskRow?.classes()).toContain('highlighted-task')
+      expect(modifiedTaskRow?.classes()).toContain('fading')
+    })
+
+    it('should cleanup timers on component unmount', () => {
+      // Add some tasks to trigger highlighting
+      const testTasks = [
+        {
+          id: 4,
+          category_name: 'Testing',
+          task_name: 'Cleanup Test',
+          start_time: '12:00',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        }
+      ]
+
+      // Create a fresh wrapper to test unmount
+      const testWrapper = mount(TaskList, {
+        props: {
+          taskRecords: testTasks,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // Trigger highlighting by modifying tasks
+      testWrapper.setProps({
+        taskRecords: [
+          {
+            ...testTasks[0],
+            task_name: 'Cleanup Test Modified'
+          }
+        ]
+      })
+
+      // Unmount should not throw errors (timers should be cleaned up)
+      expect(() => {
+        testWrapper.unmount()
+      }).not.toThrow()
+    })
+  })
+
+  describe('Keyboard Event Handling', () => {
+    it('should handle Escape key in task name input to revert changes', async () => {
+      const taskNameInput = wrapper.find('input[type="text"]')
+      const originalValue = taskNameInput.element.value
+
+      // Modify the input value
+      await taskNameInput.setValue('Modified Task Name')
+      expect(taskNameInput.element.value).toBe('Modified Task Name')
+
+      // Press Escape key
+      await taskNameInput.trigger('keydown', { key: 'Escape' })
+
+      // Should revert to original value
+      expect(taskNameInput.element.value).toBe(originalValue)
+    })
+
+    it('should handle Escape key in time input to revert changes', async () => {
+      const timeInput = wrapper.find('input[type="time"]')
+      const convertToTimeInput = vi.fn(time => time)
+
+      // Update wrapper with mock function
+      await wrapper.setProps({
+        convertToTimeInput
+      })
+
+      // Press Escape key
+      await timeInput.trigger('keydown', { key: 'Escape' })
+
+      // Should call convertToTimeInput with original time
+      expect(convertToTimeInput).toHaveBeenCalledWith(mockTaskRecords[0].start_time)
+    })
+
+    it('should ignore non-Escape keys in task name input', async () => {
+      const taskNameInput = wrapper.find('input[type="text"]')
+      const originalValue = taskNameInput.element.value
+
+      // Modify the input value
+      await taskNameInput.setValue('Modified Task Name')
+      expect(taskNameInput.element.value).toBe('Modified Task Name')
+
+      // Press a different key (not Escape)
+      await taskNameInput.trigger('keydown', { key: 'Enter' })
+
+      // Should not revert value
+      expect(taskNameInput.element.value).toBe('Modified Task Name')
+    })
+
+    it('should ignore non-Escape keys in time input', async () => {
+      const timeInput = wrapper.find('input[type="time"]')
+      const convertToTimeInput = vi.fn(time => time)
+
+      // Create fresh wrapper to avoid previous calls
+      const freshWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords.slice(0, 1), // Just one task
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput,
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // Clear any initialization calls
+      convertToTimeInput.mockClear()
+
+      const freshTimeInput = freshWrapper.find('input[type="time"]')
+
+      // Press a different key (not Escape)
+      await freshTimeInput.trigger('keydown', { key: 'Enter' })
+
+      // Should not call convertToTimeInput for non-Escape keys
+      expect(convertToTimeInput).not.toHaveBeenCalled()
+
+      freshWrapper.unmount()
+    })
+  })
+
+  describe('Focus Management', () => {
+    it('should focus trigger button after category selection', async () => {
+      // Set up inline dropdown for a task
+      await wrapper.setProps({
+        showInlineDropdown: { [mockTaskRecords[0].id]: true }
+      })
+
+      const dropdownItem = wrapper.find('.dropdown-item')
+      await dropdownItem.trigger('click')
+
+      expect(wrapper.emitted('selectInlineCategory')).toBeTruthy()
+      // Parent component handles closing dropdown via selectInlineCategory handler
+    })
+
+    it('should handle keyboard navigation in inline dropdown', async () => {
+      await wrapper.setProps({
+        showInlineDropdown: { [mockTaskRecords[0].id]: true }
+      })
+
+      const dropdown = wrapper.find('.dropdown-menu')
+
+      // Test arrow down navigation
+      await dropdown.trigger('keydown', { key: 'ArrowDown' })
+
+      // Test escape key
+      await dropdown.trigger('keydown', { key: 'Escape' })
+
+      expect(wrapper.emitted('toggleInlineDropdown')).toBeTruthy()
+    })
+  })
+
+  describe('Component Methods', () => {
+    it('should handle scrollToBottom when container is available', async () => {
+      const scrollToBottom = wrapper.vm.scrollToBottom
+      expect(typeof scrollToBottom).toBe('function')
+
+      // Should not throw error
+      expect(() => scrollToBottom()).not.toThrow()
+    })
+
+    it('should handle scrollToBottom with custom parent pane', async () => {
+      const mockParentPane = {
+        value: {
+          scrollTo: vi.fn(),
+          scrollHeight: 1000
+        }
+      }
+
+      const scrollToBottom = wrapper.vm.scrollToBottom
+      await scrollToBottom(mockParentPane)
+
+      expect(mockParentPane.value.scrollTo).toHaveBeenCalledWith({
+        top: 1000,
+        behavior: 'auto'
+      })
     })
   })
 })

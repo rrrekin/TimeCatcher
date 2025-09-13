@@ -18,7 +18,9 @@
           </button>
           <div
             v-if="showFormCategoryDropdown"
+            ref="dropdownMenuRef"
             class="dropdown-menu"
+            :class="`dropdown-position-${dropdownPosition}`"
             role="listbox"
             id="form-dropdown-menu"
             aria-labelledby="add-task-category"
@@ -100,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType, computed, ref } from 'vue'
+import { type PropType, computed, ref, nextTick, watch } from 'vue'
 import type { Category } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
@@ -144,8 +146,12 @@ const emit = defineEmits<{
   addEndTask: []
 }>()
 
-// Template ref
+// Template refs
 const addTaskFormRef = ref<HTMLElement>()
+const dropdownMenuRef = ref<HTMLElement>()
+
+// Dropdown positioning
+const dropdownPosition = ref<'below' | 'above'>('below')
 
 // Convert categories to ref for composable
 const categoriesRef = computed(() => props.categories)
@@ -189,6 +195,38 @@ const handleAddTask = () => {
     emit('addTask')
   }
 }
+
+// Dynamic dropdown positioning
+const calculateDropdownPosition = async () => {
+  if (!addTaskFormRef.value) return
+
+  await nextTick()
+
+  const trigger = addTaskFormRef.value.querySelector('.dropdown-trigger') as HTMLElement
+  if (!trigger) return
+
+  const triggerRect = trigger.getBoundingClientRect()
+  if (!triggerRect) return
+
+  const viewportHeight = window.innerHeight
+  const dropdownHeight = 200 // Max height from CSS
+  const spaceBelow = viewportHeight - triggerRect.bottom
+  const spaceAbove = triggerRect.top
+
+  // Position above if there's not enough space below but enough space above
+  dropdownPosition.value = spaceBelow < dropdownHeight && spaceAbove >= dropdownHeight ? 'above' : 'below'
+}
+
+// Watch for dropdown visibility changes to recalculate position
+watch(
+  () => props.showFormCategoryDropdown,
+  async isOpen => {
+    if (isOpen) {
+      await calculateDropdownPosition()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
@@ -307,7 +345,6 @@ const handleAddTask = () => {
 
 .dropdown-menu {
   position: absolute;
-  top: 100%;
   left: 0;
   right: 0;
   z-index: 1000;
@@ -317,7 +354,16 @@ const handleAddTask = () => {
   box-shadow: 0 4px 12px var(--shadow-color);
   max-height: 200px;
   overflow-y: auto;
+}
+
+.dropdown-position-below {
+  top: 100%;
   margin-top: 2px;
+}
+
+.dropdown-position-above {
+  bottom: 100%;
+  margin-bottom: 2px;
 }
 
 .dropdown-item {
@@ -380,6 +426,10 @@ const handleAddTask = () => {
 
 /* Special task buttons */
 .special-task-buttons {
+  /* Define hover colors for special buttons */
+  --warning-hover: color-mix(in srgb, var(--warning) 80%, var(--text-primary) 20%);
+  --success-hover: color-mix(in srgb, var(--success) 80%, var(--text-primary) 20%);
+
   display: flex;
   gap: 12px;
   padding: 16px;

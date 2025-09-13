@@ -368,13 +368,10 @@ const handleInlineDropdownToggle = async (recordId: number, categoryName: string
 
 // Unified category selection handler
 const handleCategorySelection = async (recordId: number, categoryName: string) => {
-  // 1. Emit the category selection
+  // 1. Emit the category selection (parent handles closing dropdown)
   emit('selectInlineCategory', recordId, categoryName)
 
-  // 2. Close the dropdown
-  emit('toggleInlineDropdown', recordId)
-
-  // 3. Return focus to the trigger button
+  // 2. Return focus to the trigger button
   await nextTick()
   focusTriggerButton(recordId)
 }
