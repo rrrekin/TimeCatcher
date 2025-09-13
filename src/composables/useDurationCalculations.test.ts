@@ -266,6 +266,74 @@ describe('useDurationCalculations', () => {
       // Duration: 630 - 540 = 90 minutes = 1h 30m
       expect(duration).toBe('1h 30m')
     })
+
+    it('should return "-" when record is not part of sorted list (object identity mismatch)', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Task 1',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Task 2',
+          start_time: '10:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      // Intentionally use a shallow copy to change object identity.
+      // calculateDuration looks up records by reference (object identity) from the sorted map,
+      // not by id/field equality, so a cloned object should not be found and must return '-'.
+      const copyOfFirst = { ...taskRecords.value[0]! }
+      const duration = composable.calculateDuration(copyOfFirst)
+      expect(duration).toBe('-')
+    })
+
+    it('should return "-" when next record has invalid/unknown time', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Valid Task',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Invalid Next',
+          start_time: 'invalid', // parseTimeString -> null
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      const duration = composable.calculateDuration(taskRecords.value[0]!)
+      expect(duration).toBe('-')
+    })
+
+    it('should return "0m" for last task when start time is after current time (today)', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Future Today',
+          start_time: '11:30', // 690 > mocked now 630
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      const duration = composable.calculateDuration(taskRecords.value[0]!)
+      expect(duration).toBe('0m')
+    })
   })
 
   describe('getTotalMinutesTracked', () => {
@@ -399,40 +467,6 @@ describe('useDurationCalculations', () => {
       expect(personalCategory!.minutes).toBe(60)
     })
 
-    it('should calculate percentages correctly', () => {
-      taskRecords.value = [
-        {
-          id: 1,
-          category_name: 'Work',
-          task_name: 'Task 1',
-          start_time: '09:00',
-          date: '2024-01-15',
-          task_type: 'normal'
-        },
-        {
-          id: 2,
-          category_name: 'Personal',
-          task_name: 'Task 2',
-          start_time: '11:00',
-          date: '2024-01-15',
-          task_type: 'normal'
-        }
-      ]
-
-      const breakdown = composable.getCategoryBreakdown()
-
-      expect(breakdown).toHaveLength(2)
-
-      const workCategory = breakdown.find(cat => cat.categoryName === 'Work')
-      const personalCategory = breakdown.find(cat => cat.categoryName === 'Personal')
-
-      // Work: 09:00-11:00 = 120 minutes
-      // Personal: 11:00-10:30 = 0 minutes (ends before it starts)
-      // Total: 120 minutes
-      expect(workCategory!.percentage).toBe(100) // 120/120 * 100
-      expect(personalCategory!.percentage).toBe(0) // 0/120 * 100
-    })
-
     it('should sort categories by minutes descending', () => {
       taskRecords.value = [
         {
@@ -487,6 +521,32 @@ describe('useDurationCalculations', () => {
 
       const breakdown = composable.getCategoryBreakdown()
       expect(breakdown).toHaveLength(0)
+    })
+  })
+
+  describe('edge cases for totals and breakdowns', () => {
+    it('getTotalMinutesTracked should skip normal tasks with empty start_time', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'No Start',
+          start_time: '', // filtered out of sorted list -> nextRecord undefined
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'End',
+          start_time: '10:00',
+          date: '2024-01-15',
+          task_type: 'end'
+        }
+      ]
+
+      const total = composable.getTotalMinutesTracked()
+      expect(total).toBe(0)
     })
   })
 })

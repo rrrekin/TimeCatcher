@@ -54,18 +54,6 @@
               >
             </div>
             <div class="category-time">{{ categoryData.totalTimeCombined }}</div>
-            <div class="category-bar">
-              <div
-                class="category-progress"
-                role="progressbar"
-                :aria-valuenow="clampPercent(categoryData.percentage)"
-                aria-valuemin="0"
-                aria-valuemax="100"
-                :aria-valuetext="`${clampPercent(categoryData.percentage).toFixed(0)}%`"
-                :aria-labelledby="`category-name-${index}`"
-                :style="{ width: clampPercent(categoryData.percentage) + '%' }"
-              ></div>
-            </div>
           </div>
 
           <!-- Task summaries within category -->
@@ -148,7 +136,6 @@ interface DailyReportProps {
     totalTime: string
     totalTimeRounded: string
     totalTimeCombined: string
-    percentage: number
     taskSummaries: Array<{
       name: string
       count: number
@@ -194,11 +181,6 @@ onUnmounted(() => {
     activeTimer = null
   }
 })
-
-// Helper function
-const clampPercent = (p: number): number => {
-  return Math.max(0, Math.min(100, p))
-}
 
 // Tooltip methods
 const showTooltip = (task: any, event: MouseEvent, categoryName: string, taskIndex: number) => {
@@ -474,7 +456,7 @@ const getStatusText = () => {
 .category-header {
   padding: 16px;
   display: grid;
-  grid-template-columns: 1fr auto 200px;
+  grid-template-columns: 1fr auto;
   gap: 16px;
   align-items: center;
   background: linear-gradient(90deg, var(--bg-secondary), var(--bg-primary));
@@ -502,21 +484,6 @@ const getStatusText = () => {
   color: var(--text-primary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-size: 14px;
-}
-
-.category-bar {
-  background: var(--border-color);
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  position: relative;
-}
-
-.category-progress {
-  background: linear-gradient(90deg, var(--verdigris), var(--emerald));
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s ease;
 }
 
 .task-summaries {
