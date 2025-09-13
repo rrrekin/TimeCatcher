@@ -79,6 +79,7 @@
               role="button"
               :aria-label="`Copy task name: ${task.name}`"
               :aria-describedby="getTooltipId(task.name, categoryData.name, index)"
+              aria-keyshortcuts="Enter Space"
               @mouseenter="showTooltip(task, $event, categoryData.name, index)"
               @mouseleave="hideTooltip"
               @click="copyTaskNameToClipboard(task.name)"
@@ -308,8 +309,37 @@ const handleTaskKeydown = (event: KeyboardEvent, taskName: string) => {
 
 // Generate stable tooltip ID for each task
 const getTooltipId = (taskName: string, categoryName: string, index: number) => {
+  // Sanitize input string to create valid HTML ID
+  const sanitizeForId = (input: string): string => {
+    if (!input || typeof input !== 'string') {
+      return 'unknown'
+    }
+
+    // Normalize Unicode (NFKD - Normalization Form Canonical Decomposition)
+    // Remove diacritics and convert to lowercase
+    const normalized = input
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove combining diacritical marks
+      .toLowerCase()
+
+    // Keep only alphanumeric characters, dashes, and underscores
+    // Replace everything else with dashes
+    const alphanumeric = normalized.replace(/[^a-z0-9_-]/g, '-')
+
+    // Collapse multiple consecutive dashes into single dash
+    const collapsed = alphanumeric.replace(/-+/g, '-')
+
+    // Remove leading/trailing dashes
+    const trimmed = collapsed.replace(/^-+|-+$/g, '')
+
+    // Return sanitized string or fallback if empty
+    return trimmed || 'unknown'
+  }
+
   // Create a stable ID that's unique per task
-  return `tooltip-${categoryName.replace(/\s+/g, '-')}-${taskName.replace(/\s+/g, '-')}-${index}`
+  const sanitizedTaskName = sanitizeForId(taskName)
+  const sanitizedCategoryName = sanitizeForId(categoryName)
+  return `tooltip-${sanitizedCategoryName}-${sanitizedTaskName}-${index}`
 }
 
 // Computed properties

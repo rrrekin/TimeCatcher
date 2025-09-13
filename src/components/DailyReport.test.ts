@@ -371,7 +371,7 @@ describe('DailyReport Component', () => {
       expect(firstTask.attributes('tabindex')).toBe('0')
       expect(firstTask.attributes('role')).toBe('button')
       expect(firstTask.attributes('aria-label')).toBe('Copy task name: Development')
-      expect(firstTask.attributes('aria-describedby')).toContain('tooltip-Work-Development-0')
+      expect(firstTask.attributes('aria-describedby')).toContain('tooltip-work-development-0')
 
       // Trigger Enter key
       await firstTask.trigger('keydown', { key: 'Enter' })
@@ -545,134 +545,160 @@ describe('DailyReport Component', () => {
       const tooltipId = tooltip.attributes('id')
       const ariaDescribedby = firstTask.attributes('aria-describedby')
       expect(tooltipId).toBe(ariaDescribedby)
-      expect(tooltipId).toBe('tooltip-Work-Development-0')
+      expect(tooltipId).toBe('tooltip-work-development-0')
     })
 
     it('should position tooltip correctly when near screen edges', async () => {
-      // Mock window dimensions
-      Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
-      Object.defineProperty(window, 'innerHeight', { value: 600, writable: true })
+      // Save original window dimensions
+      const originalWidth = window.innerWidth
+      const originalHeight = window.innerHeight
 
-      const workCategory = wrapper.findAll('.category-section')[0]
-      const firstTask = workCategory.findAll('.task-summary')[0]
+      try {
+        // Mock window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: 600, writable: true })
 
-      // Helper function to extract pixel values from style attribute
-      const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
-        const match = style?.match(new RegExp(`${property}: (\\d+)px`))
-        return match ? parseInt(match[1]) : 0
+        const workCategory = wrapper.findAll('.category-section')[0]
+        const firstTask = workCategory.findAll('.task-summary')[0]
+
+        // Helper function to extract pixel values from style attribute
+        const leftRegex = /left: (\d+)px/
+        const topRegex = /top: (\d+)px/
+        const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+          const regex = property === 'left' ? leftRegex : topRegex
+          const match = style?.match(regex)
+          return match ? parseInt(match[1]) : 0
+        }
+
+        // Test tooltip positioning near left edge (should clamp to minimum position)
+        await firstTask.trigger('mouseenter', {
+          clientX: -100, // Far left, would cause negative positioning
+          clientY: 100
+        })
+
+        // Should clamp to minimum left position (>= 10px)
+        const tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+        expect(leftValue).toBeGreaterThanOrEqual(10)
+
+        await firstTask.trigger('mouseleave')
+
+        // Test tooltip positioning near top edge (should clamp to minimum position)
+        await firstTask.trigger('mouseenter', {
+          clientX: 100,
+          clientY: -100 // Far up, would cause negative positioning
+        })
+
+        // Should clamp to minimum top position (>= 10px)
+        const tooltipAfter = wrapper.find('.task-tooltip')
+        expect(tooltipAfter.exists()).toBe(true)
+        const topValue = getPixelValue(tooltipAfter.attributes('style'), 'top')
+        expect(topValue).toBeGreaterThanOrEqual(10)
+      } finally {
+        // Restore original window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: originalHeight, writable: true })
       }
-
-      // Test tooltip positioning near left edge (should clamp to minimum position)
-      await firstTask.trigger('mouseenter', {
-        clientX: -100, // Far left, would cause negative positioning
-        clientY: 100
-      })
-
-      // Should clamp to minimum left position (>= 10px)
-      const tooltip = wrapper.find('.task-tooltip')
-      expect(tooltip.exists()).toBe(true)
-      const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
-      expect(leftValue).toBeGreaterThanOrEqual(10)
-
-      await firstTask.trigger('mouseleave')
-
-      // Test tooltip positioning near top edge (should clamp to minimum position)
-      await firstTask.trigger('mouseenter', {
-        clientX: 100,
-        clientY: -100 // Far up, would cause negative positioning
-      })
-
-      // Should clamp to minimum top position (>= 10px)
-      const tooltipAfter = wrapper.find('.task-tooltip')
-      expect(tooltipAfter.exists()).toBe(true)
-      const topValue = getPixelValue(tooltipAfter.attributes('style'), 'top')
-      expect(topValue).toBeGreaterThanOrEqual(10)
     })
 
     it('should reposition tooltip when it would go off right or bottom edge', async () => {
-      // Mock window dimensions
-      const windowWidth = 500
-      const windowHeight = 400
-      Object.defineProperty(window, 'innerWidth', { value: windowWidth, writable: true })
-      Object.defineProperty(window, 'innerHeight', { value: windowHeight, writable: true })
+      // Save original window dimensions
+      const originalWidth = window.innerWidth
+      const originalHeight = window.innerHeight
 
-      const workCategory = wrapper.findAll('.category-section')[0]
-      const firstTask = workCategory.findAll('.task-summary')[0]
+      try {
+        // Mock window dimensions
+        const windowWidth = 500
+        const windowHeight = 400
+        Object.defineProperty(window, 'innerWidth', { value: windowWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: windowHeight, writable: true })
 
-      // Helper function to extract pixel values from style attribute
-      const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
-        const match = style?.match(new RegExp(`${property}: (\\d+)px`))
-        return match ? parseInt(match[1]) : 0
-      }
+        const workCategory = wrapper.findAll('.category-section')[0]
+        const firstTask = workCategory.findAll('.task-summary')[0]
 
-      // Helper function to get tooltip dimensions
-      const getTooltipDimensions = (tooltipElement: any) => {
-        // Mock getBoundingClientRect for testing since the tooltip isn't actually rendered in DOM
-        const tooltipEl = tooltipElement.element
-        if (tooltipEl) {
-          // Simulate realistic tooltip dimensions based on implementation
-          tooltipEl.getBoundingClientRect = vi.fn(() => ({
-            width: 390, // Typical tooltip width from implementation
-            height: 100, // Typical tooltip height
-            left: 0,
-            top: 0,
-            right: 390,
-            bottom: 100,
-            x: 0,
-            y: 0,
-            toJSON: () => ({})
-          }))
-          return { width: 390, height: 100 }
+        // Helper function to extract pixel values from style attribute
+        const leftRegex = /left: (\d+)px/
+        const topRegex = /top: (\d+)px/
+        const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+          const regex = property === 'left' ? leftRegex : topRegex
+          const match = style?.match(regex)
+          return match ? parseInt(match[1]) : 0
         }
-        return { width: 390, height: 100 } // Fallback dimensions
-      }
 
-      // Test tooltip repositioning when near right edge
-      const rightEdgeClientX = windowWidth - 50 // Position that would cause overflow
-      await firstTask.trigger('mouseenter', {
-        clientX: rightEdgeClientX,
-        clientY: 200
-      })
+        // Helper function to get tooltip dimensions
+        const getTooltipDimensions = (tooltipElement: any) => {
+          // Mock getBoundingClientRect for testing since the tooltip isn't actually rendered in DOM
+          const tooltipEl = tooltipElement.element
+          if (tooltipEl) {
+            // Simulate realistic tooltip dimensions based on implementation
+            tooltipEl.getBoundingClientRect = vi.fn(() => ({
+              width: 390, // Typical tooltip width from implementation
+              height: 100, // Typical tooltip height
+              left: 0,
+              top: 0,
+              right: 390,
+              bottom: 100,
+              x: 0,
+              y: 0,
+              toJSON: () => ({})
+            }))
+            return { width: 390, height: 100 }
+          }
+          return { width: 390, height: 100 } // Fallback dimensions
+        }
 
-      // Measure tooltip and calculate expected positioning
-      let tooltip = wrapper.find('.task-tooltip')
-      expect(tooltip.exists()).toBe(true)
-      const { width: tooltipWidth } = getTooltipDimensions(tooltip)
+        // Test tooltip repositioning when near right edge
+        const rightEdgeClientX = windowWidth - 50 // Position that would cause overflow
+        await firstTask.trigger('mouseenter', {
+          clientX: rightEdgeClientX,
+          clientY: 200
+        })
 
-      // Calculate if tooltip would overflow right edge
-      const wouldOverflowRight = rightEdgeClientX + 10 + tooltipWidth > windowWidth
-      expect(wouldOverflowRight).toBe(true) // Verify our test setup causes overflow
+        // Measure tooltip and calculate expected positioning
+        let tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const { width: tooltipWidth } = getTooltipDimensions(tooltip)
 
-      const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
-      if (wouldOverflowRight) {
-        // Should be repositioned to the left of cursor
-        expect(leftValue).toBeLessThan(rightEdgeClientX)
-        expect(leftValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
-      }
+        // Calculate if tooltip would overflow right edge
+        const wouldOverflowRight = rightEdgeClientX + 10 + tooltipWidth > windowWidth
+        expect(wouldOverflowRight).toBe(true) // Verify our test setup causes overflow
 
-      await firstTask.trigger('mouseleave')
+        const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+        if (wouldOverflowRight) {
+          // Should be repositioned to the left of cursor
+          expect(leftValue).toBeLessThan(rightEdgeClientX)
+          expect(leftValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+        }
 
-      // Test tooltip repositioning when near bottom edge
-      const bottomEdgeClientY = windowHeight - 50 // Position that would cause overflow
-      await firstTask.trigger('mouseenter', {
-        clientX: 200,
-        clientY: bottomEdgeClientY
-      })
+        await firstTask.trigger('mouseleave')
 
-      // Measure tooltip and calculate expected positioning
-      tooltip = wrapper.find('.task-tooltip')
-      expect(tooltip.exists()).toBe(true)
-      const { height: tooltipHeight } = getTooltipDimensions(tooltip)
+        // Test tooltip repositioning when near bottom edge
+        const bottomEdgeClientY = windowHeight - 50 // Position that would cause overflow
+        await firstTask.trigger('mouseenter', {
+          clientX: 200,
+          clientY: bottomEdgeClientY
+        })
 
-      // Calculate if tooltip would overflow bottom edge
-      const wouldOverflowBottom = bottomEdgeClientY + tooltipHeight > windowHeight
-      expect(wouldOverflowBottom).toBe(true) // Verify our test setup causes overflow
+        // Measure tooltip and calculate expected positioning
+        tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const { height: tooltipHeight } = getTooltipDimensions(tooltip)
 
-      const topValue = getPixelValue(tooltip.attributes('style'), 'top')
-      if (wouldOverflowBottom) {
-        // Should be repositioned above cursor
-        expect(topValue).toBeLessThan(bottomEdgeClientY)
-        expect(topValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+        // Calculate if tooltip would overflow bottom edge
+        const wouldOverflowBottom = bottomEdgeClientY + tooltipHeight > windowHeight
+        expect(wouldOverflowBottom).toBe(true) // Verify our test setup causes overflow
+
+        const topValue = getPixelValue(tooltip.attributes('style'), 'top')
+        if (wouldOverflowBottom) {
+          // Should be repositioned above cursor
+          expect(topValue).toBeLessThan(bottomEdgeClientY)
+          expect(topValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+        }
+      } finally {
+        // Restore original window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: originalHeight, writable: true })
       }
     })
   })

@@ -1180,7 +1180,14 @@ const getEnhancedCategoryBreakdown = computed(() => {
   return baseCategoryBreakdown.map(category => {
     const categoryData = categoryMap.get(category.categoryName)
     const plainMinutes = category.minutes
-    const roundedMinutes = roundToFiveMinutes(plainMinutes)
+
+    // Calculate rounded minutes as sum of per-task rounded values
+    const roundedMinutes = categoryData
+      ? Array.from(categoryData.tasks.values()).reduce(
+          (sum: number, task: TaskSummary) => sum + roundToFiveMinutes(task.totalMinutes),
+          0
+        )
+      : roundToFiveMinutes(plainMinutes)
 
     return {
       ...category,
