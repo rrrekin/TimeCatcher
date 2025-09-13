@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import DailyReport from './DailyReport.vue'
 import type { TaskRecord } from '@/shared/types'
@@ -43,18 +43,69 @@ describe('DailyReport Component', () => {
       name: 'Work',
       taskCount: 2,
       totalTime: '3h 30m',
+      totalTimeRounded: '3h 30m',
+      totalTimeCombined: '3h 30m (3h 30m)',
       percentage: 70,
       taskSummaries: [
-        { name: 'Development', count: 1, totalTime: '2h 15m' },
-        { name: 'Meeting', count: 1, totalTime: '1h 15m' }
+        {
+          name: 'Development',
+          count: 1,
+          totalTime: '2h 15m',
+          totalTimeRounded: '2h 15m',
+          totalTimeCombined: '2h 15m (2h 15m)',
+          appearances: [
+            {
+              startTime: '09:00',
+              endTime: '11:15',
+              duration: 135,
+              durationFormatted: '2h 15m',
+              date: '2024-01-15'
+            }
+          ]
+        },
+        {
+          name: 'Meeting',
+          count: 1,
+          totalTime: '1h 15m',
+          totalTimeRounded: '1h 15m',
+          totalTimeCombined: '1h 15m (1h 15m)',
+          appearances: [
+            {
+              startTime: '14:00',
+              endTime: '15:15',
+              duration: 75,
+              durationFormatted: '1h 15m',
+              date: '2024-01-15'
+            }
+          ]
+        }
       ]
     },
     {
       name: 'Personal',
       taskCount: 1,
       totalTime: '1h 30m',
+      totalTimeRounded: '1h 30m',
+      totalTimeCombined: '1h 30m (1h 30m)',
       percentage: 30,
-      taskSummaries: [{ name: 'Exercise', count: 1, totalTime: '1h 30m' }]
+      taskSummaries: [
+        {
+          name: 'Exercise',
+          count: 1,
+          totalTime: '1h 30m',
+          totalTimeRounded: '1h 30m',
+          totalTimeCombined: '1h 30m (1h 30m)',
+          appearances: [
+            {
+              startTime: '18:00',
+              endTime: '19:30',
+              duration: 90,
+              durationFormatted: '1h 30m',
+              date: '2024-01-15'
+            }
+          ]
+        }
+      ]
     }
   ]
 
@@ -66,6 +117,8 @@ describe('DailyReport Component', () => {
         hasEndTaskForSelectedDate: true,
         targetWorkHours: 8,
         totalTimeTracked: '5h 0m',
+        totalTimeTrackedRounded: '5h 0m',
+        totalTimeTrackedCombined: '5h 0m (5h 0m)',
         totalMinutesTracked: 300,
         categoryBreakdown: mockCategoryBreakdown
       }
@@ -75,7 +128,10 @@ describe('DailyReport Component', () => {
   describe('Component Rendering', () => {
     it('should render the report header with total time', () => {
       const header = wrapper.find('[data-testid="report-header-title"]')
-      expect(header.text()).toContain('Daily Report: 5h 0m')
+      expect(header.text()).toContain('Daily Report')
+
+      const totalTime = wrapper.find('[data-testid="total-time-display"]')
+      expect(totalTime.text()).toContain('5h 0m (5h 0m)')
     })
 
     it('should display the date title', () => {
@@ -146,7 +202,7 @@ describe('DailyReport Component', () => {
       expect(categoryTasks.text()).toBe('2 tasks')
 
       const categoryTime = workCategory.find('.category-time')
-      expect(categoryTime.text()).toBe('3h 30m')
+      expect(categoryTime.text()).toBe('3h 30m (3h 30m)')
     })
 
     it('should display singular "task" for single task count', () => {
@@ -179,16 +235,14 @@ describe('DailyReport Component', () => {
       expect(firstTask.find('.task-count').text()).toBe('1x')
     })
 
-    it('should display rounded time and actual time for each task', () => {
+    it('should display combined time for each task', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const firstTask = workCategory.findAll('.task-summary')[0]
 
-      const roundedTime = firstTask.find('.task-time-rounded')
-      const actualTime = firstTask.find('.task-time-actual')
+      const combinedTime = firstTask.find('.task-time-combined')
 
-      expect(roundedTime.exists()).toBe(true)
-      expect(actualTime.exists()).toBe(true)
-      expect(actualTime.text()).toBe('2h 15m') // Actual time from props
+      expect(combinedTime.exists()).toBe(true)
+      expect(combinedTime.text()).toBe('2h 15m (2h 15m)') // Combined time from props
     })
   })
 
@@ -209,58 +263,443 @@ describe('DailyReport Component', () => {
     })
   })
 
-  describe('formatTaskTime Function', () => {
-    let vm: any
-
+  describe('Clipboard Functionality', () => {
     beforeEach(() => {
-      vm = wrapper.vm as any
+      // Mock navigator.clipboard
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: vi.fn(() => Promise.resolve())
+        }
+      })
+      vi.useFakeTimers()
     })
 
-    it('should round time to nearest 5 minutes - basic cases', () => {
-      expect(vm.formatTaskTime('1h 32m')).toBe('1h 30m')
-      expect(vm.formatTaskTime('1h 33m')).toBe('1h 35m')
-      expect(vm.formatTaskTime('47m')).toBe('45m')
-      expect(vm.formatTaskTime('48m')).toBe('50m')
+    afterEach(() => {
+      vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
-    it('should handle hour-only times', () => {
-      expect(vm.formatTaskTime('2h')).toBe('2h')
-      expect(vm.formatTaskTime('1h')).toBe('1h')
+    it('should copy task name to clipboard when task is clicked', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      await firstTask.trigger('click')
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+
+      // Check that task is highlighted as copied
+      expect(firstTask.classes()).toContain('task-summary-copied')
     })
 
-    it('should handle minute-only times', () => {
-      expect(vm.formatTaskTime('30m')).toBe('30m')
-      expect(vm.formatTaskTime('7m')).toBe('5m')
-      expect(vm.formatTaskTime('23m')).toBe('25m')
+    it('should handle clipboard copy errors gracefully', async () => {
+      // Mock clipboard to throw an error
+      const mockWriteText = vi.fn(() => Promise.reject(new Error('Clipboard not available')))
+      Object.assign(navigator, {
+        clipboard: { writeText: mockWriteText }
+      })
+
+      // Mock document.execCommand for fallback
+      document.execCommand = vi.fn(() => true)
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      await firstTask.trigger('click')
+
+      expect(mockWriteText).toHaveBeenCalledWith('Development')
+      // Should fallback to document.execCommand
+      expect(document.execCommand).toHaveBeenCalledWith('copy')
+
+      // Check that task is highlighted as copied even with fallback
+      expect(firstTask.classes()).toContain('task-summary-copied')
     })
 
-    it('should handle edge cases', () => {
-      expect(vm.formatTaskTime('0m')).toBe('0m')
-      expect(vm.formatTaskTime('1m')).toBe('0m')
-      expect(vm.formatTaskTime('2m')).toBe('0m')
-      expect(vm.formatTaskTime('3m')).toBe('5m')
+    it('should only highlight one task at a time', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+      const secondTask = workCategory.findAll('.task-summary')[1]
+
+      // Click first task
+      await firstTask.trigger('click')
+      expect(firstTask.classes()).toContain('task-summary-copied')
+      expect(secondTask.classes()).not.toContain('task-summary-copied')
+
+      // Click second task
+      await secondTask.trigger('click')
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+      expect(secondTask.classes()).toContain('task-summary-copied')
     })
 
-    it('should handle mixed hour and minute times', () => {
-      expect(vm.formatTaskTime('2h 17m')).toBe('2h 15m')
-      expect(vm.formatTaskTime('3h 58m')).toBe('4h')
-      expect(vm.formatTaskTime('1h 2m')).toBe('1h')
+    it('should handle both clipboard API and fallback failing', async () => {
+      // Mock clipboard to throw an error
+      const mockWriteText = vi.fn(() => Promise.reject(new Error('Clipboard not available')))
+      Object.assign(navigator, {
+        clipboard: { writeText: mockWriteText }
+      })
+
+      // Mock document.execCommand to also fail
+      document.execCommand = vi.fn(() => {
+        throw new Error('execCommand also failed')
+      })
+
+      // Spy on console.error to verify error logging
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      await firstTask.trigger('click')
+
+      expect(mockWriteText).toHaveBeenCalledWith('Development')
+      expect(document.execCommand).toHaveBeenCalledWith('copy')
+
+      // Should log both errors
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to copy task name to clipboard:', expect.any(Error))
+      expect(consoleSpy).toHaveBeenCalledWith('Clipboard fallback also failed:', expect.any(Error))
+
+      // Task should not be highlighted since copy failed
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+
+      consoleSpy.mockRestore()
     })
 
-    it('should handle large times correctly', () => {
-      expect(vm.formatTaskTime('8h 37m')).toBe('8h 35m')
-      expect(vm.formatTaskTime('12h 3m')).toBe('12h 5m')
+    it('should handle keyboard accessibility with Enter key', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Verify accessibility attributes
+      expect(firstTask.attributes('tabindex')).toBe('0')
+      expect(firstTask.attributes('role')).toBe('button')
+      expect(firstTask.attributes('aria-label')).toBe('Copy task name: Development')
+      expect(firstTask.attributes('aria-describedby')).toContain('tooltip-work-development-0')
+
+      // Trigger Enter key
+      await firstTask.trigger('keydown', { key: 'Enter' })
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+      expect(firstTask.classes()).toContain('task-summary-copied')
     })
 
-    it('should round 30+ minutes in the hour to the next hour when appropriate', () => {
-      expect(vm.formatTaskTime('1h 58m')).toBe('2h')
-      expect(vm.formatTaskTime('2h 58m')).toBe('3h') // 2h 58m = 178 minutes, rounds to 180 = 3h
+    it('should handle keyboard accessibility with Space key', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Mock preventDefault function
+      const mockPreventDefault = vi.fn()
+
+      // Trigger Space key with preventDefault mock
+      await firstTask.trigger('keydown', {
+        key: ' ',
+        preventDefault: mockPreventDefault
+      })
+
+      expect(mockPreventDefault).toHaveBeenCalled() // Should prevent default scrolling
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+      expect(firstTask.classes()).toContain('task-summary-copied')
     })
 
-    it('should handle malformed input gracefully', () => {
-      expect(vm.formatTaskTime('')).toBe('-')
-      expect(vm.formatTaskTime('invalid')).toBe('-')
-      expect(vm.formatTaskTime('h m')).toBe('-')
+    it('should not trigger copy on other keys', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Clear previous calls
+      vi.clearAllMocks()
+
+      // Trigger other keys
+      await firstTask.trigger('keydown', { key: 'Tab' })
+      await firstTask.trigger('keydown', { key: 'Escape' })
+      await firstTask.trigger('keydown', { key: 'ArrowDown' })
+
+      expect(navigator.clipboard.writeText).not.toHaveBeenCalled()
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+    })
+
+    it('should show copy toast when task is copied', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Initially no toast should be visible
+      expect(wrapper.find('.copy-toast').exists()).toBe(false)
+
+      // Click to copy task
+      await firstTask.trigger('click')
+
+      // Toast should be visible with correct message
+      const toast = wrapper.find('.copy-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.text()).toBe('Copied "Development"')
+      expect(toast.attributes('role')).toBe('status')
+      expect(toast.attributes('aria-live')).toBe('polite')
+
+      // Should use fake timers to test timeout behavior
+      vi.advanceTimersByTime(2000)
+      await wrapper.vm.$nextTick()
+
+      // Toast should be hidden after timeout
+      expect(wrapper.find('.copy-toast').exists()).toBe(false)
+    })
+
+    it('should clear existing timer when copying multiple times', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+      const secondTask = workCategory.findAll('.task-summary')[1]
+
+      // Mock clearTimeout to spy on timer clearing
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      // Click first task
+      await firstTask.trigger('click')
+      expect(wrapper.find('.copy-toast').text()).toBe('Copied "Development"')
+
+      // Click second task quickly (before first timer expires)
+      await secondTask.trigger('click')
+
+      // Should have cleared the previous timer
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      expect(wrapper.find('.copy-toast').text()).toBe('Copied "Meeting"')
+
+      clearTimeoutSpy.mockRestore()
+    })
+  })
+
+  describe('Tooltip Functionality', () => {
+    it('should show tooltip on mouseenter and hide on mouseleave', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Initially tooltip should be hidden
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+
+      // Trigger mouseenter to show tooltip
+      await firstTask.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should be visible
+      expect(wrapper.find('.task-tooltip').exists()).toBe(true)
+      expect(wrapper.find('.tooltip-header').text()).toBe('Development')
+
+      // Trigger mouseleave to hide tooltip
+      await firstTask.trigger('mouseleave')
+
+      // Tooltip should be hidden again
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+    })
+
+    it('should not show tooltip for tasks without appearances', async () => {
+      // Create props with task that has no appearances
+      await wrapper.setProps({
+        ...wrapper.props(),
+        categoryBreakdown: [
+          {
+            name: 'Work',
+            taskCount: 1,
+            totalTime: '2h 15m',
+            totalTimeRounded: '2h 15m',
+            totalTimeCombined: '2h 15m (2h 15m)',
+            percentage: 70,
+            taskSummaries: [
+              {
+                name: 'TaskWithoutAppearances',
+                count: 1,
+                totalTime: '2h 15m',
+                totalTimeRounded: '2h 15m',
+                totalTimeCombined: '2h 15m (2h 15m)'
+                // Note: no appearances property
+              }
+            ]
+          }
+        ]
+      })
+
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const taskWithoutAppearances = workCategory.findAll('.task-summary')[0]
+
+      // Trigger mouseenter
+      await taskWithoutAppearances.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should not be visible
+      expect(wrapper.find('.task-tooltip').exists()).toBe(false)
+    })
+
+    it('should have proper ARIA relationship between task and tooltip', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Trigger mouseenter to show tooltip
+      await firstTask.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should be visible with correct ID
+      const tooltip = wrapper.find('.task-tooltip')
+      expect(tooltip.exists()).toBe(true)
+      expect(tooltip.attributes('role')).toBe('tooltip')
+
+      // Tooltip ID should match aria-describedby
+      const tooltipId = tooltip.attributes('id')
+      const ariaDescribedby = firstTask.attributes('aria-describedby')
+      expect(tooltipId).toBe(ariaDescribedby)
+      expect(tooltipId).toBe('tooltip-work-development-0')
+    })
+
+    it('should position tooltip correctly when near screen edges', async () => {
+      // Save original window dimensions
+      const originalWidth = window.innerWidth
+      const originalHeight = window.innerHeight
+
+      try {
+        // Mock window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: 600, writable: true })
+
+        const workCategory = wrapper.findAll('.category-section')[0]
+        const firstTask = workCategory.findAll('.task-summary')[0]
+
+        // Helper function to extract pixel values from style attribute
+        const leftRegex = /left: (\d+)px/
+        const topRegex = /top: (\d+)px/
+        const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+          const regex = property === 'left' ? leftRegex : topRegex
+          const match = style?.match(regex)
+          return match ? parseInt(match[1]) : 0
+        }
+
+        // Test tooltip positioning near left edge (should clamp to minimum position)
+        await firstTask.trigger('mouseenter', {
+          clientX: -100, // Far left, would cause negative positioning
+          clientY: 100
+        })
+
+        // Should clamp to minimum left position (>= 10px)
+        const tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+        expect(leftValue).toBeGreaterThanOrEqual(10)
+
+        await firstTask.trigger('mouseleave')
+
+        // Test tooltip positioning near top edge (should clamp to minimum position)
+        await firstTask.trigger('mouseenter', {
+          clientX: 100,
+          clientY: -100 // Far up, would cause negative positioning
+        })
+
+        // Should clamp to minimum top position (>= 10px)
+        const tooltipAfter = wrapper.find('.task-tooltip')
+        expect(tooltipAfter.exists()).toBe(true)
+        const topValue = getPixelValue(tooltipAfter.attributes('style'), 'top')
+        expect(topValue).toBeGreaterThanOrEqual(10)
+      } finally {
+        // Restore original window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: originalHeight, writable: true })
+      }
+    })
+
+    it('should reposition tooltip when it would go off right or bottom edge', async () => {
+      // Save original window dimensions
+      const originalWidth = window.innerWidth
+      const originalHeight = window.innerHeight
+
+      try {
+        // Mock window dimensions
+        const windowWidth = 500
+        const windowHeight = 400
+        Object.defineProperty(window, 'innerWidth', { value: windowWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: windowHeight, writable: true })
+
+        const workCategory = wrapper.findAll('.category-section')[0]
+        const firstTask = workCategory.findAll('.task-summary')[0]
+
+        // Helper function to extract pixel values from style attribute
+        const leftRegex = /left: (\d+)px/
+        const topRegex = /top: (\d+)px/
+        const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+          const regex = property === 'left' ? leftRegex : topRegex
+          const match = style?.match(regex)
+          return match ? parseInt(match[1]) : 0
+        }
+
+        // Helper function to get tooltip dimensions
+        const getTooltipDimensions = (tooltipElement: any) => {
+          // Mock getBoundingClientRect for testing since the tooltip isn't actually rendered in DOM
+          const tooltipEl = tooltipElement.element
+          if (tooltipEl) {
+            // Simulate realistic tooltip dimensions based on implementation
+            tooltipEl.getBoundingClientRect = vi.fn(() => ({
+              width: 390, // Typical tooltip width from implementation
+              height: 100, // Typical tooltip height
+              left: 0,
+              top: 0,
+              right: 390,
+              bottom: 100,
+              x: 0,
+              y: 0,
+              toJSON: () => ({})
+            }))
+            return { width: 390, height: 100 }
+          }
+          return { width: 390, height: 100 } // Fallback dimensions
+        }
+
+        // Test tooltip repositioning when near right edge
+        const rightEdgeClientX = windowWidth - 50 // Position that would cause overflow
+        await firstTask.trigger('mouseenter', {
+          clientX: rightEdgeClientX,
+          clientY: 200
+        })
+
+        // Measure tooltip and calculate expected positioning
+        let tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const { width: tooltipWidth } = getTooltipDimensions(tooltip)
+
+        // Calculate if tooltip would overflow right edge
+        const wouldOverflowRight = rightEdgeClientX + 10 + tooltipWidth > windowWidth
+        expect(wouldOverflowRight).toBe(true) // Verify our test setup causes overflow
+
+        const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+        if (wouldOverflowRight) {
+          // Should be repositioned to the left of cursor
+          expect(leftValue).toBeLessThan(rightEdgeClientX)
+          expect(leftValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+        }
+
+        await firstTask.trigger('mouseleave')
+
+        // Test tooltip repositioning when near bottom edge
+        const bottomEdgeClientY = windowHeight - 50 // Position that would cause overflow
+        await firstTask.trigger('mouseenter', {
+          clientX: 200,
+          clientY: bottomEdgeClientY
+        })
+
+        // Measure tooltip and calculate expected positioning
+        tooltip = wrapper.find('.task-tooltip')
+        expect(tooltip.exists()).toBe(true)
+        const { height: tooltipHeight } = getTooltipDimensions(tooltip)
+
+        // Calculate if tooltip would overflow bottom edge
+        const wouldOverflowBottom = bottomEdgeClientY + tooltipHeight > windowHeight
+        expect(wouldOverflowBottom).toBe(true) // Verify our test setup causes overflow
+
+        const topValue = getPixelValue(tooltip.attributes('style'), 'top')
+        if (wouldOverflowBottom) {
+          // Should be repositioned above cursor
+          expect(topValue).toBeLessThan(bottomEdgeClientY)
+          expect(topValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+        }
+      } finally {
+        // Restore original window dimensions
+        Object.defineProperty(window, 'innerWidth', { value: originalWidth, writable: true })
+        Object.defineProperty(window, 'innerHeight', { value: originalHeight, writable: true })
+      }
     })
   })
 
