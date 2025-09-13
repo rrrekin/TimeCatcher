@@ -136,99 +136,8 @@
             </button>
           </td>
         </tr>
-
-        <!-- Add task form row (always visible at bottom) -->
-        <tr class="add-task-row">
-          <td>
-            <div class="custom-dropdown table-dropdown add-task-dropdown" :class="{ open: showFormCategoryDropdown }">
-              <button
-                type="button"
-                class="dropdown-trigger"
-                :id="formDropdownTriggerId"
-                @click="handleFormDropdownToggle"
-                :aria-expanded="showFormCategoryDropdown"
-                :aria-controls="formDropdownMenuId"
-                aria-haspopup="listbox"
-              >
-                <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </button>
-              <div
-                v-if="showFormCategoryDropdown"
-                class="dropdown-menu"
-                role="listbox"
-                :id="formDropdownMenuId"
-                :aria-labelledby="formDropdownTriggerId"
-                @keydown="handleFormDropdownKeydown"
-                tabindex="-1"
-              >
-                <div
-                  v-for="(category, index) in categories"
-                  :key="category.id ?? `form-cat-${category.name}-${index}`"
-                  class="dropdown-item"
-                  role="option"
-                  :class="{ selected: newTask.categoryId === category.id }"
-                  :aria-selected="newTask.categoryId === category.id"
-                  :tabindex="formListbox.getActiveIndex('form') === index ? '0' : '-1'"
-                  :data-option-index="index"
-                  @click="handleFormCategorySelection(category)"
-                >
-                  {{ category.name }}
-                </div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <input
-              type="text"
-              :value="newTask.name"
-              @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
-              @keydown.enter.prevent="onAddTaskEnter"
-              class="editable-cell add-task-input"
-              placeholder="Enter task name..."
-            />
-          </td>
-          <td>
-            <input
-              type="time"
-              step="60"
-              :value="newTask.time"
-              @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
-              @keydown.enter.prevent="onAddTaskEnter"
-              :class="['editable-cell', 'time-input', { 'empty-time': !newTask.time.trim() }]"
-            />
-          </td>
-          <td class="duration-cell">-</td>
-          <td class="actions-cell">
-            <button
-              class="action-btn add-btn primary-add-btn"
-              @click="handleAddTask"
-              :disabled="!isAddTaskValid"
-              :aria-disabled="!isAddTaskValid"
-              :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
-              :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
-            >
-              + Add Task
-            </button>
-          </td>
-        </tr>
       </tbody>
     </table>
-
-    <!-- Special task buttons -->
-    <div class="special-task-buttons">
-      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">⏸ Pause</button>
-      <button
-        type="button"
-        class="special-task-btn end-btn"
-        @click="$emit('addEndTask')"
-        :disabled="hasEndTaskForSelectedDate"
-        :aria-disabled="hasEndTaskForSelectedDate"
-        :title="hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task for this day'"
-      >
-        ⏹ End
-      </button>
-    </div>
   </div>
 </template>
 
@@ -243,8 +152,6 @@ const componentId =
   typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
     ? `tasklist-${globalThis.crypto.randomUUID()}`
     : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-const formDropdownMenuId = `form-dropdown-menu-${componentId}`
-const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
@@ -296,18 +203,6 @@ const props = defineProps({
     type: Object as PropType<{ [key: number]: boolean }>,
     required: true
   },
-  showFormCategoryDropdown: {
-    type: Boolean,
-    required: true
-  },
-  newTask: {
-    type: Object as PropType<{
-      categoryId: number | null
-      name: string
-      time: string
-    }>,
-    required: true
-  },
   // Function props
   calculateDuration: {
     type: Function as PropType<(record: TaskRecordWithId) => string>,
@@ -318,10 +213,6 @@ const props = defineProps({
     required: true
   },
   getCurrentTime: {
-    type: Function as PropType<() => string>,
-    required: true
-  },
-  getSelectedCategoryName: {
     type: Function as PropType<() => string>,
     required: true
   },
@@ -339,12 +230,6 @@ const emit = defineEmits<{
   handleEnter: [recordId: number, field: string, event: Event]
   replayTask: [record: TaskRecordWithId]
   confirmDeleteTask: [record: TaskRecordWithId]
-  toggleFormDropdown: []
-  selectFormCategory: [category: Category]
-  updateNewTask: [newTask: { categoryId: number | null; name: string; time: string }]
-  addTask: []
-  addPauseTask: []
-  addEndTask: []
 }>()
 
 // Expose scrollToBottom method to parent
@@ -354,15 +239,6 @@ defineExpose({
 
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
-
-// Validation for add task form
-const isAddTaskValid = computed(() => {
-  return (
-    props.newTask.categoryId != null && // Category must be selected
-    props.newTask.name.trim().length > 0 // Task name must not be empty/whitespace
-    // Time is optional - if empty, current time will be used
-  )
-})
 
 // Inline dropdown navigation composable
 const inlineListbox = useListboxNavigation({
@@ -382,22 +258,6 @@ const inlineListbox = useListboxNavigation({
   },
   getOptionSelector: (recordId: string | number, optionIndex: number) =>
     `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
-})
-
-// Form dropdown navigation composable
-const formListbox = useListboxNavigation({
-  containerRef: taskTableRef,
-  items: categoriesRef,
-  onSelect: (category: Category, index: number) => {
-    handleFormCategorySelection(category)
-  },
-  onClose: async () => {
-    emit('toggleFormDropdown')
-    await nextTick()
-    focusFormTriggerButton()
-  },
-  getOptionSelector: (contextId: string | number, optionIndex: number) =>
-    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
 })
 
 // Keyboard handling for inline dropdown navigation
@@ -439,73 +299,6 @@ const focusTriggerButton = (recordId: number) => {
     `[aria-controls="${componentId}-dropdown-menu-${recordId}"]`
   )
   button?.focus()
-}
-
-// Form dropdown keyboard handling
-const handleFormDropdownKeydown = (event: KeyboardEvent) => {
-  formListbox.handleKeydown(event, 'form')
-}
-
-// Form category selection handler
-const handleFormCategorySelection = async (category: Category) => {
-  // 1. Emit the category selection
-  emit('selectFormCategory', category)
-
-  // 2. Close the dropdown
-  emit('toggleFormDropdown')
-
-  // 3. Return focus to the trigger button
-  await nextTick()
-  focusFormTriggerButton()
-}
-
-// Form dropdown trigger focus helper
-const focusFormTriggerButton = () => {
-  const button = taskTableRef.value?.querySelector<HTMLButtonElement>(`[aria-controls="${formDropdownMenuId}"]`)
-  button?.focus()
-}
-
-// Handle form dropdown toggle - only initialize when opening
-const handleFormDropdownToggle = async () => {
-  // Capture pre-toggle intent to avoid race condition
-  const willOpen = !props.showFormCategoryDropdown
-
-  // Emit the toggle
-  emit('toggleFormDropdown')
-
-  // Only initialize when opening and categories exist
-  if (willOpen) {
-    // Guard against empty/loading categories
-    if (!props.categories || props.categories.length === 0) {
-      return
-    }
-
-    await nextTick()
-    initializeFormActiveOption()
-  }
-}
-
-// Initialize form dropdown active option when opened
-const initializeFormActiveOption = () => {
-  const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
-  const clampedIndex = Math.max(0, selectedIndex)
-  formListbox.initializeActiveOption('form', clampedIndex)
-}
-
-// Guarded add task handler
-const handleAddTask = () => {
-  // Only emit addTask if form is valid
-  if (isAddTaskValid.value) {
-    emit('addTask')
-  }
-}
-
-// Guarded Enter key handler for add task form
-const onAddTaskEnter = () => {
-  // Only emit addTask if form is valid
-  if (isAddTaskValid.value) {
-    emit('addTask')
-  }
 }
 
 // Initialize active option when dropdown opens
@@ -848,59 +641,6 @@ tr:last-child td {
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
-}
-
-/* Add task row */
-.add-task-row {
-  background: var(--bg-secondary);
-}
-
-.add-task-input::placeholder {
-  color: var(--text-muted);
-}
-
-/* Special task buttons */
-.special-task-buttons {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  justify-content: center;
-}
-
-.special-task-btn {
-  flex: 1;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  color: white;
-}
-
-.pause-btn {
-  background: var(--warning);
-}
-
-.pause-btn:hover {
-  background: var(--warning-hover);
-  transform: translateY(-2px);
-}
-
-.end-btn {
-  background: var(--success);
-}
-
-.end-btn:hover:not(:disabled) {
-  background: var(--success-hover);
-  transform: translateY(-2px);
-}
-
-.end-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* Duration cell specific styles */
