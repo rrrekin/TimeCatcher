@@ -36,7 +36,9 @@
           :class="{
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === TASK_TYPE_PAUSE,
-            'end-task-row': record.task_type === TASK_TYPE_END
+            'end-task-row': record.task_type === TASK_TYPE_END,
+            'highlighted-task': highlightedTasks.has(record.id),
+            fading: fadingTasks.has(record.id)
           }"
         >
           <!-- Special task layout: merged category + task columns -->
@@ -142,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType, ref, nextTick, computed, type Ref } from 'vue'
+import { type PropType, ref, nextTick, computed, type Ref, watch, onUnmounted } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
@@ -258,6 +260,90 @@ const inlineListbox = useListboxNavigation({
   },
   getOptionSelector: (recordId: string | number, optionIndex: number) =>
     `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
+})
+
+// Highlighting system for task changes
+const highlightedTasks = ref<Set<number>>(new Set())
+const fadingTasks = ref<Set<number>>(new Set())
+const highlightTimers = ref<Map<number, NodeJS.Timeout>>(new Map())
+
+// Method to highlight a task (for adds/modifications)
+const highlightTask = (taskId: number) => {
+  // Clear any existing timer for this task
+  const existingTimer = highlightTimers.value.get(taskId)
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+  }
+
+  // Remove from fading set if it's there and add to highlighted
+  fadingTasks.value.delete(taskId)
+  highlightedTasks.value.add(taskId)
+
+  // Start fade immediately using requestAnimationFrame to ensure DOM update
+  requestAnimationFrame(() => {
+    fadingTasks.value.add(taskId)
+  })
+
+  // Set timer to remove highlight after 15 seconds
+  const timer = setTimeout(() => {
+    highlightedTasks.value.delete(taskId)
+    fadingTasks.value.delete(taskId)
+    highlightTimers.value.delete(taskId)
+  }, 15000)
+
+  highlightTimers.value.set(taskId, timer)
+}
+
+// Watch for task record changes to highlight new/modified tasks
+const previousTaskIds = ref<Set<number>>(new Set())
+
+watch(
+  () => props.taskRecords,
+  (newRecords, oldRecords) => {
+    if (!oldRecords || oldRecords.length === 0) {
+      // Initial load - don't highlight anything
+      previousTaskIds.value = new Set(newRecords.map(task => task.id))
+      return
+    }
+
+    const newTaskIds = new Set(newRecords.map(task => task.id))
+    const oldTaskIds = previousTaskIds.value
+
+    // Find newly added tasks
+    const addedTaskIds = new Set([...newTaskIds].filter(id => !oldTaskIds.has(id)))
+
+    // Find modified tasks by comparing task content
+    const oldTaskMap = new Map(oldRecords.map(task => [task.id, task]))
+    const modifiedTaskIds = new Set<number>()
+
+    newRecords.forEach(newTask => {
+      const oldTask = oldTaskMap.get(newTask.id)
+      if (oldTask && !addedTaskIds.has(newTask.id)) {
+        // Check if task content has changed
+        if (
+          oldTask.task_name !== newTask.task_name ||
+          oldTask.category_name !== newTask.category_name ||
+          oldTask.start_time !== newTask.start_time
+        ) {
+          modifiedTaskIds.add(newTask.id)
+        }
+      }
+    })
+
+    // Highlight added and modified tasks
+    ;[...addedTaskIds, ...modifiedTaskIds].forEach(taskId => {
+      highlightTask(taskId)
+    })
+
+    // Update previous task IDs
+    previousTaskIds.value = newTaskIds
+  },
+  { deep: true }
+)
+
+// Cleanup timers on unmount
+onUnmounted(() => {
+  highlightTimers.value.forEach(timer => clearTimeout(timer))
 })
 
 // Keyboard handling for inline dropdown navigation
@@ -652,5 +738,15 @@ tr:last-child td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Task highlighting styles */
+.highlighted-task {
+  background-color: rgba(87, 189, 175, 0.2);
+  transition: background-color 15s ease-out;
+}
+
+.highlighted-task.fading {
+  background-color: transparent;
 }
 </style>

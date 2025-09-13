@@ -169,3 +169,7 @@ src/**/*.js
 /.mcp.json
 
 /test-results/
+
+.gemini/
+gha-creds-*.json
+GEMINI.md

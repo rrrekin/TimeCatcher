@@ -266,4 +266,99 @@ describe('TaskList Component', () => {
       await expect(vm.scrollToBottom()).resolves.toBeUndefined()
     })
   })
+
+  describe('Task Highlighting', () => {
+    it('should highlight newly added tasks', async () => {
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({ taskRecords: initialTasks })
+
+      // Add a new task
+      const newTask = {
+        id: 3,
+        category_name: 'Learning',
+        task_name: 'New Task',
+        start_time: '11:00',
+        date: '2024-01-15',
+        task_type: 'normal' as const
+      }
+
+      await wrapper.setProps({
+        taskRecords: [...initialTasks, newTask]
+      })
+
+      // Wait for DOM update
+      await wrapper.vm.$nextTick()
+
+      // Check if the new task is highlighted
+      const taskRows = wrapper.findAll('tbody tr')
+      expect(taskRows).toHaveLength(2) // Should have 2 tasks now
+
+      // Find the task row by checking the input value
+      const newTaskRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'New Task'
+      })
+
+      expect(newTaskRow).toBeTruthy()
+      expect(newTaskRow?.classes()).toContain('highlighted-task')
+    })
+
+    it('should highlight modified tasks', async () => {
+      // Start with initial tasks
+      await wrapper.setProps({ taskRecords: mockTaskRecords })
+
+      // Modify a task
+      const modifiedTasks = [
+        {
+          ...mockTaskRecords[0],
+          task_name: 'Modified Task Name'
+        },
+        mockTaskRecords[1]
+      ]
+
+      await wrapper.setProps({ taskRecords: modifiedTasks })
+
+      // Wait for DOM update
+      await wrapper.vm.$nextTick()
+
+      // Check if the modified task is highlighted
+      const taskRows = wrapper.findAll('tbody tr')
+
+      // Find the task row by checking the input value
+      const modifiedTaskRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'Modified Task Name'
+      })
+
+      expect(modifiedTaskRow).toBeTruthy()
+      expect(modifiedTaskRow?.classes()).toContain('highlighted-task')
+    })
+
+    it('should not highlight tasks on initial load', async () => {
+      // Mount a fresh component with initial tasks
+      const freshWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // No tasks should be highlighted on initial load
+      const taskRows = freshWrapper.findAll('tbody tr')
+      taskRows.forEach(row => {
+        expect(row.classes()).not.toContain('highlighted-task')
+      })
+
+      freshWrapper.unmount()
+    })
+  })
 })
