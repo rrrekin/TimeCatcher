@@ -399,40 +399,6 @@ describe('useDurationCalculations', () => {
       expect(personalCategory!.minutes).toBe(60)
     })
 
-    it('should calculate percentages correctly', () => {
-      taskRecords.value = [
-        {
-          id: 1,
-          category_name: 'Work',
-          task_name: 'Task 1',
-          start_time: '09:00',
-          date: '2024-01-15',
-          task_type: 'normal'
-        },
-        {
-          id: 2,
-          category_name: 'Personal',
-          task_name: 'Task 2',
-          start_time: '11:00',
-          date: '2024-01-15',
-          task_type: 'normal'
-        }
-      ]
-
-      const breakdown = composable.getCategoryBreakdown()
-
-      expect(breakdown).toHaveLength(2)
-
-      const workCategory = breakdown.find(cat => cat.categoryName === 'Work')
-      const personalCategory = breakdown.find(cat => cat.categoryName === 'Personal')
-
-      // Work: 09:00-11:00 = 120 minutes
-      // Personal: 11:00-10:30 = 0 minutes (ends before it starts)
-      // Total: 120 minutes
-      expect(workCategory!.percentage).toBe(100) // 120/120 * 100
-      expect(personalCategory!.percentage).toBe(0) // 0/120 * 100
-    })
-
     it('should sort categories by minutes descending', () => {
       taskRecords.value = [
         {

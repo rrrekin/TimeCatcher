@@ -109,7 +109,7 @@
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
-              :pattern="!record.start_time.trim() ? '^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$' : ''"
+              :pattern="!record.start_time.trim() ? '^([01]?\d|2[0-3]):([0-5]?\d)$' : ''"
               :maxlength="!record.start_time.trim() ? 5 : 0"
             />
           </td>
@@ -144,7 +144,7 @@
 </template>
 
 <script setup lang="ts">
-import { type PropType, ref, nextTick, computed, type Ref, watch, onUnmounted } from 'vue'
+import { type PropType, ref, nextTick, computed, type Ref, watch, onUnmounted, toRaw, reactive } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
@@ -262,88 +262,86 @@ const inlineListbox = useListboxNavigation({
     `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
 })
 
-// Highlighting system for task changes
-const highlightedTasks = ref<Set<number>>(new Set())
-const fadingTasks = ref<Set<number>>(new Set())
-const highlightTimers = ref<Map<number, number>>(new Map())
+// Highlighting system for task changes (reactive Set/Map to track add/delete)
+const highlightedTasks = reactive(new Set<number>())
+const fadingTasks = reactive(new Set<number>())
+const highlightTimers = reactive(new Map<number, ReturnType<typeof setTimeout>>())
 
 // Method to highlight a task (for adds/modifications)
 const highlightTask = (taskId: number) => {
   // Clear any existing timer for this task
-  const existingTimer = highlightTimers.value.get(taskId)
+  const existingTimer = highlightTimers.get(taskId)
   if (existingTimer) {
     clearTimeout(existingTimer)
   }
 
   // Remove from fading set if it's there and add to highlighted
-  fadingTasks.value.delete(taskId)
-  highlightedTasks.value.add(taskId)
+  fadingTasks.delete(taskId)
+  highlightedTasks.add(taskId)
 
   // Start fade immediately using requestAnimationFrame to ensure DOM update
   requestAnimationFrame(() => {
-    fadingTasks.value.add(taskId)
+    fadingTasks.add(taskId)
   })
 
   // Set timer to remove highlight after 15 seconds
   const timer = setTimeout(() => {
-    highlightedTasks.value.delete(taskId)
-    fadingTasks.value.delete(taskId)
-    highlightTimers.value.delete(taskId)
+    highlightedTasks.delete(taskId)
+    fadingTasks.delete(taskId)
+    highlightTimers.delete(taskId)
   }, 15000)
 
-  highlightTimers.value.set(taskId, timer)
+  highlightTimers.set(taskId, timer)
 }
 
 // Watch for task record changes to highlight new/modified tasks
-const previousTaskIds = ref<Set<number>>(new Set())
+const previousTasksMap = ref<Map<number, TaskRecordWithId>>(new Map())
 
 watch(
   () => props.taskRecords,
-  (newRecords, oldRecords) => {
-    if (!oldRecords || oldRecords.length === 0) {
+  newRecords => {
+    const plainNewRecords = toRaw(newRecords)
+    if (previousTasksMap.value.size === 0) {
       // Initial load - don't highlight anything
-      previousTaskIds.value = new Set(newRecords.map(task => task.id))
+      previousTasksMap.value = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
       return
     }
 
-    const newTaskIds = new Set(newRecords.map(task => task.id))
-    const oldTaskIds = previousTaskIds.value
-
-    // Find newly added tasks
-    const addedTaskIds = new Set([...newTaskIds].filter(id => !oldTaskIds.has(id)))
-
-    // Find modified tasks by comparing task content
-    const oldTaskMap = new Map(oldRecords.map(task => [task.id, task]))
+    const newRecordsMap = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
+    const addedTaskIds = new Set<number>()
     const modifiedTaskIds = new Set<number>()
 
-    newRecords.forEach(newTask => {
-      const oldTask = oldTaskMap.get(newTask.id)
-      if (oldTask && !addedTaskIds.has(newTask.id)) {
-        // Check if task content has changed
+    // Find added and modified tasks
+    for (const [id, newTask] of newRecordsMap.entries()) {
+      const oldTask = previousTasksMap.value.get(id)
+      if (!oldTask) {
+        addedTaskIds.add(id)
+      } else {
+        // Compare plain objects to detect modifications
         if (
           oldTask.task_name !== newTask.task_name ||
           oldTask.category_name !== newTask.category_name ||
           oldTask.start_time !== newTask.start_time
         ) {
-          modifiedTaskIds.add(newTask.id)
+          modifiedTaskIds.add(id)
         }
       }
-    })
+    }
 
     // Highlight added and modified tasks
     ;[...addedTaskIds, ...modifiedTaskIds].forEach(taskId => {
       highlightTask(taskId)
     })
 
-    // Update previous task IDs
-    previousTaskIds.value = newTaskIds
+    // Update previous tasks snapshot
+    previousTasksMap.value = newRecordsMap
   },
   { deep: true }
 )
 
 // Cleanup timers on unmount
 onUnmounted(() => {
-  highlightTimers.value.forEach(timer => clearTimeout(timer))
+  highlightTimers.forEach(timer => clearTimeout(timer))
 })
 
 // Keyboard handling for inline dropdown navigation

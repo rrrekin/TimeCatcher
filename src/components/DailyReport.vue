@@ -136,7 +136,6 @@ interface DailyReportProps {
     totalTime: string
     totalTimeRounded: string
     totalTimeCombined: string
-    percentage: number
     taskSummaries: Array<{
       name: string
       count: number

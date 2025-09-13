@@ -209,7 +209,9 @@ const calculateDropdownPosition = async () => {
   if (!triggerRect) return
 
   const viewportHeight = window.innerHeight
-  const dropdownHeight = 200 // Max height from CSS
+  const measuredHeight = dropdownMenuRef.value?.offsetHeight
+  const dropdownHeight = typeof measuredHeight === 'number' && measuredHeight > 0 ? measuredHeight : 200 // Fallback to CSS max-height
+
   const spaceBelow = viewportHeight - triggerRect.bottom
   const spaceAbove = triggerRect.top
 
@@ -223,6 +225,8 @@ watch(
   async isOpen => {
     if (isOpen) {
       await calculateDropdownPosition()
+      await nextTick() // Wait for DOM updates
+      dropdownMenuRef.value?.focus() // Focus the listbox for keyboard navigation
     }
   },
   { immediate: true }

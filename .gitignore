@@ -173,3 +173,5 @@ src/**/*.js
 .gemini/
 gha-creds-*.json
 GEMINI.md
+
+AGENTS.md

@@ -12,7 +12,7 @@
 
     <div class="layout">
       <div class="task-table-pane" ref="taskTablePaneRef">
-        <div class="task-list-container">
+        <div class="task-list-container" ref="scrollableContainerRef">
           <TaskList
             ref="taskListRef"
             :task-records="taskRecords"
@@ -283,6 +283,8 @@ const appVersion = ref<string>('')
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
 const taskTablePaneRef = ref<HTMLElement | undefined>(undefined)
+// Ref to the actual scrollable container wrapping the task list
+const scrollableContainerRef = ref<HTMLElement | undefined>(undefined)
 const taskListRef = ref<ComponentPublicInstance<{
   scrollToBottom?: (parentPaneRef?: Ref<HTMLElement | undefined>) => Promise<void>
 }> | null>(null)
@@ -292,7 +294,8 @@ const safeScrollToBottom = async (): Promise<void> => {
   await nextTick()
   try {
     const fn = taskListRef.value?.scrollToBottom
-    if (typeof fn === 'function') await fn(taskTablePaneRef)
+    // Scroll the actual scrollable container, not the outer pane
+    if (typeof fn === 'function') await fn(scrollableContainerRef)
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
   }

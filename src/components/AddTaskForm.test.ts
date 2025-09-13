@@ -75,18 +75,22 @@ describe('AddTaskForm Component', () => {
   })
 
   describe('Form Interactions', () => {
-    it('should emit updateNewTask when task name changes', async () => {
+    it('should emit updateNewTask with correct payload when task name changes', async () => {
       const taskNameInput = wrapper.find('input[placeholder="Enter task name..."]')
       await taskNameInput.setValue('New Task')
 
-      expect(wrapper.emitted('updateNewTask')).toBeTruthy()
+      const emittedEvent = wrapper.emitted('updateNewTask')
+      expect(emittedEvent).toBeTruthy()
+      expect(emittedEvent?.[0]).toEqual([{ name: 'New Task', categoryId: null, time: '' }])
     })
 
-    it('should emit updateNewTask when time changes', async () => {
+    it('should emit updateNewTask with correct payload when time changes', async () => {
       const timeInput = wrapper.find('input[type="time"]')
       await timeInput.setValue('10:30')
 
-      expect(wrapper.emitted('updateNewTask')).toBeTruthy()
+      const emittedEvent = wrapper.emitted('updateNewTask')
+      expect(emittedEvent).toBeTruthy()
+      expect(emittedEvent?.[0]).toEqual([{ name: '', categoryId: null, time: '10:30' }])
     })
 
     it('should emit toggleFormDropdown when category dropdown is clicked', async () => {
@@ -151,7 +155,7 @@ describe('AddTaskForm Component', () => {
   })
 
   describe('Form Validation', () => {
-    it('should be valid when category and name are provided', async () => {
+    it('should enable add button when category and name are provided', async () => {
       await wrapper.setProps({
         newTask: {
           categoryId: 1,
@@ -159,12 +163,12 @@ describe('AddTaskForm Component', () => {
           time: ''
         }
       })
-
-      const vm = wrapper.vm as any
-      expect(vm.isAddTaskValid).toBe(true)
+      await wrapper.vm.$nextTick()
+      const addButton = wrapper.find('.primary-add-btn')
+      expect(addButton.attributes('disabled')).toBeUndefined()
     })
 
-    it('should be invalid when category is missing', async () => {
+    it('should disable add button when category is missing', async () => {
       await wrapper.setProps({
         newTask: {
           categoryId: null,
@@ -172,12 +176,12 @@ describe('AddTaskForm Component', () => {
           time: ''
         }
       })
-
-      const vm = wrapper.vm as any
-      expect(vm.isAddTaskValid).toBe(false)
+      await wrapper.vm.$nextTick()
+      const addButton = wrapper.find('.primary-add-btn')
+      expect(addButton.attributes('disabled')).toBeDefined()
     })
 
-    it('should be invalid when name is empty', async () => {
+    it('should disable add button when name is empty', async () => {
       await wrapper.setProps({
         newTask: {
           categoryId: 1,
@@ -185,9 +189,9 @@ describe('AddTaskForm Component', () => {
           time: ''
         }
       })
-
-      const vm = wrapper.vm as any
-      expect(vm.isAddTaskValid).toBe(false)
+      await wrapper.vm.$nextTick()
+      const addButton = wrapper.find('.primary-add-btn')
+      expect(addButton.attributes('disabled')).toBeDefined()
     })
   })
 

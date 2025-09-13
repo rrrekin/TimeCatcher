@@ -45,7 +45,6 @@ describe('DailyReport Component', () => {
       totalTime: '3h 30m',
       totalTimeRounded: '3h 30m',
       totalTimeCombined: '3h 30m (3h 30m)',
-      percentage: 70,
       taskSummaries: [
         {
           name: 'Development',
@@ -87,7 +86,6 @@ describe('DailyReport Component', () => {
       totalTime: '1h 30m',
       totalTimeRounded: '1h 30m',
       totalTimeCombined: '1h 30m (1h 30m)',
-      percentage: 30,
       taskSummaries: [
         {
           name: 'Exercise',
@@ -479,7 +477,6 @@ describe('DailyReport Component', () => {
             totalTime: '2h 15m',
             totalTimeRounded: '2h 15m',
             totalTimeCombined: '2h 15m (2h 15m)',
-            percentage: 70,
             taskSummaries: [
               {
                 name: 'TaskWithoutAppearances',

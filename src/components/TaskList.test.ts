@@ -5,9 +5,16 @@ import type { TaskRecord, Category, TaskRecordWithId } from '@/shared/types'
 import { SPECIAL_TASK_TYPES } from '@/shared/types'
 
 describe('TaskList Component', () => {
-  let wrapper: VueWrapper<any>
-  let mockTaskRecords: Array<TaskRecord & { id: number }>
+  let wrapper: VueWrapper<any> | undefined
+  let mockTaskRecords: TaskRecordWithId[]
   let mockCategories: Category[]
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+      wrapper = undefined
+    }
+  })
 
   beforeEach(() => {
     mockTaskRecords = [
@@ -305,21 +312,18 @@ describe('TaskList Component', () => {
     })
 
     it('should highlight modified tasks', async () => {
-      // Start with initial tasks
-      await wrapper.setProps({ taskRecords: mockTaskRecords })
+      // Start with initial tasks to initialize the watcher's previousTasksMap
+      const initialTasks = JSON.parse(JSON.stringify(mockTaskRecords))
+      await wrapper.setProps({ taskRecords: initialTasks })
 
       // Modify a task
-      const modifiedTasks = [
-        {
-          ...mockTaskRecords[0],
-          task_name: 'Modified Task Name'
-        },
-        mockTaskRecords[1]
-      ]
+      const modifiedTasks = JSON.parse(JSON.stringify(mockTaskRecords))
+      modifiedTasks[0].task_name = 'Modified Task Name'
 
       await wrapper.setProps({ taskRecords: modifiedTasks })
 
-      // Wait for DOM update
+      // Wait for DOM update and ensure all watchers have run
+      await wrapper.vm.$nextTick()
       await wrapper.vm.$nextTick()
 
       // Check if the modified task is highlighted
@@ -486,6 +490,48 @@ describe('TaskList Component', () => {
       expect(() => {
         testWrapper.unmount()
       }).not.toThrow()
+    })
+
+    it('should remove highlight after timeout', async () => {
+      vi.useFakeTimers()
+
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({ taskRecords: initialTasks })
+
+      // Add a new task to trigger highlighting
+      const newTask = {
+        id: 3,
+        category_name: 'Learning',
+        task_name: 'Highlight Timeout Test',
+        start_time: '11:00',
+        date: '2024-01-15',
+        task_type: 'normal' as const
+      }
+      await wrapper.setProps({
+        taskRecords: [...initialTasks, newTask]
+      })
+
+      // Wait for DOM update
+      await wrapper.vm.$nextTick()
+
+      const taskRows = wrapper.findAll('tbody tr')
+      const newTaskRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'Highlight Timeout Test'
+      })
+
+      expect(newTaskRow?.classes()).toContain('highlighted-task')
+
+      // Advance timers by 15 seconds
+      await vi.advanceTimersByTimeAsync(15000)
+      await wrapper.vm.$nextTick()
+
+      // The classes should be removed
+      expect(newTaskRow?.classes()).not.toContain('highlighted-task')
+      expect(newTaskRow?.classes()).not.toContain('fading')
+
+      vi.useRealTimers()
     })
   })
 
