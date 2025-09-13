@@ -157,6 +157,27 @@ import TaskList from '@/components/TaskList.vue'
 import DailyReport from '@/components/DailyReport.vue'
 import SetupModal from '@/components/SetupModal.vue'
 
+// Component-specific types for task summaries
+interface Appearance {
+  startTime: string
+  endTime: string
+  duration: number
+  durationFormatted: string
+  date: string
+}
+
+interface TaskSummary {
+  name: string
+  count: number
+  totalMinutes: number
+  totalMinutesRounded: number
+  appearances: Appearance[]
+  firstOccurrence: number
+  totalTime?: string
+  totalTimeRounded?: string
+  totalTimeCombined?: string
+}
+
 interface NewTaskForm {
   categoryId: number | null
   name: string
@@ -1084,7 +1105,7 @@ const parseDurationToMinutes = (durationStr: string): number => {
 const getEnhancedCategoryBreakdown = computed(() => {
   if (taskRecords.value.length === 0) return []
 
-  const categoryMap = new Map()
+  const categoryMap = new Map<string, { tasks: Map<string, TaskSummary> }>()
 
   // Iterate over all task records to respect special-task boundaries
   for (let i = 0; i < taskRecords.value.length; i++) {
@@ -1093,11 +1114,12 @@ const getEnhancedCategoryBreakdown = computed(() => {
 
     if (!categoryMap.has(record.category_name)) {
       categoryMap.set(record.category_name, {
-        tasks: new Map<string, any>()
+        tasks: new Map<string, TaskSummary>()
       })
     }
 
     const category = categoryMap.get(record.category_name)
+    if (!category) continue
 
     // Track individual task occurrences
     if (!category.tasks.has(record.task_name)) {
@@ -1106,12 +1128,13 @@ const getEnhancedCategoryBreakdown = computed(() => {
         count: 0,
         totalMinutes: 0,
         totalMinutesRounded: 0,
-        appearances: [],
+        appearances: [] as Appearance[],
         firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
-      })
+      } as TaskSummary)
     }
 
     const task = category.tasks.get(record.task_name)
+    if (!task) continue
     task.count++
 
     // Calculate duration using all records as boundaries
@@ -1147,7 +1170,7 @@ const getEnhancedCategoryBreakdown = computed(() => {
         duration: flooredDuration,
         durationFormatted: formatDurationMinutes(flooredDuration),
         date: record.date
-      })
+      } as Appearance)
     }
   }
 
@@ -1166,12 +1189,12 @@ const getEnhancedCategoryBreakdown = computed(() => {
       totalTimeRounded: formatDurationMinutes(roundedMinutes),
       totalTimeCombined: formatDualTime(plainMinutes, roundedMinutes),
       taskCount: categoryData
-        ? Array.from(categoryData.tasks.values()).reduce((sum: number, task: any) => sum + (task.count || 0), 0)
+        ? Array.from(categoryData.tasks.values()).reduce((sum: number, task: TaskSummary) => sum + (task.count || 0), 0)
         : 0,
       taskSummaries: categoryData
         ? Array.from(categoryData.tasks.values())
-            .sort((a: any, b: any) => a.firstOccurrence - b.firstOccurrence)
-            .map((task: any) => ({
+            .sort((a: TaskSummary, b: TaskSummary) => a.firstOccurrence - b.firstOccurrence)
+            .map((task: TaskSummary) => ({
               ...task,
               totalTime: formatDurationMinutes(task.totalMinutes),
               totalTimeRounded: formatDurationMinutes(task.totalMinutesRounded),

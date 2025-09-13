@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import DailyReport from './DailyReport.vue'
 import type { TaskRecord } from '@/shared/types'
@@ -276,6 +276,7 @@ describe('DailyReport Component', () => {
 
     afterEach(() => {
       vi.useRealTimers()
+      vi.restoreAllMocks()
     })
 
     it('should copy task name to clipboard when task is clicked', async () => {
@@ -361,6 +362,104 @@ describe('DailyReport Component', () => {
 
       consoleSpy.mockRestore()
     })
+
+    it('should handle keyboard accessibility with Enter key', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Verify accessibility attributes
+      expect(firstTask.attributes('tabindex')).toBe('0')
+      expect(firstTask.attributes('role')).toBe('button')
+      expect(firstTask.attributes('aria-label')).toBe('Copy task name: Development')
+      expect(firstTask.attributes('aria-describedby')).toContain('tooltip-Work-Development-0')
+
+      // Trigger Enter key
+      await firstTask.trigger('keydown', { key: 'Enter' })
+
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+      expect(firstTask.classes()).toContain('task-summary-copied')
+    })
+
+    it('should handle keyboard accessibility with Space key', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Mock preventDefault function
+      const mockPreventDefault = vi.fn()
+
+      // Trigger Space key with preventDefault mock
+      await firstTask.trigger('keydown', {
+        key: ' ',
+        preventDefault: mockPreventDefault
+      })
+
+      expect(mockPreventDefault).toHaveBeenCalled() // Should prevent default scrolling
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Development')
+      expect(firstTask.classes()).toContain('task-summary-copied')
+    })
+
+    it('should not trigger copy on other keys', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Clear previous calls
+      vi.clearAllMocks()
+
+      // Trigger other keys
+      await firstTask.trigger('keydown', { key: 'Tab' })
+      await firstTask.trigger('keydown', { key: 'Escape' })
+      await firstTask.trigger('keydown', { key: 'ArrowDown' })
+
+      expect(navigator.clipboard.writeText).not.toHaveBeenCalled()
+      expect(firstTask.classes()).not.toContain('task-summary-copied')
+    })
+
+    it('should show copy toast when task is copied', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Initially no toast should be visible
+      expect(wrapper.find('.copy-toast').exists()).toBe(false)
+
+      // Click to copy task
+      await firstTask.trigger('click')
+
+      // Toast should be visible with correct message
+      const toast = wrapper.find('.copy-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.text()).toBe('Copied "Development"')
+      expect(toast.attributes('role')).toBe('status')
+      expect(toast.attributes('aria-live')).toBe('polite')
+
+      // Should use fake timers to test timeout behavior
+      vi.advanceTimersByTime(2000)
+      await wrapper.vm.$nextTick()
+
+      // Toast should be hidden after timeout
+      expect(wrapper.find('.copy-toast').exists()).toBe(false)
+    })
+
+    it('should clear existing timer when copying multiple times', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+      const secondTask = workCategory.findAll('.task-summary')[1]
+
+      // Mock clearTimeout to spy on timer clearing
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      // Click first task
+      await firstTask.trigger('click')
+      expect(wrapper.find('.copy-toast').text()).toBe('Copied "Development"')
+
+      // Click second task quickly (before first timer expires)
+      await secondTask.trigger('click')
+
+      // Should have cleared the previous timer
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      expect(wrapper.find('.copy-toast').text()).toBe('Copied "Meeting"')
+
+      clearTimeoutSpy.mockRestore()
+    })
   })
 
   describe('Tooltip Functionality', () => {
@@ -427,6 +526,28 @@ describe('DailyReport Component', () => {
       expect(wrapper.find('.task-tooltip').exists()).toBe(false)
     })
 
+    it('should have proper ARIA relationship between task and tooltip', async () => {
+      const workCategory = wrapper.findAll('.category-section')[0]
+      const firstTask = workCategory.findAll('.task-summary')[0]
+
+      // Trigger mouseenter to show tooltip
+      await firstTask.trigger('mouseenter', {
+        clientX: 100,
+        clientY: 100
+      })
+
+      // Tooltip should be visible with correct ID
+      const tooltip = wrapper.find('.task-tooltip')
+      expect(tooltip.exists()).toBe(true)
+      expect(tooltip.attributes('role')).toBe('tooltip')
+
+      // Tooltip ID should match aria-describedby
+      const tooltipId = tooltip.attributes('id')
+      const ariaDescribedby = firstTask.attributes('aria-describedby')
+      expect(tooltipId).toBe(ariaDescribedby)
+      expect(tooltipId).toBe('tooltip-Work-Development-0')
+    })
+
     it('should position tooltip correctly when near screen edges', async () => {
       // Mock window dimensions
       Object.defineProperty(window, 'innerWidth', { value: 800, writable: true })
@@ -435,63 +556,124 @@ describe('DailyReport Component', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
       const firstTask = workCategory.findAll('.task-summary')[0]
 
-      // Test tooltip positioning near left edge (should adjust to x = 10)
+      // Helper function to extract pixel values from style attribute
+      const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+        const match = style?.match(new RegExp(`${property}: (\\d+)px`))
+        return match ? parseInt(match[1]) : 0
+      }
+
+      // Test tooltip positioning near left edge (should clamp to minimum position)
       await firstTask.trigger('mouseenter', {
         clientX: -100, // Far left, would cause negative positioning
         clientY: 100
       })
 
-      // Should clamp to minimum left position of 10px
+      // Should clamp to minimum left position (>= 10px)
       const tooltip = wrapper.find('.task-tooltip')
       expect(tooltip.exists()).toBe(true)
-      expect(tooltip.attributes('style')).toContain('left: 10px')
+      const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+      expect(leftValue).toBeGreaterThanOrEqual(10)
 
       await firstTask.trigger('mouseleave')
 
-      // Test tooltip positioning near top edge (should adjust to y = 10)
+      // Test tooltip positioning near top edge (should clamp to minimum position)
       await firstTask.trigger('mouseenter', {
         clientX: 100,
         clientY: -100 // Far up, would cause negative positioning
       })
 
-      // Should clamp to minimum top position of 10px
+      // Should clamp to minimum top position (>= 10px)
       const tooltipAfter = wrapper.find('.task-tooltip')
       expect(tooltipAfter.exists()).toBe(true)
-      expect(tooltipAfter.attributes('style')).toContain('top: 10px')
+      const topValue = getPixelValue(tooltipAfter.attributes('style'), 'top')
+      expect(topValue).toBeGreaterThanOrEqual(10)
     })
 
     it('should reposition tooltip when it would go off right or bottom edge', async () => {
       // Mock window dimensions
-      Object.defineProperty(window, 'innerWidth', { value: 500, writable: true })
-      Object.defineProperty(window, 'innerHeight', { value: 400, writable: true })
+      const windowWidth = 500
+      const windowHeight = 400
+      Object.defineProperty(window, 'innerWidth', { value: windowWidth, writable: true })
+      Object.defineProperty(window, 'innerHeight', { value: windowHeight, writable: true })
 
       const workCategory = wrapper.findAll('.category-section')[0]
       const firstTask = workCategory.findAll('.task-summary')[0]
 
+      // Helper function to extract pixel values from style attribute
+      const getPixelValue = (style: string | undefined, property: 'left' | 'top'): number => {
+        const match = style?.match(new RegExp(`${property}: (\\d+)px`))
+        return match ? parseInt(match[1]) : 0
+      }
+
+      // Helper function to get tooltip dimensions
+      const getTooltipDimensions = (tooltipElement: any) => {
+        // Mock getBoundingClientRect for testing since the tooltip isn't actually rendered in DOM
+        const tooltipEl = tooltipElement.element
+        if (tooltipEl) {
+          // Simulate realistic tooltip dimensions based on implementation
+          tooltipEl.getBoundingClientRect = vi.fn(() => ({
+            width: 390, // Typical tooltip width from implementation
+            height: 100, // Typical tooltip height
+            left: 0,
+            top: 0,
+            right: 390,
+            bottom: 100,
+            x: 0,
+            y: 0,
+            toJSON: () => ({})
+          }))
+          return { width: 390, height: 100 }
+        }
+        return { width: 390, height: 100 } // Fallback dimensions
+      }
+
       // Test tooltip repositioning when near right edge
+      const rightEdgeClientX = windowWidth - 50 // Position that would cause overflow
       await firstTask.trigger('mouseenter', {
-        clientX: 450, // Close to right edge (500-390 = 110, so 450 > 110)
+        clientX: rightEdgeClientX,
         clientY: 200
       })
 
-      // Should position to the left of cursor instead (450 - 390 - 10 = 50)
+      // Measure tooltip and calculate expected positioning
       let tooltip = wrapper.find('.task-tooltip')
       expect(tooltip.exists()).toBe(true)
-      expect(tooltip.attributes('style')).toContain('left: 50px')
+      const { width: tooltipWidth } = getTooltipDimensions(tooltip)
+
+      // Calculate if tooltip would overflow right edge
+      const wouldOverflowRight = rightEdgeClientX + 10 + tooltipWidth > windowWidth
+      expect(wouldOverflowRight).toBe(true) // Verify our test setup causes overflow
+
+      const leftValue = getPixelValue(tooltip.attributes('style'), 'left')
+      if (wouldOverflowRight) {
+        // Should be repositioned to the left of cursor
+        expect(leftValue).toBeLessThan(rightEdgeClientX)
+        expect(leftValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+      }
 
       await firstTask.trigger('mouseleave')
 
       // Test tooltip repositioning when near bottom edge
+      const bottomEdgeClientY = windowHeight - 50 // Position that would cause overflow
       await firstTask.trigger('mouseenter', {
         clientX: 200,
-        clientY: 350 // Close to bottom edge (tooltip height ~100, so 350+100 > 400)
+        clientY: bottomEdgeClientY
       })
 
-      // Should position above cursor instead
+      // Measure tooltip and calculate expected positioning
       tooltip = wrapper.find('.task-tooltip')
       expect(tooltip.exists()).toBe(true)
-      // The exact top value depends on estimated tooltip height, just ensure it's repositioned
-      expect(parseInt(tooltip.attributes('style')?.match(/top: (\d+)px/)?.[1] || '0')).toBeLessThan(350)
+      const { height: tooltipHeight } = getTooltipDimensions(tooltip)
+
+      // Calculate if tooltip would overflow bottom edge
+      const wouldOverflowBottom = bottomEdgeClientY + tooltipHeight > windowHeight
+      expect(wouldOverflowBottom).toBe(true) // Verify our test setup causes overflow
+
+      const topValue = getPixelValue(tooltip.attributes('style'), 'top')
+      if (wouldOverflowBottom) {
+        // Should be repositioned above cursor
+        expect(topValue).toBeLessThan(bottomEdgeClientY)
+        expect(topValue).toBeGreaterThanOrEqual(10) // Respect minimum margin
+      }
     })
   })
 

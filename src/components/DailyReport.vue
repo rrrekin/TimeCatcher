@@ -75,9 +75,14 @@
               :key="task.name ? `${task.name}-${index}` : index"
               class="task-summary"
               :class="{ 'task-summary-copied': copiedTaskName === task.name }"
-              @mouseenter="showTooltip(task, $event)"
+              tabindex="0"
+              role="button"
+              :aria-label="`Copy task name: ${task.name}`"
+              :aria-describedby="getTooltipId(task.name, categoryData.name, index)"
+              @mouseenter="showTooltip(task, $event, categoryData.name, index)"
               @mouseleave="hideTooltip"
               @click="copyTaskNameToClipboard(task.name)"
+              @keydown="handleTaskKeydown($event, task.name)"
             >
               <span class="task-name">{{ task.name }}</span>
               <span class="task-count">{{ task.count }}x</span>
@@ -97,7 +102,9 @@
     <!-- Tooltip for task appearances -->
     <div
       v-if="tooltipVisible && tooltipContent"
+      :id="currentTooltipId"
       class="task-tooltip"
+      role="tooltip"
       :style="{
         position: 'fixed',
         left: tooltipPosition.x + 'px',
@@ -111,6 +118,11 @@
           <div class="appearance-duration">{{ appearance.durationFormatted }}</div>
         </div>
       </div>
+    </div>
+
+    <!-- Copy confirmation toast -->
+    <div v-if="showCopyToast" class="copy-toast" role="status" aria-live="polite">
+      {{ copyToastMessage }}
     </div>
   </div>
 </template>
@@ -161,9 +173,15 @@ const tooltipVisible = ref(false)
 const tooltipContent = ref<any>(null)
 const tooltipTaskName = ref('')
 const tooltipPosition = ref({ x: 0, y: 0 })
+const tooltipTaskCategory = ref('')
+const tooltipTaskIndex = ref(0)
 
 // Copy state - track which task was last copied
 const copiedTaskName = ref('')
+
+// Copy confirmation toast state
+const showCopyToast = ref(false)
+const copyToastMessage = ref('')
 
 // Timer cleanup
 let activeTimer: number | null = null
@@ -182,10 +200,12 @@ const clampPercent = (p: number): number => {
 }
 
 // Tooltip methods
-const showTooltip = (task: any, event: MouseEvent) => {
+const showTooltip = (task: any, event: MouseEvent, categoryName: string, taskIndex: number) => {
   if (task.appearances && task.appearances.length > 0) {
     tooltipContent.value = task.appearances
     tooltipTaskName.value = task.name || 'Task'
+    tooltipTaskCategory.value = categoryName
+    tooltipTaskIndex.value = taskIndex
 
     // Calculate tooltip dimensions (approximate)
     const tooltipWidth = 390 // max-width from CSS
@@ -235,6 +255,7 @@ const copyTaskNameToClipboard = async (taskName: string) => {
   try {
     await navigator.clipboard.writeText(taskName)
     copiedTaskName.value = taskName
+    showCopyConfirmationToast(taskName)
   } catch (error) {
     console.error('Failed to copy task name to clipboard:', error)
     // Fallback for older browsers or when clipboard API is not available
@@ -250,13 +271,54 @@ const copyTaskNameToClipboard = async (taskName: string) => {
       document.execCommand('copy')
       textArea.remove()
       copiedTaskName.value = taskName
+      showCopyConfirmationToast(taskName)
     } catch (fallbackError) {
       console.error('Clipboard fallback also failed:', fallbackError)
     }
   }
 }
 
+// Show copy confirmation toast
+const showCopyConfirmationToast = (taskName: string) => {
+  // Clear any existing timer
+  if (activeTimer) {
+    clearTimeout(activeTimer)
+    activeTimer = null
+  }
+
+  // Set toast message and show it
+  copyToastMessage.value = `Copied "${taskName}"`
+  showCopyToast.value = true
+
+  // Set timer to hide toast after 2 seconds
+  activeTimer = window.setTimeout(() => {
+    showCopyToast.value = false
+    activeTimer = null
+  }, 2000)
+}
+
+// Handle keyboard events for accessibility
+const handleTaskKeydown = (event: KeyboardEvent, taskName: string) => {
+  // Trigger copy action on Enter or Space key
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault() // Prevent default scrolling for Space key
+    copyTaskNameToClipboard(taskName)
+  }
+}
+
+// Generate stable tooltip ID for each task
+const getTooltipId = (taskName: string, categoryName: string, index: number) => {
+  // Create a stable ID that's unique per task
+  return `tooltip-${categoryName.replace(/\s+/g, '-')}-${taskName.replace(/\s+/g, '-')}-${index}`
+}
+
 // Computed properties
+const currentTooltipId = computed(() => {
+  if (tooltipVisible.value && tooltipTaskName.value) {
+    return getTooltipId(tooltipTaskName.value, tooltipTaskCategory.value, tooltipTaskIndex.value)
+  }
+  return ''
+})
 const standardTaskCount = computed(() => {
   return props.taskRecords.filter(r => r.task_type === TASK_TYPE_NORMAL).length
 })
@@ -542,5 +604,31 @@ const getStatusText = () => {
   background: linear-gradient(90deg, rgba(87, 189, 175, 0.15), rgba(86, 179, 114, 0.15)) !important;
   border-color: var(--verdigris) !important;
   box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+}
+
+/* Copy confirmation toast */
+.copy-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--verdigris);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  z-index: 1100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: copyToastSlideIn 0.3s ease-out;
+}
+
+@keyframes copyToastSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 </style>
