@@ -266,6 +266,72 @@ describe('useDurationCalculations', () => {
       // Duration: 630 - 540 = 90 minutes = 1h 30m
       expect(duration).toBe('1h 30m')
     })
+
+    it('should return "-" when record is not part of sorted list (object identity mismatch)', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Task 1',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Task 2',
+          start_time: '10:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      // Use a shallow copy (different identity) of an existing record
+      const copyOfFirst = { ...taskRecords.value[0]! }
+      const duration = composable.calculateDuration(copyOfFirst)
+      expect(duration).toBe('-')
+    })
+
+    it('should return "-" when next record has invalid/unknown time', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Valid Task',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Invalid Next',
+          start_time: 'invalid', // parseTimeString -> null
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      const duration = composable.calculateDuration(taskRecords.value[0]!)
+      expect(duration).toBe('-')
+    })
+
+    it('should return "0m" for last task when start time is after current time (today)', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Future Today',
+          start_time: '11:30', // 690 > mocked now 630
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      const duration = composable.calculateDuration(taskRecords.value[0]!)
+      expect(duration).toBe('0m')
+    })
   })
 
   describe('getTotalMinutesTracked', () => {
@@ -453,6 +519,67 @@ describe('useDurationCalculations', () => {
 
       const breakdown = composable.getCategoryBreakdown()
       expect(breakdown).toHaveLength(0)
+    })
+
+    it('should keep invalid times at the end even with multiple invalid entries', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Valid',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Invalid A',
+          start_time: 'oops',
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 3,
+          category_name: 'Work',
+          task_name: 'Invalid B',
+          start_time: 'bad',
+          date: '2024-01-15',
+          task_type: 'normal'
+        }
+      ]
+
+      const sorted = composable.sortedTaskRecords.value
+      expect(sorted[0]!.task_name).toBe('Valid')
+      // Ensure both invalid entries are at the end (order among them is not important)
+      const lastTwo = sorted.slice(-2).map(r => r.task_name)
+      expect(new Set(lastTwo)).toEqual(new Set(['Invalid A', 'Invalid B']))
+    })
+  })
+
+  describe('edge cases for totals and breakdowns', () => {
+    it('getTotalMinutesTracked should skip normal tasks with empty start_time', () => {
+      taskRecords.value = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'No Start',
+          start_time: '', // filtered out of sorted list -> nextRecord undefined
+          date: '2024-01-15',
+          task_type: 'normal'
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'End',
+          start_time: '10:00',
+          date: '2024-01-15',
+          task_type: 'end'
+        }
+      ]
+
+      const total = composable.getTotalMinutesTracked()
+      expect(total).toBe(0)
     })
   })
 })
