@@ -265,7 +265,7 @@ const inlineListbox = useListboxNavigation({
 // Highlighting system for task changes
 const highlightedTasks = ref<Set<number>>(new Set())
 const fadingTasks = ref<Set<number>>(new Set())
-const highlightTimers = ref<Map<number, NodeJS.Timeout>>(new Map())
+const highlightTimers = ref<Map<number, number>>(new Map())
 
 // Method to highlight a task (for adds/modifications)
 const highlightTask = (taskId: number) => {
