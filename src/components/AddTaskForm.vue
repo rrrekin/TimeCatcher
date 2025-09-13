@@ -172,7 +172,10 @@ const formListbox = useListboxNavigation({
 
 // Computed properties
 const isAddTaskValid = computed(() => {
-  return !!(props.newTask.name.trim() && props.newTask.categoryId)
+  // Accept categoryId 0 as valid; only null/undefined are invalid
+  const hasName = props.newTask.name.trim().length > 0
+  const hasCategory = props.newTask.categoryId != null
+  return hasName && hasCategory
 })
 
 // Methods

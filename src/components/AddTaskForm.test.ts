@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import AddTaskForm from './AddTaskForm.vue'
 import type { Category } from '@/shared/types'
@@ -30,6 +30,15 @@ describe('AddTaskForm Component', () => {
         getSelectedCategoryName: vi.fn(() => 'Work')
       }
     })
+  })
+
+  afterEach(() => {
+    // Ensure wrapper is properly cleaned up between tests to avoid DOM leakage
+    if (wrapper) {
+      wrapper.unmount()
+      // Reset reference to help GC and prevent accidental reuse
+      wrapper = null as unknown as VueWrapper<any>
+    }
   })
 
   describe('Basic Rendering', () => {
@@ -261,7 +270,7 @@ describe('AddTaskForm Component', () => {
     it('should not emit addTask when add button is clicked but form is invalid', async () => {
       await wrapper.setProps({
         newTask: {
-          categoryId: 0, // Invalid category
+          categoryId: null, // Invalid category (null/undefined only)
           name: 'Test Task',
           time: '10:00'
         }

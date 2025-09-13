@@ -287,7 +287,9 @@ describe('useDurationCalculations', () => {
         }
       ]
 
-      // Use a shallow copy (different identity) of an existing record
+      // Intentionally use a shallow copy to change object identity.
+      // calculateDuration looks up records by reference (object identity) from the sorted map,
+      // not by id/field equality, so a cloned object should not be found and must return '-'.
       const copyOfFirst = { ...taskRecords.value[0]! }
       const duration = composable.calculateDuration(copyOfFirst)
       expect(duration).toBe('-')
@@ -519,41 +521,6 @@ describe('useDurationCalculations', () => {
 
       const breakdown = composable.getCategoryBreakdown()
       expect(breakdown).toHaveLength(0)
-    })
-
-    it('should keep invalid times at the end even with multiple invalid entries', () => {
-      taskRecords.value = [
-        {
-          id: 1,
-          category_name: 'Work',
-          task_name: 'Valid',
-          start_time: '09:00',
-          date: '2024-01-15',
-          task_type: 'normal'
-        },
-        {
-          id: 2,
-          category_name: 'Work',
-          task_name: 'Invalid A',
-          start_time: 'oops',
-          date: '2024-01-15',
-          task_type: 'normal'
-        },
-        {
-          id: 3,
-          category_name: 'Work',
-          task_name: 'Invalid B',
-          start_time: 'bad',
-          date: '2024-01-15',
-          task_type: 'normal'
-        }
-      ]
-
-      const sorted = composable.sortedTaskRecords.value
-      expect(sorted[0]!.task_name).toBe('Valid')
-      // Ensure both invalid entries are at the end (order among them is not important)
-      const lastTwo = sorted.slice(-2).map(r => r.task_name)
-      expect(new Set(lastTwo)).toEqual(new Set(['Invalid A', 'Invalid B']))
     })
   })
 

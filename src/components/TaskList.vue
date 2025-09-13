@@ -109,8 +109,8 @@
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
-              :pattern="!record.start_time.trim() ? '^([01]?\d|2[0-3]):([0-5]?\d)$' : ''"
-              :maxlength="!record.start_time.trim() ? 5 : 0"
+              :pattern="!record.start_time.trim() ? '^([01]?\d|2[0-3]):([0-5]\d)$' : ''"
+              :maxlength="!record.start_time.trim() ? 5 : null"
             />
           </td>
           <!-- Duration column (visibility based on task type) -->
