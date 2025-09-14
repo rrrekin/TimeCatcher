@@ -200,18 +200,39 @@ ipcMain.handle('app:get-version', async () => {
 // External URL handler
 ipcMain.handle('app:open-external-url', async (_, url: string) => {
   try {
-    // Basic URL validation
+    // Basic validation
     if (!url || typeof url !== 'string') {
       throw new Error('Invalid URL provided')
     }
 
-    // Ensure URL has protocol
-    const urlToOpen = url.match(/^https?:\/\//) ? url : `https://${url}`
+    const trimmedUrl = url.trim()
+    if (!trimmedUrl) {
+      throw new Error('Empty URL provided')
+    }
 
-    // Additional validation using URL constructor
-    new URL(urlToOpen)
+    // Parse and validate URL
+    const parsedUrl = new URL(trimmedUrl)
 
-    await shell.openExternal(urlToOpen)
+    // Only allow http and https protocols
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('Only HTTP and HTTPS URLs are allowed')
+    }
+
+    // Security checks - prevent local network access
+    if (
+      parsedUrl.hostname === 'localhost' ||
+      parsedUrl.hostname === '127.0.0.1' ||
+      parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+    ) {
+      throw new Error('Local network URLs are not allowed')
+    }
+
+    // Ensure valid hostname
+    if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+      throw new Error('Invalid hostname')
+    }
+
+    await shell.openExternal(trimmedUrl)
     return true
   } catch (error) {
     console.error('Failed to open external URL:', error)

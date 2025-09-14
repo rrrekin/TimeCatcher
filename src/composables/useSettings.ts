@@ -17,15 +17,29 @@ export function useSettings() {
   let usedModernAPI = false
 
   /**
-   * Validate URL format
+   * Validate URL format - expects pre-trimmed input
    */
   const isValidUrl = (url: string): boolean => {
-    const trimmedUrl = url.trim()
-    if (!trimmedUrl) return true // Empty URL is allowed
+    if (!url) return false // Empty URL is not allowed
     try {
-      // Add https:// if no protocol specified
-      const urlToTest = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : `https://${trimmedUrl}`
-      new URL(urlToTest)
+      const parsedUrl = new URL(url)
+      // Only allow http and https protocols
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return false
+      }
+      // Additional security checks for shell.openExternal
+      // Prevent localhost/local network access for security
+      if (
+        parsedUrl.hostname === 'localhost' ||
+        parsedUrl.hostname === '127.0.0.1' ||
+        parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+      ) {
+        return false
+      }
+      // Ensure hostname exists and is not just an IP without proper validation
+      if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+        return false
+      }
       return true
     } catch {
       return false
@@ -143,8 +157,9 @@ export function useSettings() {
 
     // Validate and update reporting app settings
     reportingAppButtonText.value = tempReportingAppButtonText.value.trim() || 'Tempo'
-    if (isValidUrl(tempReportingAppUrl.value)) {
-      reportingAppUrl.value = tempReportingAppUrl.value.trim()
+    const trimmedUrl = tempReportingAppUrl.value.trim()
+    if (!trimmedUrl || isValidUrl(trimmedUrl)) {
+      reportingAppUrl.value = trimmedUrl
     }
 
     applyTheme(currentTheme.value)

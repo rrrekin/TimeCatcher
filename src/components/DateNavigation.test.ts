@@ -139,7 +139,7 @@ describe('DateNavigation', () => {
     })
 
     it('handles different URL formats', () => {
-      const testUrls = ['https://example.com', 'http://localhost:3000', 'https://my-app.domain.com/path']
+      const testUrls = ['https://example.com', 'http://public-api.com:3000', 'https://my-app.domain.com/path']
 
       testUrls.forEach(url => {
         const wrapper = mount(DateNavigation, {
@@ -150,8 +150,12 @@ describe('DateNavigation', () => {
           }
         })
 
-        const reportingBtn = wrapper.find('.reporting-app-btn')
-        expect(reportingBtn.exists()).toBe(true)
+        try {
+          const reportingBtn = wrapper.find('.reporting-app-btn')
+          expect(reportingBtn.exists()).toBe(true)
+        } finally {
+          wrapper.unmount()
+        }
       })
     })
 

@@ -382,16 +382,34 @@ const openSetup = async () => {
 }
 
 const openReportingApp = async () => {
-  if (!reportingAppUrl.value.trim()) {
+  const trimmedUrl = reportingAppUrl.value.trim()
+  if (!trimmedUrl) {
     showToastMessage('No reporting application URL configured', 'error')
     return
   }
 
+  // Validate URL before attempting to open
+  if (!isValidUrl(trimmedUrl)) {
+    console.error('Invalid reporting app URL:', trimmedUrl)
+    showToastMessage('Invalid reporting application URL configured', 'error')
+    return
+  }
+
+  // Runtime/IPC guards
+  if (!window?.electronAPI || typeof window.electronAPI.openExternalUrl !== 'function') {
+    console.error('electronAPI.openExternalUrl is unavailable')
+    showToastMessage('Reporting application cannot be opened (IPC unavailable)', 'error')
+    return
+  }
+
   try {
-    const success = await window.electronAPI?.openExternalUrl(reportingAppUrl.value)
-    if (success) {
-      showToastMessage(`Opened ${reportingAppButtonText.value}`, 'success')
+    const success = await window.electronAPI.openExternalUrl(trimmedUrl)
+    if (!success) {
+      console.error('openExternalUrl returned falsy result for URL:', trimmedUrl)
+      showToastMessage('Failed to open reporting application', 'error')
+      return
     }
+    showToastMessage(`Opened ${reportingAppButtonText.value}`, 'success')
   } catch (error) {
     console.error('Failed to open reporting app:', error)
     showToastMessage('Failed to open reporting application', 'error')

@@ -177,14 +177,14 @@ describe('useSettings', () => {
   })
 
   describe('isValidUrl function', () => {
-    it('should return true for empty string', () => {
+    it('should return false for empty string', () => {
       const { isValidUrl } = useSettings()
-      expect(isValidUrl('')).toBe(true)
+      expect(isValidUrl('')).toBe(false)
     })
 
-    it('should return true for whitespace-only string', () => {
+    it('should return false for whitespace-only string', () => {
       const { isValidUrl } = useSettings()
-      expect(isValidUrl('   ')).toBe(true)
+      expect(isValidUrl('   ')).toBe(false)
     })
 
     it('should return true for valid HTTPS URLs', () => {
@@ -204,45 +204,51 @@ describe('useSettings', () => {
 
     it('should return true for valid HTTP URLs', () => {
       const { isValidUrl } = useSettings()
-      const validUrls = ['http://example.com', 'http://localhost:3000', 'http://127.0.0.1:8080']
+      const validUrls = ['http://example.com', 'http://public-domain.org', 'http://api.service.com']
 
       validUrls.forEach(url => {
         expect(isValidUrl(url)).toBe(true)
       })
     })
 
-    it('should return true for URLs without protocol (adds https:// automatically)', () => {
-      const { isValidUrl } = useSettings()
-      const validUrls = ['example.com', 'www.example.com', 'subdomain.example.com', 'localhost:3000']
-
-      validUrls.forEach(url => {
-        expect(isValidUrl(url)).toBe(true)
-      })
-    })
-
-    it('should return false for invalid URLs', () => {
+    it('should return false for URLs without protocol and local URLs', () => {
       const { isValidUrl } = useSettings()
       const invalidUrls = [
-        '://missing-protocol',
-        'http://',
-        'https://',
-        'javascript:alert(1)' // becomes https://javascript:alert(1) which is invalid
+        'example.com',
+        'www.example.com',
+        'subdomain.example.com', // no protocol
+        'http://localhost:3000',
+        'https://localhost',
+        'http://127.0.0.1:8080', // local URLs
+        'http://192.168.1.1',
+        'https://10.0.0.1',
+        'http://172.16.0.1' // private network IPs
       ]
 
       invalidUrls.forEach(url => {
         expect(isValidUrl(url)).toBe(false)
       })
+    })
 
-      // These are actually valid according to URL constructor
-      const actuallyValidUrls = [
-        'not-a-url', // becomes https://not-a-url which is valid
-        'ftp://example.com', // valid URL with ftp protocol
-        'example', // becomes https://example which is valid
-        '...' // becomes https://... which is valid
+    it('should return false for invalid URLs and dangerous protocols', () => {
+      const { isValidUrl } = useSettings()
+      const invalidUrls = [
+        '://missing-protocol',
+        'http://',
+        'https://',
+        'javascript:alert(1)', // dangerous protocol
+        'file:///etc/passwd', // dangerous protocol
+        'data:text/html,<script>alert(1)</script>', // dangerous protocol
+        'ftp://example.com', // non-http/https protocol
+        'not-a-url', // no protocol
+        'example', // no protocol
+        '...', // no protocol
+        'http://a', // hostname too short
+        'https://ab' // hostname too short
       ]
 
-      actuallyValidUrls.forEach(url => {
-        expect(isValidUrl(url)).toBe(true)
+      invalidUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(false)
       })
     })
 
@@ -382,9 +388,9 @@ describe('useSettings', () => {
 
       const testCases = [
         { input: 'https://valid.com', expected: 'https://valid.com', shouldSave: true },
-        { input: 'valid.com', expected: 'valid.com', shouldSave: true },
-        { input: '', expected: '', shouldSave: true },
-        { input: '://missing-protocol', expected: '', shouldSave: false }
+        { input: '', expected: '', shouldSave: true }, // empty URLs are explicitly allowed in saveSettings
+        { input: '://missing-protocol', expected: '', shouldSave: false },
+        { input: 'valid.com', expected: '', shouldSave: false } // no protocol
       ]
 
       testCases.forEach(({ input, expected, shouldSave }) => {
