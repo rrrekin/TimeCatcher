@@ -12,15 +12,22 @@ on:
         required: false
         type: string
       draft:
-        description: Create release as draft
+        description: Create release as draft (default false)
         type: boolean
-        default: true
+        default: false
         required: true
       prerelease:
         description: Mark as prerelease
         type: boolean
         default: false
         required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: manual-release-${{ github.ref || github.workflow }}
+  cancel-in-progress: true
 
 env:
   NODE_VERSION: '24'
@@ -86,22 +93,35 @@ jobs:
         id: version
         shell: bash
         run: |
+          set -euo pipefail
           PKG_VERSION=$(node -p "require('./package.json').version")
           INPUT_TAG="${{ github.event.inputs.release_tag }}"
-          if [ -n "$INPUT_TAG" ]; then
-            TAG="$INPUT_TAG"
+          # Validate provided tag (must look like v<semver>)
+          if [ -n "${INPUT_TAG}" ]; then
+            if [[ "${INPUT_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.+-]+)?$ ]]; then
+              TAG="${INPUT_TAG}"
+            else
+              echo "Error: Invalid tag format: '${INPUT_TAG}'. Expected 'v<major>.<minor>.<patch>' optionally with pre-release/build metadata." >&2
+              exit 1
+            fi
           else
-            TAG="v$PKG_VERSION"
+            TAG="v${PKG_VERSION}"
           fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          # release name
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+          # Resolve release name: explicit input > derived from tag > from package.json
           INPUT_NAME="${{ github.event.inputs.release_name }}"
-          if [ -n "$INPUT_NAME" ]; then
-            NAME="$INPUT_NAME"
+          if [ -n "${INPUT_NAME}" ]; then
+            NAME="${INPUT_NAME}"
           else
-            NAME="TimeCatcher $PKG_VERSION"
+            if [ -n "${INPUT_TAG}" ]; then
+              VERSION_FROM_TAG="${TAG#v}"
+              NAME="TimeCatcher ${VERSION_FROM_TAG}"
+            else
+              NAME="TimeCatcher ${PKG_VERSION}"
+            fi
           fi
-          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Determine previous tag
         id: prev
@@ -144,9 +164,6 @@ jobs:
             git log --no-merges --pretty=format:'- %s (%h) by %an' $RANGE
             echo
           } > CHANGELOG.md
-          echo 'changelog<<EOF' >> $GITHUB_OUTPUT
-          cat CHANGELOG.md >> $GITHUB_OUTPUT
-          echo 'EOF' >> $GITHUB_OUTPUT
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -161,7 +178,7 @@ jobs:
           name: ${{ steps.version.outputs.name }}
           draft: ${{ github.event.inputs.draft == 'true' }}
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          body_path: CHANGELOG.md
           files: |
             release_artifacts/**
         env:
