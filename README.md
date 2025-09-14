@@ -1,5 +1,15 @@
 # TimeCatcher
 
+---
+
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/rrrekin/TimeCatcher?utm_source=oss&utm_medium=github&utm_campaign=rrrekin%2FTimeCatcher&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+![License](https://img.shields.io/github/license/rrrekin/TimeCatcher)
+![GitHub issues](https://img.shields.io/github/issues/rrrekin/TimeCatcher)
+![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
+![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
+![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)
+[![codecov](https://codecov.io/gh/rrrekin/TimeCatcher/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rrrekin/TimeCatcher)
+
 Context-switch time tracking, my way
 
 ## About This Project
@@ -59,7 +69,7 @@ Schema and IPC APIs are summarized in [CLAUDE.md](./CLAUDE.md).
 
 ## CI, Coverage & Versioning
 
-- CI runs tests and build on Node 22 and 24; coverage uploaded to Codecov
+- CI runs tests and build on Node 22 and 24. Coverage collection, threshold enforcement, and Codecov upload run only in the Node 22 job (see `.github/workflows/ci.yml`, gated by `matrix.node-version == 22`).
 - Changed-files coverage thresholds enforced: lines 80%, branches 85%, functions 75%, statements 80% (see [docs/BRANCH_PROTECTION_SETUP.md](./docs/BRANCH_PROTECTION_SETUP.md))
 - Semantic versioning with an automated “version bump” workflow based on PR titles; details in [docs/VERSIONING.md](./docs/VERSIONING.md)
 
@@ -71,13 +81,3 @@ Schema and IPC APIs are summarized in [CLAUDE.md](./CLAUDE.md).
 - Branch protection and coverage: [docs/BRANCH_PROTECTION_SETUP.md](./docs/BRANCH_PROTECTION_SETUP.md)
 - Line endings policy: [docs/LINE_ENDINGS.md](./docs/LINE_ENDINGS.md)
 - Versioning workflow: [docs/VERSIONING.md](./docs/VERSIONING.md)
-
----
-
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/rrrekin/TimeCatcher?utm_source=oss&utm_medium=github&utm_campaign=rrrekin%2FTimeCatcher&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
-![License](https://img.shields.io/github/license/rrrekin/TimeCatcher)
-![GitHub issues](https://img.shields.io/github/issues/rrrekin/TimeCatcher)
-![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
-![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
-![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)
-[![codecov](https://codecov.io/gh/rrrekin/TimeCatcher/branch/main/graph/badge.svg)](https://app.codecov.io/gh/rrrekin/TimeCatcher)
