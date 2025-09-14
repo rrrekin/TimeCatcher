@@ -274,7 +274,7 @@ describe('useSettings', () => {
       expect(isValidUrl('   ')).toBe(false)
     })
 
-    it('should block IPv6 loopback, link-local, and 0.0.0.0', () => {
+    it('should block IPv6 loopback, link-local, 0.0.0.0, 127/8, IPv4-mapped IPv6, and trailing-dot localhost', () => {
       const { isValidUrl } = useSettings()
 
       const blocked = [
@@ -283,7 +283,15 @@ describe('useSettings', () => {
         'http://[fe80::1]/',
         'https://[fe80::abcd]/',
         'http://0.0.0.0',
-        'https://0.0.0.0'
+        'https://0.0.0.0',
+        // 127/8 range examples
+        'http://127.0.0.1',
+        'http://127.255.255.255',
+        // IPv4-mapped IPv6
+        'http://[::ffff:127.0.0.1]/',
+        // trailing-dot localhost variants
+        'http://localhost.',
+        'http://localhost./'
       ]
 
       blocked.forEach(url => {

@@ -32,20 +32,24 @@ export function useSettings() {
 
       // Additional security checks for shell.openExternal
       // Prevent localhost/local network access for security
-      // Normalize hostname and strip IPv6 square brackets if present
+      // Normalize hostname and strip IPv6 square brackets if present; also remove trailing dots
       let hostname = (parsedUrl.hostname || '').toLowerCase()
       if (hostname.startsWith('[') && hostname.endsWith(']')) {
         hostname = hostname.slice(1, -1)
       }
+      // Remove any trailing dots (e.g., 'localhost.' -> 'localhost')
+      hostname = hostname.replace(/\.+$/, '')
       if (
         hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
+        /^127\./.test(hostname) ||
         hostname === '0.0.0.0' ||
         /^192\.168\./.test(hostname) ||
         /^10\./.test(hostname) ||
         /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
         hostname === '::1' ||
-        /^fe(8|9|a|b)/i.test(hostname) // IPv6 link-local fe80::/10 family
+        /^fe(8|9|a|b)/i.test(hostname) || // IPv6 link-local fe80::/10 family
+        /^::ffff:/i.test(hostname) || // IPv4-mapped IPv6 notation
+        /127\.0\.0\.1$/.test(hostname) // Catch mapped or literal loopback suffix
       ) {
         return false
       }
