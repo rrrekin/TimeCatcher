@@ -274,6 +274,13 @@ Use other MCPs if this can be useful for a specific task or step.
 
 Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
 
+## Agent Coding Checklist
+
+- Tests: Always import `afterEach`, unmount and null wrappers to avoid DOM leakage. Use `vi.useFakeTimers()` + `vi.setSystemTime()` for time logic. Keep sorting tests under `describe('sortedTaskRecords')`. Assert current regex and `maxlength` omission. Run `npm run test:coverage:check` on Node 20/22.
+- IPC/runtime guards: Check `window.electronAPI` and method presence; show user-friendly errors if missing.
+- DOM timing: After opening dropdowns/toggles, `await nextTick()` before focusing/positioning.
+- General: Prefer explicit refs/props over implicit DOM traversal; centralize shared regex/time helpers to avoid drift.
+
 ## Versioning System
 
 TimeCatcher uses semi-automatic semantic versioning with PR-based automatic bumps. See docs/VERSIONING.md for complete workflow details, npm commands, and release processes.

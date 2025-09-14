@@ -110,7 +110,7 @@
               @keydown.esc="handleTimeEscapeCancel($event, record)"
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
               :pattern="!record.start_time.trim() ? '^([01]?\d|2[0-3]):([0-5]\d)$' : ''"
-              :maxlength="!record.start_time.trim() ? 5 : null"
+              :maxlength="!record.start_time.trim() ? 5 : undefined"
             />
           </td>
           <!-- Duration column (visibility based on task type) -->
