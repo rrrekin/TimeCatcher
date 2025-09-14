@@ -36,7 +36,9 @@
           :class="{
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === TASK_TYPE_PAUSE,
-            'end-task-row': record.task_type === TASK_TYPE_END
+            'end-task-row': record.task_type === TASK_TYPE_END,
+            'highlighted-task': highlightedTasks.has(record.id),
+            fading: fadingTasks.has(record.id)
           }"
         >
           <!-- Special task layout: merged category + task columns -->
@@ -107,8 +109,8 @@
               @keydown.enter="$emit('handleEnter', record.id, 'start_time', $event)"
               @keydown.esc="handleTimeEscapeCancel($event, record)"
               :class="['editable-cell', 'time-input', { 'empty-time': !record.start_time.trim() }]"
-              :pattern="!record.start_time.trim() ? '^([01]?\\\\d|2[0-3]):([0-5]?\\\\d)$' : ''"
-              :maxlength="!record.start_time.trim() ? 5 : 0"
+              :pattern="!record.start_time.trim() ? '^([01]?\d|2[0-3]):([0-5]\d)$' : ''"
+              :maxlength="!record.start_time.trim() ? 5 : undefined"
             />
           </td>
           <!-- Duration column (visibility based on task type) -->
@@ -136,115 +138,31 @@
             </button>
           </td>
         </tr>
-
-        <!-- Add task form row (always visible at bottom) -->
-        <tr class="add-task-row">
-          <td>
-            <div class="custom-dropdown table-dropdown add-task-dropdown" :class="{ open: showFormCategoryDropdown }">
-              <button
-                type="button"
-                class="dropdown-trigger"
-                :id="formDropdownTriggerId"
-                @click="handleFormDropdownToggle"
-                :aria-expanded="showFormCategoryDropdown"
-                :aria-controls="formDropdownMenuId"
-                aria-haspopup="listbox"
-              >
-                <span class="dropdown-value">{{ getSelectedCategoryName() || 'Select category' }}</span>
-                <span class="dropdown-arrow">▼</span>
-              </button>
-              <div
-                v-if="showFormCategoryDropdown"
-                class="dropdown-menu"
-                role="listbox"
-                :id="formDropdownMenuId"
-                :aria-labelledby="formDropdownTriggerId"
-                @keydown="handleFormDropdownKeydown"
-                tabindex="-1"
-              >
-                <div
-                  v-for="(category, index) in categories"
-                  :key="category.id ?? `form-cat-${category.name}-${index}`"
-                  class="dropdown-item"
-                  role="option"
-                  :class="{ selected: newTask.categoryId === category.id }"
-                  :aria-selected="newTask.categoryId === category.id"
-                  :tabindex="formListbox.getActiveIndex('form') === index ? '0' : '-1'"
-                  :data-option-index="index"
-                  @click="handleFormCategorySelection(category)"
-                >
-                  {{ category.name }}
-                </div>
-              </div>
-            </div>
-          </td>
-          <td>
-            <input
-              type="text"
-              :value="newTask.name"
-              @input="$emit('updateNewTask', { ...newTask, name: ($event.target as HTMLInputElement).value })"
-              @keydown.enter.prevent="onAddTaskEnter"
-              class="editable-cell add-task-input"
-              placeholder="Enter task name..."
-            />
-          </td>
-          <td>
-            <input
-              type="time"
-              step="60"
-              :value="newTask.time"
-              @input="$emit('updateNewTask', { ...newTask, time: ($event.target as HTMLInputElement).value })"
-              @keydown.enter.prevent="onAddTaskEnter"
-              :class="['editable-cell', 'time-input', { 'empty-time': !newTask.time.trim() }]"
-            />
-          </td>
-          <td class="duration-cell">-</td>
-          <td class="actions-cell">
-            <button
-              class="action-btn add-btn primary-add-btn"
-              @click="handleAddTask"
-              :disabled="!isAddTaskValid"
-              :aria-disabled="!isAddTaskValid"
-              :title="isAddTaskValid ? 'Add new task' : 'Please fill in all required fields'"
-              :aria-label="isAddTaskValid ? 'Add task' : 'Add task (disabled - missing required fields)'"
-            >
-              + Add Task
-            </button>
-          </td>
-        </tr>
       </tbody>
     </table>
-
-    <!-- Special task buttons -->
-    <div class="special-task-buttons">
-      <button type="button" class="special-task-btn pause-btn" @click="$emit('addPauseTask')">⏸ Pause</button>
-      <button
-        type="button"
-        class="special-task-btn end-btn"
-        @click="$emit('addEndTask')"
-        :disabled="hasEndTaskForSelectedDate"
-        :aria-disabled="hasEndTaskForSelectedDate"
-        :title="hasEndTaskForSelectedDate ? 'End task already exists for this day' : 'Add end task for this day'"
-      >
-        ⏹ End
-      </button>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { type PropType, ref, nextTick, computed, type Ref } from 'vue'
+import { type PropType, ref, nextTick, computed, type Ref, watch, onUnmounted, toRaw, reactive } from 'vue'
 import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
+
+// Helper for requestAnimationFrame with fallback for test environments
+const safeRequestAnimationFrame = (callback: FrameRequestCallback): void => {
+  if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+    window.requestAnimationFrame(callback)
+  } else {
+    setTimeout(callback, 0)
+  }
+}
 
 // Generate unique component instance ID for ARIA references
 const componentId =
   typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
     ? `tasklist-${globalThis.crypto.randomUUID()}`
     : `tasklist-${Date.now()}-${Math.floor(Math.random() * 10000)}`
-const formDropdownMenuId = `form-dropdown-menu-${componentId}`
-const formDropdownTriggerId = `form-dropdown-trigger-${componentId}`
 
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
@@ -296,18 +214,6 @@ const props = defineProps({
     type: Object as PropType<{ [key: number]: boolean }>,
     required: true
   },
-  showFormCategoryDropdown: {
-    type: Boolean,
-    required: true
-  },
-  newTask: {
-    type: Object as PropType<{
-      categoryId: number | null
-      name: string
-      time: string
-    }>,
-    required: true
-  },
   // Function props
   calculateDuration: {
     type: Function as PropType<(record: TaskRecordWithId) => string>,
@@ -318,10 +224,6 @@ const props = defineProps({
     required: true
   },
   getCurrentTime: {
-    type: Function as PropType<() => string>,
-    required: true
-  },
-  getSelectedCategoryName: {
     type: Function as PropType<() => string>,
     required: true
   },
@@ -339,12 +241,6 @@ const emit = defineEmits<{
   handleEnter: [recordId: number, field: string, event: Event]
   replayTask: [record: TaskRecordWithId]
   confirmDeleteTask: [record: TaskRecordWithId]
-  toggleFormDropdown: []
-  selectFormCategory: [category: Category]
-  updateNewTask: [newTask: { categoryId: number | null; name: string; time: string }]
-  addTask: []
-  addPauseTask: []
-  addEndTask: []
 }>()
 
 // Expose scrollToBottom method to parent
@@ -354,15 +250,6 @@ defineExpose({
 
 // Convert props.categories to ref for composable
 const categoriesRef = computed(() => props.categories)
-
-// Validation for add task form
-const isAddTaskValid = computed(() => {
-  return (
-    props.newTask.categoryId != null && // Category must be selected
-    props.newTask.name.trim().length > 0 // Task name must not be empty/whitespace
-    // Time is optional - if empty, current time will be used
-  )
-})
 
 // Inline dropdown navigation composable
 const inlineListbox = useListboxNavigation({
@@ -384,20 +271,86 @@ const inlineListbox = useListboxNavigation({
     `#${componentId}-dropdown-menu-${recordId} [data-record-id="${recordId}"][data-index="${optionIndex}"]`
 })
 
-// Form dropdown navigation composable
-const formListbox = useListboxNavigation({
-  containerRef: taskTableRef,
-  items: categoriesRef,
-  onSelect: (category: Category, index: number) => {
-    handleFormCategorySelection(category)
+// Highlighting system for task changes (reactive Set/Map to track add/delete)
+const highlightedTasks = reactive(new Set<number>())
+const fadingTasks = reactive(new Set<number>())
+const highlightTimers = reactive(new Map<number, ReturnType<typeof setTimeout>>())
+
+// Method to highlight a task (for adds/modifications)
+const highlightTask = (taskId: number) => {
+  // Clear any existing timer for this task
+  const existingTimer = highlightTimers.get(taskId)
+  if (existingTimer) {
+    clearTimeout(existingTimer)
+  }
+
+  // Remove from fading set if it's there and add to highlighted
+  fadingTasks.delete(taskId)
+  highlightedTasks.add(taskId)
+
+  // Start fade immediately using requestAnimationFrame to ensure DOM update
+  safeRequestAnimationFrame(() => {
+    fadingTasks.add(taskId)
+  })
+
+  // Set timer to remove highlight after 15 seconds
+  const timer = setTimeout(() => {
+    highlightedTasks.delete(taskId)
+    fadingTasks.delete(taskId)
+    highlightTimers.delete(taskId)
+  }, 15000)
+
+  highlightTimers.set(taskId, timer)
+}
+
+// Watch for task record changes to highlight new/modified tasks
+const previousTasksMap = ref<Map<number, TaskRecordWithId>>(new Map())
+
+watch(
+  () => props.taskRecords,
+  newRecords => {
+    const plainNewRecords = toRaw(newRecords)
+    if (previousTasksMap.value.size === 0) {
+      // Initial load - don't highlight anything
+      previousTasksMap.value = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
+      return
+    }
+
+    const newRecordsMap = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
+    const addedTaskIds = new Set<number>()
+    const modifiedTaskIds = new Set<number>()
+
+    // Find added and modified tasks
+    for (const [id, newTask] of newRecordsMap.entries()) {
+      const oldTask = previousTasksMap.value.get(id)
+      if (!oldTask) {
+        addedTaskIds.add(id)
+      } else {
+        // Compare plain objects to detect modifications
+        if (
+          oldTask.task_name !== newTask.task_name ||
+          oldTask.category_name !== newTask.category_name ||
+          oldTask.start_time !== newTask.start_time
+        ) {
+          modifiedTaskIds.add(id)
+        }
+      }
+    }
+
+    // Highlight added and modified tasks
+    ;[...addedTaskIds, ...modifiedTaskIds].forEach(taskId => {
+      highlightTask(taskId)
+    })
+
+    // Update previous tasks snapshot
+    previousTasksMap.value = newRecordsMap
   },
-  onClose: async () => {
-    emit('toggleFormDropdown')
-    await nextTick()
-    focusFormTriggerButton()
-  },
-  getOptionSelector: (contextId: string | number, optionIndex: number) =>
-    `#${formDropdownMenuId} [data-option-index="${optionIndex}"]`
+  { deep: true }
+)
+
+// Cleanup timers on unmount
+onUnmounted(() => {
+  highlightTimers.forEach(timer => clearTimeout(timer))
 })
 
 // Keyboard handling for inline dropdown navigation
@@ -422,13 +375,10 @@ const handleInlineDropdownToggle = async (recordId: number, categoryName: string
 
 // Unified category selection handler
 const handleCategorySelection = async (recordId: number, categoryName: string) => {
-  // 1. Emit the category selection
+  // 1. Emit the category selection (parent handles closing dropdown)
   emit('selectInlineCategory', recordId, categoryName)
 
-  // 2. Close the dropdown
-  emit('toggleInlineDropdown', recordId)
-
-  // 3. Return focus to the trigger button
+  // 2. Return focus to the trigger button
   await nextTick()
   focusTriggerButton(recordId)
 }
@@ -439,73 +389,6 @@ const focusTriggerButton = (recordId: number) => {
     `[aria-controls="${componentId}-dropdown-menu-${recordId}"]`
   )
   button?.focus()
-}
-
-// Form dropdown keyboard handling
-const handleFormDropdownKeydown = (event: KeyboardEvent) => {
-  formListbox.handleKeydown(event, 'form')
-}
-
-// Form category selection handler
-const handleFormCategorySelection = async (category: Category) => {
-  // 1. Emit the category selection
-  emit('selectFormCategory', category)
-
-  // 2. Close the dropdown
-  emit('toggleFormDropdown')
-
-  // 3. Return focus to the trigger button
-  await nextTick()
-  focusFormTriggerButton()
-}
-
-// Form dropdown trigger focus helper
-const focusFormTriggerButton = () => {
-  const button = taskTableRef.value?.querySelector<HTMLButtonElement>(`[aria-controls="${formDropdownMenuId}"]`)
-  button?.focus()
-}
-
-// Handle form dropdown toggle - only initialize when opening
-const handleFormDropdownToggle = async () => {
-  // Capture pre-toggle intent to avoid race condition
-  const willOpen = !props.showFormCategoryDropdown
-
-  // Emit the toggle
-  emit('toggleFormDropdown')
-
-  // Only initialize when opening and categories exist
-  if (willOpen) {
-    // Guard against empty/loading categories
-    if (!props.categories || props.categories.length === 0) {
-      return
-    }
-
-    await nextTick()
-    initializeFormActiveOption()
-  }
-}
-
-// Initialize form dropdown active option when opened
-const initializeFormActiveOption = () => {
-  const selectedIndex = props.categories.findIndex(cat => cat.id === props.newTask.categoryId)
-  const clampedIndex = Math.max(0, selectedIndex)
-  formListbox.initializeActiveOption('form', clampedIndex)
-}
-
-// Guarded add task handler
-const handleAddTask = () => {
-  // Only emit addTask if form is valid
-  if (isAddTaskValid.value) {
-    emit('addTask')
-  }
-}
-
-// Guarded Enter key handler for add task form
-const onAddTaskEnter = () => {
-  // Only emit addTask if form is valid
-  if (isAddTaskValid.value) {
-    emit('addTask')
-  }
 }
 
 // Initialize active option when dropdown opens
@@ -850,59 +733,6 @@ tr:last-child td {
   transform: none;
 }
 
-/* Add task row */
-.add-task-row {
-  background: var(--bg-secondary);
-}
-
-.add-task-input::placeholder {
-  color: var(--text-muted);
-}
-
-/* Special task buttons */
-.special-task-buttons {
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  justify-content: center;
-}
-
-.special-task-btn {
-  flex: 1;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all var(--transition-fast);
-  color: white;
-}
-
-.pause-btn {
-  background: var(--warning);
-}
-
-.pause-btn:hover {
-  background: var(--warning-hover);
-  transform: translateY(-2px);
-}
-
-.end-btn {
-  background: var(--success);
-}
-
-.end-btn:hover:not(:disabled) {
-  background: var(--success-hover);
-  transform: translateY(-2px);
-}
-
-.end-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* Duration cell specific styles */
 .duration-cell {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
@@ -912,5 +742,15 @@ tr:last-child td {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Task highlighting styles */
+.highlighted-task {
+  background-color: rgba(87, 189, 175, 0.2);
+  transition: background-color 15s ease-out;
+}
+
+.highlighted-task.fading {
+  background-color: transparent;
 }
 </style>

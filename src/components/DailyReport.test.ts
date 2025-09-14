@@ -45,7 +45,6 @@ describe('DailyReport Component', () => {
       totalTime: '3h 30m',
       totalTimeRounded: '3h 30m',
       totalTimeCombined: '3h 30m (3h 30m)',
-      percentage: 70,
       taskSummaries: [
         {
           name: 'Development',
@@ -87,7 +86,6 @@ describe('DailyReport Component', () => {
       totalTime: '1h 30m',
       totalTimeRounded: '1h 30m',
       totalTimeCombined: '1h 30m (1h 30m)',
-      percentage: 30,
       taskSummaries: [
         {
           name: 'Exercise',
@@ -211,15 +209,6 @@ describe('DailyReport Component', () => {
       const categoryTasks = personalCategory.find('.category-tasks')
       expect(categoryTasks.text()).toBe('1 task')
     })
-
-    it('should render progress bar with correct width', () => {
-      const workCategory = wrapper.findAll('.category-section')[0]
-      const progressBar = workCategory.find('.category-progress')
-
-      expect(progressBar.attributes('style')).toContain('width: 70%')
-      expect(progressBar.attributes('aria-valuenow')).toBe('70')
-      expect(progressBar.attributes('aria-valuetext')).toBe('70%')
-    })
   })
 
   describe('Task Summaries', () => {
@@ -247,16 +236,6 @@ describe('DailyReport Component', () => {
   })
 
   describe('Helper Functions', () => {
-    it('should clamp percentages correctly', () => {
-      const vm = wrapper.vm as any
-
-      expect(vm.clampPercent(50)).toBe(50)
-      expect(vm.clampPercent(-10)).toBe(0)
-      expect(vm.clampPercent(150)).toBe(100)
-      expect(vm.clampPercent(0)).toBe(0)
-      expect(vm.clampPercent(100)).toBe(100)
-    })
-
     it('should calculate standard task count correctly', () => {
       const vm = wrapper.vm as any
       expect(vm.standardTaskCount).toBe(3) // 3 normal tasks, 1 pause task
@@ -498,7 +477,6 @@ describe('DailyReport Component', () => {
             totalTime: '2h 15m',
             totalTimeRounded: '2h 15m',
             totalTimeCombined: '2h 15m (2h 15m)',
-            percentage: 70,
             taskSummaries: [
               {
                 name: 'TaskWithoutAppearances',
@@ -758,19 +736,6 @@ describe('DailyReport Component', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have proper ARIA attributes for progress bars', () => {
-      const progressBars = wrapper.findAll('.category-progress')
-
-      progressBars.forEach(bar => {
-        expect(bar.attributes('role')).toBe('progressbar')
-        expect(bar.attributes('aria-valuenow')).toBeDefined()
-        expect(bar.attributes('aria-valuemin')).toBe('0')
-        expect(bar.attributes('aria-valuemax')).toBe('100')
-        expect(bar.attributes('aria-valuetext')).toBeDefined()
-        expect(bar.attributes('aria-labelledby')).toBeDefined()
-      })
-    })
-
     it('should have proper ARIA live region for status', () => {
       const statusEmojis = wrapper.find('.status-emojis')
       expect(statusEmojis.attributes('aria-live')).toBe('polite')

@@ -12,27 +12,34 @@
 
     <div class="layout">
       <div class="task-table-pane" ref="taskTablePaneRef">
-        <TaskList
-          ref="taskListRef"
-          :task-records="taskRecords"
-          :categories="categories"
-          :is-loading-tasks="isLoadingTasks"
-          :display-date="displayDate"
-          :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
-          :show-inline-dropdown="showInlineDropdown"
-          :show-form-category-dropdown="showFormCategoryDropdown"
+        <div class="task-list-container" ref="scrollableContainerRef">
+          <TaskList
+            ref="taskListRef"
+            :task-records="taskRecords"
+            :categories="categories"
+            :is-loading-tasks="isLoadingTasks"
+            :display-date="displayDate"
+            :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
+            :show-inline-dropdown="showInlineDropdown"
+            :calculate-duration="calculateDuration"
+            :convert-to-time-input="convertToTimeInput"
+            :get-current-time="getCurrentTime"
+            :is-special="isSpecial"
+            @toggle-inline-dropdown="toggleInlineDropdown"
+            @select-inline-category="selectInlineCategory"
+            @handle-blur="handleBlur"
+            @handle-enter="handleEnter"
+            @replay-task="replayTask"
+            @confirm-delete-task="confirmDeleteTask"
+          />
+        </div>
+
+        <AddTaskForm
           :new-task="newTask"
-          :calculate-duration="calculateDuration"
-          :convert-to-time-input="convertToTimeInput"
-          :get-current-time="getCurrentTime"
+          :categories="categories"
+          :show-form-category-dropdown="showFormCategoryDropdown"
+          :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
           :get-selected-category-name="getSelectedCategoryName"
-          :is-special="isSpecial"
-          @toggle-inline-dropdown="toggleInlineDropdown"
-          @select-inline-category="selectInlineCategory"
-          @handle-blur="handleBlur"
-          @handle-enter="handleEnter"
-          @replay-task="replayTask"
-          @confirm-delete-task="confirmDeleteTask"
           @toggle-form-dropdown="toggleFormDropdown"
           @select-form-category="selectFormCategory"
           @update-new-task="updateNewTask"
@@ -154,6 +161,7 @@ import { formatDateString, toYMDLocal as toYMDLocalUtil } from '@/utils/dateUtil
 import { formatDurationMinutes, parseTimeString, getLastTaskEndTime } from '@/utils/timeUtils'
 import DateNavigation from '@/components/DateNavigation.vue'
 import TaskList from '@/components/TaskList.vue'
+import AddTaskForm from '@/components/AddTaskForm.vue'
 import DailyReport from '@/components/DailyReport.vue'
 import SetupModal from '@/components/SetupModal.vue'
 
@@ -275,6 +283,8 @@ const appVersion = ref<string>('')
 // Template refs
 const categoriesListRef = ref<HTMLElement | null>(null)
 const taskTablePaneRef = ref<HTMLElement | undefined>(undefined)
+// Ref to the actual scrollable container wrapping the task list
+const scrollableContainerRef = ref<HTMLElement | undefined>(undefined)
 const taskListRef = ref<ComponentPublicInstance<{
   scrollToBottom?: (parentPaneRef?: Ref<HTMLElement | undefined>) => Promise<void>
 }> | null>(null)
@@ -284,7 +294,8 @@ const safeScrollToBottom = async (): Promise<void> => {
   await nextTick()
   try {
     const fn = taskListRef.value?.scrollToBottom
-    if (typeof fn === 'function') await fn(taskTablePaneRef)
+    // Scroll the actual scrollable container, not the outer pane
+    if (typeof fn === 'function') await fn(scrollableContainerRef)
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
   }
@@ -1305,6 +1316,11 @@ body {
   box-shadow: 1px 0 3px var(--shadow-color);
   display: flex;
   flex-direction: column;
+  height: 100%;
+}
+
+.task-list-container {
+  flex: 1;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
@@ -1313,21 +1329,21 @@ body {
   scrollbar-color: var(--border-color) transparent;
 }
 
-/* Auto-hide scrollbar styles for task table pane */
-.task-table-pane::-webkit-scrollbar {
+/* Auto-hide scrollbar styles for task list container */
+.task-list-container::-webkit-scrollbar {
   width: 6px;
 }
 
-.task-table-pane::-webkit-scrollbar-track {
+.task-list-container::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.task-table-pane::-webkit-scrollbar-thumb {
+.task-list-container::-webkit-scrollbar-thumb {
   background: transparent;
   border-radius: 3px;
 }
 
-.task-table-pane:hover::-webkit-scrollbar-thumb {
+.task-list-container:hover::-webkit-scrollbar-thumb {
   background: var(--border-color);
 }
 
