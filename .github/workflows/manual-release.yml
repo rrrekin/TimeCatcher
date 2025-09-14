@@ -1,0 +1,168 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag to create (defaults to v<package.json version>)
+        required: false
+        type: string
+      release_name:
+        description: Release name (defaults to TimeCatcher <version>)
+        required: false
+        type: string
+      draft:
+        description: Create release as draft
+        type: boolean
+        default: true
+        required: true
+      prerelease:
+        description: Mark as prerelease
+        type: boolean
+        default: false
+        required: true
+
+env:
+  NODE_VERSION: '24'
+  # Prevent accidental code signing / notarization in CI
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  ELECTRON_SKIP_NOTARIZATION: 'true'
+
+jobs:
+  build:
+    name: Build - ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+            build_cmd: npm run build:mac
+          - os: windows-latest
+            platform: windows
+            build_cmd: npm run build:win
+          - os: ubuntu-latest
+            platform: linux
+            build_cmd: npm run build:linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build (${{ matrix.platform }})
+        run: ${{ matrix.build_cmd }}
+      - name: Upload artifacts (${{ matrix.platform }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: timecatcher-${{ matrix.platform }}
+          path: |
+            dist/packages/**
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Resolve version/tag
+        id: version
+        shell: bash
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          INPUT_TAG="${{ github.event.inputs.release_tag }}"
+          if [ -n "$INPUT_TAG" ]; then
+            TAG="$INPUT_TAG"
+          else
+            TAG="v$PKG_VERSION"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # release name
+          INPUT_NAME="${{ github.event.inputs.release_name }}"
+          if [ -n "$INPUT_NAME" ]; then
+            NAME="$INPUT_NAME"
+          else
+            NAME="TimeCatcher $PKG_VERSION"
+          fi
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+
+      - name: Determine previous tag
+        id: prev
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            let prevTag = null;
+            try {
+              const latest = await github.rest.repos.getLatestRelease({owner, repo});
+              prevTag = latest.data.tag_name;
+            } catch (e) {
+              core.info('No published releases found, falling back to latest tag');
+              try {
+                const tags = await github.rest.repos.listTags({owner, repo, per_page: 1});
+                if (tags.data.length > 0) {
+                  prevTag = tags.data[0].name;
+                }
+              } catch (e2) {
+                core.info('No tags found either.');
+              }
+            }
+            core.setOutput('tag', prevTag || '');
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          PREV="${{ steps.prev.outputs.tag }}"
+          if [ -n "$PREV" ]; then
+            echo "Generating changelog from $PREV to HEAD"
+            RANGE="$PREV..HEAD"
+          else
+            echo "Generating changelog from repository start to HEAD"
+            RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
+          fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --pretty=format:'- %s (%h) by %an' $RANGE
+            echo
+          } > CHANGELOG.md
+          echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+          cat CHANGELOG.md >> $GITHUB_OUTPUT
+          echo 'EOF' >> $GITHUB_OUTPUT
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.name }}
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: |
+            release_artifacts/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
