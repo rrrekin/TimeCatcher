@@ -176,7 +176,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # Ensure GITHUB_TOKEN is set before using gh
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "::error::GITHUB_TOKEN is not set. Please ensure the workflow has access to secrets.GITHUB_TOKEN." >&2
+            exit 1
+          fi
           export GH_TOKEN="${GITHUB_TOKEN}"
+
           TAG="${{ steps.version.outputs.tag }}"
 
           # Create temp files first and ensure cleanup on any exit
@@ -184,7 +191,8 @@ jobs:
           TEMP_STDERR=$(mktemp)
           trap 'rm -f "$TEMP_STDOUT" "$TEMP_STDERR"' EXIT
 
-          if gh release view "$TAG" --json url --jq .url > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
+          # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present
+          if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
             # Success: release exists
             RELEASE_URL=$(cat "$TEMP_STDOUT")
             echo "Release $TAG already exists at: $RELEASE_URL"
