@@ -17,27 +17,70 @@ export function useSettings() {
   let usedModernAPI = false
 
   /**
-   * Validate URL format - expects pre-trimmed input
+   * Validate URL format with internal trimming and local-address blocking.
+   * Mirrors main-process checks and also blocks IPv6 loopback and link-local.
    */
   const isValidUrl = (url: string): boolean => {
-    if (!url) return false // Empty URL is not allowed
+    const trimmed = (url ?? '').trim()
+    if (!trimmed) return false // Empty or whitespace-only URL is not allowed
     try {
-      const parsedUrl = new URL(url)
+      const parsedUrl = new URL(trimmed)
       // Only allow http and https protocols
       if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
         return false
       }
+
       // Additional security checks for shell.openExternal
       // Prevent localhost/local network access for security
+      // Normalize hostname and strip IPv6 square brackets if present; also remove trailing dots
+      let hostname = (parsedUrl.hostname || '').toLowerCase()
+      if (hostname.startsWith('[') && hostname.endsWith(']')) {
+        hostname = hostname.slice(1, -1)
+      }
+      // Remove any trailing dots (e.g., 'localhost.' -> 'localhost')
+      hostname = hostname.replace(/\.+$/, '')
+
+      // Normalize IPv4-mapped IPv6 dotted-quad forms (e.g., ::ffff:127.0.0.1 -> 127.0.0.1)
+      const v4Mapped = hostname.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+      if (v4Mapped) {
+        hostname = v4Mapped[1] ?? hostname
+      }
+
+      // Expanded local/private checks
+      const isLocalhost = hostname === 'localhost'
+      const isAnyV4 = hostname === '0.0.0.0'
+      const isLoopbackV4 = /^127\./.test(hostname) // 127/8
+      const isLinkLocalV4 = /^169\.254\./.test(hostname) // 169.254/16
+      const isRfc1918 =
+        /^192\.168\./.test(hostname) || /^10\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
+      const isLoopbackV6 = hostname === '::1'
+      const isLinkLocalV6 = /^fe(8|9|a|b)/i.test(hostname) // fe80::/10 family
+      // Any remaining IPv4-mapped IPv6 not in dotted form, or explicit 127.0.0.1 suffix
+      const isV4MappedIPv6 = /^::ffff:/i.test(hostname) || /127\.0\.0\.1$/.test(hostname)
+
       if (
-        parsedUrl.hostname === 'localhost' ||
-        parsedUrl.hostname === '127.0.0.1' ||
-        parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+        isLocalhost ||
+        isAnyV4 ||
+        isLoopbackV4 ||
+        isLinkLocalV4 ||
+        isRfc1918 ||
+        isLoopbackV6 ||
+        isLinkLocalV6 ||
+        isV4MappedIPv6
       ) {
         return false
       }
-      // Ensure hostname exists and is not just an IP without proper validation
-      if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+
+      // Ensure hostname looks valid: allow domains with dots, localhost, or IP addresses (IPv4/IPv6)
+      const isIpAddress = (h: string): boolean => {
+        const ipv4 = /^\d{1,3}(?:\.\d{1,3}){3}$/
+        if (ipv4.test(h)) return true
+        // Simple IPv6 heuristic: presence of ':' after normalization
+        return h.includes(':')
+      }
+      const looksLikeDomain = hostname.includes('.')
+      const isLocalHostName = hostname === 'localhost'
+      if (!hostname || !(looksLikeDomain || isLocalHostName || isIpAddress(hostname))) {
         return false
       }
       return true
@@ -128,9 +171,23 @@ export function useSettings() {
       reportingAppButtonText.value = savedButtonText
     }
 
-    const savedUrl = localStorage.getItem('reportingAppUrl')
-    if (savedUrl) {
-      reportingAppUrl.value = savedUrl
+    const savedUrlRaw = localStorage.getItem('reportingAppUrl')
+    // Validate persisted URL and only apply if valid. If invalid, clear value
+    // and remove the bad entry to avoid stale/broken URLs in the UI.
+    if (savedUrlRaw !== null) {
+      const trimmed = savedUrlRaw.trim()
+      if (!trimmed) {
+        reportingAppUrl.value = ''
+      } else if (isValidUrl(trimmed)) {
+        reportingAppUrl.value = trimmed
+      } else {
+        reportingAppUrl.value = ''
+        try {
+          localStorage.removeItem('reportingAppUrl')
+        } catch {
+          // ignore storage removal errors
+        }
+      }
     }
 
     applyTheme(currentTheme.value)

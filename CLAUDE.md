@@ -271,6 +271,7 @@ __Tests__: `src/**/*.test.ts` files
 
 Always consider use of sequential thinking and memory-timecatcher MCPs, especially when working with complex code.
 Use other MCPs if this can be useful for a specific task or step.
+For GUI verification, use the Puppeteer MCP server.
 
 Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
 
