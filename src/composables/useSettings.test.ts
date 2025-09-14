@@ -7,6 +7,7 @@ describe('useSettings', () => {
   let localStorageMock: Record<string, string | undefined>
   let setItemSpy: any
   let getItemSpy: any
+  let removeItemSpy: any
 
   beforeEach(() => {
     localStorageMock = {}
@@ -14,6 +15,9 @@ describe('useSettings', () => {
       localStorageMock[k] = v
     })
     getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(k => localStorageMock[k] ?? null)
+    removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(k => {
+      delete localStorageMock[k]
+    })
   })
 
   afterEach(() => {
@@ -263,6 +267,37 @@ describe('useSettings', () => {
       expect(isValidUrl('https://example.com:443')).toBe(true)
       expect(isValidUrl('http://example.com:80')).toBe(true)
     })
+
+    it('should trim input internally and still validate correctly', () => {
+      const { isValidUrl } = useSettings()
+      expect(isValidUrl('   https://example.com  ')).toBe(true)
+      expect(isValidUrl('   ')).toBe(false)
+    })
+
+    it('should block IPv6 loopback, link-local, 0.0.0.0, 127/8, IPv4-mapped IPv6, and trailing-dot localhost', () => {
+      const { isValidUrl } = useSettings()
+
+      const blocked = [
+        'http://[::1]/',
+        'https://[::1]/',
+        'http://[fe80::1]/',
+        'https://[fe80::abcd]/',
+        'http://0.0.0.0',
+        'https://0.0.0.0',
+        // 127/8 range examples
+        'http://127.0.0.1',
+        'http://127.255.255.255',
+        // IPv4-mapped IPv6
+        'http://[::ffff:127.0.0.1]/',
+        // trailing-dot localhost variants
+        'http://localhost.',
+        'http://localhost./'
+      ]
+
+      blocked.forEach(url => {
+        expect(isValidUrl(url)).toBe(false)
+      })
+    })
   })
 
   describe('Reporting App Settings', () => {
@@ -284,6 +319,19 @@ describe('useSettings', () => {
 
       expect(reportingAppButtonText.value).toBe('My Time App')
       expect(reportingAppUrl.value).toBe('https://timetracker.example.com')
+    })
+
+    it('should clear invalid reportingAppUrl from localStorage on load', () => {
+      localStorageMock['reportingAppButtonText'] = 'My Time App'
+      // Invalid per validation (blocked localhost)
+      localStorageMock['reportingAppUrl'] = 'http://localhost:3000'
+
+      const { loadSettings, reportingAppUrl } = useSettings()
+      loadSettings()
+
+      expect(reportingAppUrl.value).toBe('')
+      expect(removeItemSpy).toHaveBeenCalledWith('reportingAppUrl')
+      expect(localStorageMock['reportingAppUrl']).toBeUndefined()
     })
 
     it('should use defaults when localStorage values are missing', () => {

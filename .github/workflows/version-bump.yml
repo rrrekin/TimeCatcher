@@ -63,7 +63,7 @@ jobs:
         if: steps.commit-guard.outputs.should_skip != 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Configure Git
         if: steps.commit-guard.outputs.should_skip != 'true'
