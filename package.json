@@ -73,6 +73,7 @@
     "directories": {
       "output": "dist/packages"
     },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "dist/main/**/*",
       "dist/renderer/**/*",
@@ -88,8 +89,7 @@
       "target": [
         "nsis",
         "portable"
-      ],
-      "artifactName": "${productName}-${version}-${os}-${arch}.${ext}"
+      ]
     },
     "linux": {
       "icon": "assets/icon.png",
