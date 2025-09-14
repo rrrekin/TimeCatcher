@@ -171,7 +171,23 @@ jobs:
           path: release_artifacts
           merge-multiple: true
 
+      - name: Check if release exists
+        id: release_exists
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release $TAG does not exist"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
+        if: steps.release_exists.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -183,3 +199,9 @@ jobs:
             release_artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release already exists
+        if: steps.release_exists.outputs.exists == 'true'
+        run: |
+          echo "::warning::Release ${{ steps.version.outputs.tag }} already exists. Skipping release creation."
+          echo "Existing release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
