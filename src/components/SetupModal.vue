@@ -165,6 +165,15 @@
             </button>
           </div>
         </div>
+
+        <!-- Backup & Restore -->
+        <div class="setting-group">
+          <h4>Backup & Restore</h4>
+          <div class="backup-actions">
+            <button class="backup-btn" @click="$emit('backup')" :disabled="isBusy">Backup…</button>
+            <button class="restore-btn" @click="$emit('restoreBackup')" :disabled="isBusy">Restore backup…</button>
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -261,6 +270,8 @@ const emit = defineEmits<{
   startAddingCategory: []
   updateTempReportingAppButtonText: [text: string]
   updateTempReportingAppUrl: [url: string]
+  backup: []
+  restoreBackup: []
 }>()
 
 // Flag to prevent blur save when cancelling
@@ -748,5 +759,30 @@ onUnmounted(() => {
 .save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Backup & Restore */
+.backup-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.backup-btn,
+.restore-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.backup-btn:hover,
+.restore-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
 }
 </style>

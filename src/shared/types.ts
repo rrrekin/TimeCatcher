@@ -46,6 +46,9 @@ export interface ElectronAPI {
   // Application info
   getVersion: () => Promise<string>
   openExternalUrl: (url: string) => Promise<boolean>
+  // Backup & Restore
+  backupApp?: (settings: any) => Promise<{ ok: boolean; error?: string }>
+  restoreApp?: () => Promise<{ ok: boolean; settings?: any; error?: string; cancelled?: boolean }>
   // Database operations
   getCategories: () => Promise<Category[]>
   addCategory: (name: string) => Promise<Category>

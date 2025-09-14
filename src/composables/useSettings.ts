@@ -227,6 +227,43 @@ export function useSettings() {
   }
 
   /**
+   * Apply restored settings from backup: set values, validate, persist, and apply theme.
+   */
+  const applyRestoredSettings = (settings: any) => {
+    try {
+      const theme =
+        typeof settings?.theme === 'string' && ['light', 'dark', 'auto'].includes(settings.theme)
+          ? (settings.theme as Theme)
+          : currentTheme.value
+      const hoursNum = Number(settings?.targetWorkHours)
+      const hours = Number.isFinite(hoursNum) && hoursNum > 0 && hoursNum <= 24 ? hoursNum : targetWorkHours.value
+      const buttonText = String(settings?.reportingAppButtonText ?? '').trim() || 'Tempo'
+      const urlRaw = String(settings?.reportingAppUrl ?? '').trim()
+      const url = urlRaw && isValidUrl(urlRaw) ? urlRaw : ''
+
+      currentTheme.value = theme
+      targetWorkHours.value = hours
+      reportingAppButtonText.value = buttonText
+      reportingAppUrl.value = url
+
+      // Persist
+      localStorage.setItem('theme', currentTheme.value)
+      localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+      localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+      localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+
+      // Apply theme now
+      applyTheme(currentTheme.value)
+
+      // Sync temps
+      initializeTempSettings()
+    } catch (e) {
+      // Best-effort; do not throw in renderer composable
+      console.warn('Failed to apply restored settings:', e)
+    }
+  }
+
+  /**
    * Initialize temporary settings with current values
    */
   const initializeTempSettings = () => {
@@ -280,6 +317,7 @@ export function useSettings() {
     applyTheme,
     loadSettings,
     saveSettings,
+    applyRestoredSettings,
     initializeTempSettings
   }
 }

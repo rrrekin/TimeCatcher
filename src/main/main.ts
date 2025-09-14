@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { promises as fsp } from 'fs'
 import { join } from 'path'
 import { dbService } from './database'
 import { TASK_TYPE_END } from '../shared/types'
@@ -276,6 +277,126 @@ ipcMain.handle('app:open-external-url', async (_, url: string) => {
   } catch (error) {
     console.error('Failed to open external URL:', error)
     throw new Error(`Failed to open URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+// Backup handler
+ipcMain.handle('app:backup', async (_evt, settings: any) => {
+  try {
+    const defaultPath = `timecatcher-backup-${new Date().toISOString().slice(0, 10)}.json`
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Save TimeCatcher Backup',
+      defaultPath,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (canceled || !filePath) {
+      return { ok: false }
+    }
+
+    // Collect database snapshot
+    const categories = dbService.db.prepare('SELECT id, name, is_default, created_at FROM categories ORDER BY id').all()
+    const taskRecords = dbService.db
+      .prepare(
+        `SELECT id, category_name, task_name, start_time, date, task_type, created_at 
+         FROM task_records ORDER BY id`
+      )
+      .all()
+
+    const backup = {
+      version: 1,
+      settings: settings ?? {},
+      database: {
+        categories,
+        task_records: taskRecords
+      }
+    }
+
+    await fsp.writeFile(filePath, JSON.stringify(backup, null, 2), 'utf-8')
+    return { ok: true }
+  } catch (error: any) {
+    console.error('Backup failed:', error)
+    await dialog.showErrorBox('Backup failed', error?.message || 'Unknown error')
+    return { ok: false, error: error?.message || 'Backup failed' }
+  }
+})
+
+// Restore handler
+ipcMain.handle('app:restore', async () => {
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      title: 'Restore TimeCatcher Backup',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (canceled || !filePaths || filePaths.length === 0) {
+      return { ok: false, cancelled: true }
+    }
+    const filePath = filePaths[0]
+    const raw = await fsp.readFile(filePath, 'utf-8')
+    const parsed = JSON.parse(raw)
+
+    // Validate backup shape
+    const validate = (data: any): { ok: boolean; error?: string } => {
+      if (!data || typeof data !== 'object') return { ok: false, error: 'Invalid backup file' }
+      if (data.version !== 1) return { ok: false, error: 'Unsupported backup version' }
+      if (!data.database || typeof data.database !== 'object') return { ok: false, error: 'Missing database section' }
+      const db = data.database
+      if (!Array.isArray(db.categories) || !Array.isArray(db.task_records))
+        return { ok: false, error: 'Invalid database content' }
+      return { ok: true }
+    }
+    const result = validate(parsed)
+    if (!result.ok) {
+      await dialog.showErrorBox('Restore failed', result.error || 'Invalid backup')
+      return { ok: false, error: result.error || 'Invalid backup' }
+    }
+
+    // Import into database in a transaction
+    const trx = dbService.db.transaction((backup: any) => {
+      dbService.db.prepare('DELETE FROM task_records').run()
+      dbService.db.prepare('DELETE FROM categories').run()
+
+      // Restore categories
+      const insertCat = dbService.db.prepare('INSERT INTO categories (name, is_default) VALUES (?, ?)')
+      for (const c of backup.database.categories as any[]) {
+        const name = String(c.name ?? '').trim()
+        const isDefault = c.is_default ? 1 : 0
+        if (!name) continue
+        insertCat.run(name, isDefault)
+      }
+
+      // Restore task records
+      // Prefer preserving created_at if present, otherwise use default
+      const insertRecWithCreated = dbService.db.prepare(
+        `INSERT INTO task_records (category_name, task_name, start_time, date, task_type, created_at)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      const insertRec = dbService.db.prepare(
+        `INSERT INTO task_records (category_name, task_name, start_time, date, task_type)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      for (const r of backup.database.task_records as any[]) {
+        const categoryName = String(r.category_name ?? '').trim()
+        const taskName = String(r.task_name ?? '').trim()
+        const startTime = String(r.start_time ?? '').trim()
+        const date = String(r.date ?? '').trim()
+        const taskType = String(r.task_type ?? 'normal')
+        if (!categoryName || !taskName || !startTime || !date) continue
+        if (r.created_at) {
+          insertRecWithCreated.run(categoryName, taskName, startTime, date, taskType, r.created_at)
+        } else {
+          insertRec.run(categoryName, taskName, startTime, date, taskType)
+        }
+      }
+    })
+
+    trx(parsed)
+
+    return { ok: true, settings: parsed.settings ?? {} }
+  } catch (error: any) {
+    console.error('Restore failed:', error)
+    await dialog.showErrorBox('Restore failed', error?.message || 'Unknown error')
+    return { ok: false, error: error?.message || 'Restore failed' }
   }
 })
 

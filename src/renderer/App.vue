@@ -103,6 +103,8 @@
       @add-category="addCategoryWrapper"
       @cancel-adding-category="cancelAddingCategory"
       @start-adding-category="startAddingCategory"
+      @backup="backupApp"
+      @restore-backup="restoreBackup"
     />
 
     <!-- Toast notification -->
@@ -427,6 +429,62 @@ const closeSetupModal = () => {
 const saveSettings = () => {
   saveSettingsComposable()
   closeSetupModal()
+}
+
+// Backup & Restore handlers
+const backupApp = async () => {
+  if (!window?.electronAPI || typeof window.electronAPI.backupApp !== 'function') {
+    showToastMessage('Backup not available (IPC unavailable)', 'error')
+    return
+  }
+  const settings = {
+    theme: currentTheme.value,
+    targetWorkHours: targetWorkHours.value,
+    reportingAppButtonText: reportingAppButtonText.value,
+    reportingAppUrl: reportingAppUrl.value
+  }
+  try {
+    const res = await window.electronAPI.backupApp(settings)
+    if (res?.ok) {
+      showToastMessage('Backup saved successfully', 'success')
+    } else if (res?.error) {
+      showToastMessage(`Backup failed: ${res.error}`, 'error')
+    }
+  } catch (e) {
+    showToastMessage('Backup failed', 'error')
+  }
+}
+
+const restoreBackup = async () => {
+  if (!window?.electronAPI || typeof window.electronAPI.restoreApp !== 'function') {
+    showToastMessage('Restore not available (IPC unavailable)', 'error')
+    return
+  }
+  try {
+    const res = await window.electronAPI.restoreApp()
+    if (res?.ok) {
+      // Apply restored settings if provided
+      const restored = res.settings || {}
+      try {
+        // Apply and persist restored settings
+        const { applyRestoredSettings } = useSettings()
+        applyRestoredSettings(restored)
+      } catch (e) {
+        // Non-fatal; settings can be adjusted manually
+        console.warn('Failed to apply restored settings:', e)
+      }
+      // Reload data
+      await loadCategoriesWrapper()
+      await loadTaskRecordsWrapper()
+      showToastMessage('Restore completed successfully', 'success')
+    } else if (res?.cancelled) {
+      // user cancelled - no toast necessary
+    } else {
+      showToastMessage(`Restore failed${res?.error ? `: ${res.error}` : ''}`, 'error')
+    }
+  } catch (e) {
+    showToastMessage('Restore failed', 'error')
+  }
 }
 
 // Category management functions - wrappers with UI state management
