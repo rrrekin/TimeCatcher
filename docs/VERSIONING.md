@@ -20,7 +20,7 @@ When a pull request is merged to the `main` branch and CI passes successfully, t
 
 ### Examples
 
-```
+```text
 feat: add new feature                    → 0.20.0 → 0.21.0 (minor)
 feat(ui): introduce new theme            → 0.20.0 → 0.21.0 (minor)
 feat!: breaking API changes              → 0.20.0 → 1.0.0 (major)
@@ -95,7 +95,7 @@ feat: [MAJOR] migrate to Vue 4
 
 All version changes are tracked in Git commits with the pattern:
 
-```
+```text
 chore: bump [type] version
 
 Automated version bump from merged PR #123: [PR title]
