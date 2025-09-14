@@ -7,10 +7,44 @@ export function useSettings() {
   const tempTheme: Ref<Theme> = ref('auto')
   const targetWorkHours = ref(8)
   const tempTargetWorkHours = ref(8)
+  const reportingAppButtonText = ref('Tempo')
+  const reportingAppUrl = ref('')
+  const tempReportingAppButtonText = ref('Tempo')
+  const tempReportingAppUrl = ref('')
 
   // Media query for OS theme detection
   let mediaQueryList: MediaQueryList | null = null
   let usedModernAPI = false
+
+  /**
+   * Validate URL format - expects pre-trimmed input
+   */
+  const isValidUrl = (url: string): boolean => {
+    if (!url) return false // Empty URL is not allowed
+    try {
+      const parsedUrl = new URL(url)
+      // Only allow http and https protocols
+      if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+        return false
+      }
+      // Additional security checks for shell.openExternal
+      // Prevent localhost/local network access for security
+      if (
+        parsedUrl.hostname === 'localhost' ||
+        parsedUrl.hostname === '127.0.0.1' ||
+        parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+      ) {
+        return false
+      }
+      // Ensure hostname exists and is not just an IP without proper validation
+      if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+        return false
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
 
   /**
    * Handle OS theme changes
@@ -41,6 +75,14 @@ export function useSettings() {
 
     // Set color-scheme for native UI elements
     root.style.setProperty('color-scheme', resolvedTheme)
+
+    // Set color palette (same for both themes)
+    root.style.setProperty('--verdigris', '#57bdaf')
+    root.style.setProperty('--mantis', '#59c964')
+    root.style.setProperty('--asparagus', '#69966f')
+    root.style.setProperty('--emerald', '#56b372')
+    root.style.setProperty('--aero', '#1fbff0')
+    root.style.setProperty('--primary', '#57bdaf') // verdigris
 
     if (resolvedTheme === 'dark') {
       root.style.setProperty('--bg-primary', '#1a1f2e')
@@ -80,6 +122,17 @@ export function useSettings() {
       }
     }
 
+    // Load reporting app settings
+    const savedButtonText = localStorage.getItem('reportingAppButtonText')
+    if (savedButtonText) {
+      reportingAppButtonText.value = savedButtonText
+    }
+
+    const savedUrl = localStorage.getItem('reportingAppUrl')
+    if (savedUrl) {
+      reportingAppUrl.value = savedUrl
+    }
+
     applyTheme(currentTheme.value)
   }
 
@@ -102,9 +155,18 @@ export function useSettings() {
       // Note: tempTargetWorkHours remains invalid, targetWorkHours keeps valid value
     }
 
+    // Validate and update reporting app settings
+    reportingAppButtonText.value = tempReportingAppButtonText.value.trim() || 'Tempo'
+    const trimmedUrl = tempReportingAppUrl.value.trim()
+    if (!trimmedUrl || isValidUrl(trimmedUrl)) {
+      reportingAppUrl.value = trimmedUrl
+    }
+
     applyTheme(currentTheme.value)
     localStorage.setItem('theme', currentTheme.value)
     localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+    localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+    localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
   }
 
   /**
@@ -113,6 +175,8 @@ export function useSettings() {
   const initializeTempSettings = () => {
     tempTheme.value = currentTheme.value
     tempTargetWorkHours.value = targetWorkHours.value
+    tempReportingAppButtonText.value = reportingAppButtonText.value
+    tempReportingAppUrl.value = reportingAppUrl.value
   }
 
   // Load settings on mount and setup OS theme detection
@@ -151,6 +215,11 @@ export function useSettings() {
     tempTheme,
     targetWorkHours,
     tempTargetWorkHours,
+    reportingAppButtonText,
+    reportingAppUrl,
+    tempReportingAppButtonText,
+    tempReportingAppUrl,
+    isValidUrl,
     applyTheme,
     loadSettings,
     saveSettings,

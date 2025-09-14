@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
 import { TASK_TYPE_END } from '../shared/types'
@@ -195,6 +195,49 @@ ipcMain.handle('db:delete-task-record', async (_, id: number) => {
 // Application info handler
 ipcMain.handle('app:get-version', async () => {
   return app.getVersion()
+})
+
+// External URL handler
+ipcMain.handle('app:open-external-url', async (_, url: string) => {
+  try {
+    // Basic validation
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL provided')
+    }
+
+    const trimmedUrl = url.trim()
+    if (!trimmedUrl) {
+      throw new Error('Empty URL provided')
+    }
+
+    // Parse and validate URL
+    const parsedUrl = new URL(trimmedUrl)
+
+    // Only allow http and https protocols
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      throw new Error('Only HTTP and HTTPS URLs are allowed')
+    }
+
+    // Security checks - prevent local network access
+    if (
+      parsedUrl.hostname === 'localhost' ||
+      parsedUrl.hostname === '127.0.0.1' ||
+      parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+    ) {
+      throw new Error('Local network URLs are not allowed')
+    }
+
+    // Ensure valid hostname
+    if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+      throw new Error('Invalid hostname')
+    }
+
+    await shell.openExternal(trimmedUrl)
+    return true
+  } catch (error) {
+    console.error('Failed to open external URL:', error)
+    throw new Error(`Failed to open URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 })
 
 // Debug handler to view all data - only available in development

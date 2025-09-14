@@ -35,6 +35,18 @@
     </div>
 
     <button
+      v-if="reportingAppUrl"
+      type="button"
+      class="reporting-app-btn"
+      @click="$emit('openReportingApp')"
+      :title="`Open ${reportingAppButtonText}`"
+      :aria-label="`Open ${reportingAppButtonText}`"
+    >
+      <span class="reporting-app-icon" aria-hidden="true">🌐</span>
+      {{ reportingAppButtonText }}
+    </button>
+
+    <button
       type="button"
       class="setup-btn"
       @click="$emit('openSetup')"
@@ -54,6 +66,8 @@ import { useId } from 'vue'
 defineProps<{
   formattedDate: string
   dateInputValue: string
+  reportingAppButtonText: string
+  reportingAppUrl: string
 }>()
 
 // Emits
@@ -62,6 +76,7 @@ defineEmits<{
   goToToday: []
   goToNextDay: []
   updateDate: [value: string]
+  openReportingApp: []
   openSetup: []
 }>()
 
@@ -166,6 +181,30 @@ const dateInputId = useId()
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+}
+
+.reporting-app-btn {
+  background: var(--aero);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.reporting-app-btn:hover {
+  background: #1ba3d1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.reporting-app-icon {
+  font-size: 16px;
 }
 
 .setup-btn {

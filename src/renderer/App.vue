@@ -3,10 +3,13 @@
     <DateNavigation
       :formatted-date="formattedDate"
       :date-input-value="dateInputValue"
+      :reporting-app-button-text="reportingAppButtonText"
+      :reporting-app-url="reportingAppUrl"
       @go-to-previous-day="goToPreviousDay"
       @go-to-today="goToToday"
       @go-to-next-day="goToNextDay"
       @update-date="updateDateFromInput"
+      @open-reporting-app="openReportingApp"
       @open-setup="openSetup"
     />
 
@@ -72,6 +75,9 @@
       :is-open="isSetupModalOpen"
       :temp-theme="tempTheme"
       :temp-target-work-hours="tempTargetWorkHours"
+      :temp-reporting-app-button-text="tempReportingAppButtonText"
+      :temp-reporting-app-url="tempReportingAppUrl"
+      :is-valid-url="isValidUrl"
       :categories="categories"
       :is-loading-categories="isLoadingCategories"
       :is-adding-category="isAddingCategory"
@@ -85,6 +91,8 @@
       @save="saveSettings"
       @update-temp-theme="theme => (tempTheme = theme)"
       @update-temp-target-work-hours="hours => (tempTargetWorkHours = hours)"
+      @update-temp-reporting-app-button-text="text => (tempReportingAppButtonText = text)"
+      @update-temp-reporting-app-url="url => (tempReportingAppUrl = url)"
       @start-edit-category="startEditCategory"
       @update-editing-category-name="name => (editingCategoryName = name)"
       @save-edit-category="saveEditCategory"
@@ -228,6 +236,11 @@ const {
   tempTheme,
   targetWorkHours,
   tempTargetWorkHours,
+  reportingAppButtonText,
+  reportingAppUrl,
+  tempReportingAppButtonText,
+  tempReportingAppUrl,
+  isValidUrl,
   applyTheme,
   saveSettings: saveSettingsComposable,
   initializeTempSettings
@@ -366,6 +379,41 @@ const openSetup = async () => {
   initializeTempSettings()
   await loadCategories()
   isSetupModalOpen.value = true
+}
+
+const openReportingApp = async () => {
+  const trimmedUrl = reportingAppUrl.value.trim()
+  if (!trimmedUrl) {
+    showToastMessage('No reporting application URL configured', 'error')
+    return
+  }
+
+  // Validate URL before attempting to open
+  if (!isValidUrl(trimmedUrl)) {
+    console.error('Invalid reporting app URL:', trimmedUrl)
+    showToastMessage('Invalid reporting application URL configured', 'error')
+    return
+  }
+
+  // Runtime/IPC guards
+  if (!window?.electronAPI || typeof window.electronAPI.openExternalUrl !== 'function') {
+    console.error('electronAPI.openExternalUrl is unavailable')
+    showToastMessage('Reporting application cannot be opened (IPC unavailable)', 'error')
+    return
+  }
+
+  try {
+    const success = await window.electronAPI.openExternalUrl(trimmedUrl)
+    if (!success) {
+      console.error('openExternalUrl returned falsy result for URL:', trimmedUrl)
+      showToastMessage('Failed to open reporting application', 'error')
+      return
+    }
+    showToastMessage(`Opened ${reportingAppButtonText.value}`, 'success')
+  } catch (error) {
+    console.error('Failed to open reporting app:', error)
+    showToastMessage('Failed to open reporting application', 'error')
+  }
 }
 
 const closeSetupModal = () => {
