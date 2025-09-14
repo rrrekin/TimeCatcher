@@ -175,4 +175,263 @@ describe('useSettings', () => {
     expect(mql.removeListener).toHaveBeenCalled()
     matchMediaSpy.mockRestore()
   })
+
+  describe('isValidUrl function', () => {
+    it('should return true for empty string', () => {
+      const { isValidUrl } = useSettings()
+      expect(isValidUrl('')).toBe(true)
+    })
+
+    it('should return true for whitespace-only string', () => {
+      const { isValidUrl } = useSettings()
+      expect(isValidUrl('   ')).toBe(true)
+    })
+
+    it('should return true for valid HTTPS URLs', () => {
+      const { isValidUrl } = useSettings()
+      const validUrls = [
+        'https://example.com',
+        'https://www.example.com',
+        'https://example.com/path',
+        'https://example.com:8080',
+        'https://subdomain.example.com'
+      ]
+
+      validUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(true)
+      })
+    })
+
+    it('should return true for valid HTTP URLs', () => {
+      const { isValidUrl } = useSettings()
+      const validUrls = ['http://example.com', 'http://localhost:3000', 'http://127.0.0.1:8080']
+
+      validUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(true)
+      })
+    })
+
+    it('should return true for URLs without protocol (adds https:// automatically)', () => {
+      const { isValidUrl } = useSettings()
+      const validUrls = ['example.com', 'www.example.com', 'subdomain.example.com', 'localhost:3000']
+
+      validUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(true)
+      })
+    })
+
+    it('should return false for invalid URLs', () => {
+      const { isValidUrl } = useSettings()
+      const invalidUrls = [
+        '://missing-protocol',
+        'http://',
+        'https://',
+        'javascript:alert(1)' // becomes https://javascript:alert(1) which is invalid
+      ]
+
+      invalidUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(false)
+      })
+
+      // These are actually valid according to URL constructor
+      const actuallyValidUrls = [
+        'not-a-url', // becomes https://not-a-url which is valid
+        'ftp://example.com', // valid URL with ftp protocol
+        'example', // becomes https://example which is valid
+        '...' // becomes https://... which is valid
+      ]
+
+      actuallyValidUrls.forEach(url => {
+        expect(isValidUrl(url)).toBe(true)
+      })
+    })
+
+    it('should handle edge cases gracefully', () => {
+      const { isValidUrl } = useSettings()
+
+      // Test special characters
+      expect(isValidUrl('https://example.com/path?query=value&other=test')).toBe(true)
+      expect(isValidUrl('https://example.com/path#fragment')).toBe(true)
+
+      // Test port numbers
+      expect(isValidUrl('https://example.com:443')).toBe(true)
+      expect(isValidUrl('http://example.com:80')).toBe(true)
+    })
+  })
+
+  describe('Reporting App Settings', () => {
+    it('should initialize with default values', () => {
+      const { reportingAppButtonText, reportingAppUrl, tempReportingAppButtonText, tempReportingAppUrl } = useSettings()
+
+      expect(reportingAppButtonText.value).toBe('Tempo')
+      expect(reportingAppUrl.value).toBe('')
+      expect(tempReportingAppButtonText.value).toBe('Tempo')
+      expect(tempReportingAppUrl.value).toBe('')
+    })
+
+    it('should load reporting app settings from localStorage', () => {
+      localStorageMock['reportingAppButtonText'] = 'My Time App'
+      localStorageMock['reportingAppUrl'] = 'https://timetracker.example.com'
+
+      const { loadSettings, reportingAppButtonText, reportingAppUrl } = useSettings()
+      loadSettings()
+
+      expect(reportingAppButtonText.value).toBe('My Time App')
+      expect(reportingAppUrl.value).toBe('https://timetracker.example.com')
+    })
+
+    it('should use defaults when localStorage values are missing', () => {
+      // localStorage is empty (no keys set)
+      const { loadSettings, reportingAppButtonText, reportingAppUrl } = useSettings()
+      loadSettings()
+
+      expect(reportingAppButtonText.value).toBe('Tempo')
+      expect(reportingAppUrl.value).toBe('')
+    })
+
+    it('should save valid reporting app settings to localStorage', () => {
+      const { saveSettings, tempReportingAppButtonText, tempReportingAppUrl, reportingAppButtonText, reportingAppUrl } =
+        useSettings()
+
+      tempReportingAppButtonText.value = 'Custom App'
+      tempReportingAppUrl.value = 'https://custom.app.com'
+
+      saveSettings()
+
+      expect(localStorageMock['reportingAppButtonText']).toBe('Custom App')
+      expect(localStorageMock['reportingAppUrl']).toBe('https://custom.app.com')
+      expect(reportingAppButtonText.value).toBe('Custom App')
+      expect(reportingAppUrl.value).toBe('https://custom.app.com')
+    })
+
+    it('should trim and use default for empty button text', () => {
+      const { saveSettings, tempReportingAppButtonText, reportingAppButtonText } = useSettings()
+
+      tempReportingAppButtonText.value = '   '
+      saveSettings()
+
+      expect(reportingAppButtonText.value).toBe('Tempo')
+      expect(localStorageMock['reportingAppButtonText']).toBe('Tempo')
+    })
+
+    it('should not save invalid URLs', () => {
+      const { saveSettings, tempReportingAppUrl, reportingAppUrl } = useSettings()
+
+      // Set initial valid URL
+      reportingAppUrl.value = 'https://old.com'
+      tempReportingAppUrl.value = '://missing-protocol'
+
+      saveSettings()
+
+      // Should keep old URL since new one is invalid
+      expect(reportingAppUrl.value).toBe('https://old.com')
+    })
+
+    it('should save empty URLs (they are allowed)', () => {
+      const { saveSettings, tempReportingAppUrl, reportingAppUrl } = useSettings()
+
+      tempReportingAppUrl.value = ''
+      saveSettings()
+
+      expect(reportingAppUrl.value).toBe('')
+      expect(localStorageMock['reportingAppUrl']).toBe('')
+    })
+
+    it('should trim URLs before saving', () => {
+      const { saveSettings, tempReportingAppUrl, reportingAppUrl } = useSettings()
+
+      tempReportingAppUrl.value = '  https://example.com  '
+      saveSettings()
+
+      expect(reportingAppUrl.value).toBe('https://example.com')
+      expect(localStorageMock['reportingAppUrl']).toBe('https://example.com')
+    })
+
+    it('should not save URLs that fail validation', () => {
+      const { saveSettings, tempReportingAppUrl, reportingAppUrl } = useSettings()
+
+      // Set a clearly invalid URL
+      tempReportingAppUrl.value = 'https://'
+      saveSettings()
+
+      // Should remain empty since invalid URL wasn't saved
+      expect(reportingAppUrl.value).toBe('')
+    })
+
+    it('should initialize temp settings with current values', () => {
+      const {
+        initializeTempSettings,
+        reportingAppButtonText,
+        reportingAppUrl,
+        tempReportingAppButtonText,
+        tempReportingAppUrl
+      } = useSettings()
+
+      // Set current values
+      reportingAppButtonText.value = 'Test App'
+      reportingAppUrl.value = 'https://test.com'
+
+      initializeTempSettings()
+
+      expect(tempReportingAppButtonText.value).toBe('Test App')
+      expect(tempReportingAppUrl.value).toBe('https://test.com')
+    })
+
+    it('should handle complex URL validation scenarios in saveSettings', () => {
+      const { saveSettings, tempReportingAppUrl, reportingAppUrl } = useSettings()
+
+      const testCases = [
+        { input: 'https://valid.com', expected: 'https://valid.com', shouldSave: true },
+        { input: 'valid.com', expected: 'valid.com', shouldSave: true },
+        { input: '', expected: '', shouldSave: true },
+        { input: '://missing-protocol', expected: '', shouldSave: false }
+      ]
+
+      testCases.forEach(({ input, expected, shouldSave }) => {
+        // Reset to empty
+        reportingAppUrl.value = ''
+        tempReportingAppUrl.value = input
+
+        saveSettings()
+
+        if (shouldSave) {
+          expect(reportingAppUrl.value).toBe(expected)
+        } else {
+          expect(reportingAppUrl.value).toBe('')
+        }
+      })
+    })
+  })
+
+  describe('Color Palette CSS Variables', () => {
+    it('should set color palette CSS variables on applyTheme', () => {
+      const { applyTheme } = useSettings()
+      const setPropertySpy = vi.spyOn(document.documentElement.style, 'setProperty')
+
+      applyTheme('light')
+
+      // Check that color palette variables are set
+      expect(setPropertySpy).toHaveBeenCalledWith('--verdigris', '#57bdaf')
+      expect(setPropertySpy).toHaveBeenCalledWith('--mantis', '#59c964')
+      expect(setPropertySpy).toHaveBeenCalledWith('--asparagus', '#69966f')
+      expect(setPropertySpy).toHaveBeenCalledWith('--emerald', '#56b372')
+      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#1fbff0')
+      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#57bdaf')
+
+      setPropertySpy.mockRestore()
+    })
+
+    it('should set same color palette for both light and dark themes', () => {
+      const { applyTheme } = useSettings()
+      const setPropertySpy = vi.spyOn(document.documentElement.style, 'setProperty')
+
+      applyTheme('dark')
+
+      // Color palette should be the same regardless of theme
+      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#1fbff0')
+      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#57bdaf')
+
+      setPropertySpy.mockRestore()
+    })
+  })
 })

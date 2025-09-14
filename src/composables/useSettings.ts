@@ -20,10 +20,11 @@ export function useSettings() {
    * Validate URL format
    */
   const isValidUrl = (url: string): boolean => {
-    if (!url.trim()) return true // Empty URL is allowed
+    const trimmedUrl = url.trim()
+    if (!trimmedUrl) return true // Empty URL is allowed
     try {
       // Add https:// if no protocol specified
-      const urlToTest = url.match(/^https?:\/\//) ? url : `https://${url}`
+      const urlToTest = trimmedUrl.match(/^https?:\/\//) ? trimmedUrl : `https://${trimmedUrl}`
       new URL(urlToTest)
       return true
     } catch {
