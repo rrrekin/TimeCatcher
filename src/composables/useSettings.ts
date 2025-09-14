@@ -17,27 +17,41 @@ export function useSettings() {
   let usedModernAPI = false
 
   /**
-   * Validate URL format - expects pre-trimmed input
+   * Validate URL format with internal trimming and local-address blocking.
+   * Mirrors main-process checks and also blocks IPv6 loopback and link-local.
    */
   const isValidUrl = (url: string): boolean => {
-    if (!url) return false // Empty URL is not allowed
+    const trimmed = (url ?? '').trim()
+    if (!trimmed) return false // Empty or whitespace-only URL is not allowed
     try {
-      const parsedUrl = new URL(url)
+      const parsedUrl = new URL(trimmed)
       // Only allow http and https protocols
       if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
         return false
       }
+
       // Additional security checks for shell.openExternal
       // Prevent localhost/local network access for security
+      // Normalize hostname and strip IPv6 square brackets if present
+      let hostname = (parsedUrl.hostname || '').toLowerCase()
+      if (hostname.startsWith('[') && hostname.endsWith(']')) {
+        hostname = hostname.slice(1, -1)
+      }
       if (
-        parsedUrl.hostname === 'localhost' ||
-        parsedUrl.hostname === '127.0.0.1' ||
-        parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        /^192\.168\./.test(hostname) ||
+        /^10\./.test(hostname) ||
+        /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
+        hostname === '::1' ||
+        /^fe(8|9|a|b)/i.test(hostname) // IPv6 link-local fe80::/10 family
       ) {
         return false
       }
-      // Ensure hostname exists and is not just an IP without proper validation
-      if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+
+      // Ensure hostname exists and is not trivially short
+      if (!hostname || hostname.length < 3) {
         return false
       }
       return true
@@ -128,9 +142,23 @@ export function useSettings() {
       reportingAppButtonText.value = savedButtonText
     }
 
-    const savedUrl = localStorage.getItem('reportingAppUrl')
-    if (savedUrl) {
-      reportingAppUrl.value = savedUrl
+    const savedUrlRaw = localStorage.getItem('reportingAppUrl')
+    // Validate persisted URL and only apply if valid. If invalid, clear value
+    // and remove the bad entry to avoid stale/broken URLs in the UI.
+    if (savedUrlRaw !== null) {
+      const trimmed = savedUrlRaw.trim()
+      if (!trimmed) {
+        reportingAppUrl.value = ''
+      } else if (isValidUrl(trimmed)) {
+        reportingAppUrl.value = trimmed
+      } else {
+        reportingAppUrl.value = ''
+        try {
+          localStorage.removeItem('reportingAppUrl')
+        } catch {
+          // ignore storage removal errors
+        }
+      }
     }
 
     applyTheme(currentTheme.value)
