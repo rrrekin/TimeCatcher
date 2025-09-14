@@ -16,8 +16,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:coverage:check": "npm run test:coverage && node scripts/check-coverage.js",
-    "lint:md": "markdownlint-cli2",
-    "format:md": "markdownlint-cli2 --fix",
+    "lint:md": "npx -y markdownlint-cli2",
+    "format:md": "npx -y markdownlint-cli2 --fix",
     "format": "prettier --write \"{src,scripts,.github}/**/*.{ts,js,vue,json,html,css,scss,yaml,yml}\"",
     "format:check": "prettier --check \"{src,scripts,.github}/**/*.{ts,js,vue,json,html,css,scss,yaml,yml}\"",
     "install-hooks": "cp scripts/git-hooks/* .git/hooks/ && chmod +x .git/hooks/*",
@@ -73,6 +73,7 @@
     "directories": {
       "output": "dist/packages"
     },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "dist/main/**/*",
       "dist/renderer/**/*",
@@ -84,7 +85,11 @@
       "category": "public.app-category.productivity"
     },
     "win": {
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "linux": {
       "icon": "assets/icon.png",
