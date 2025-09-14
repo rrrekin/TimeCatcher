@@ -179,9 +179,10 @@ jobs:
           export GH_TOKEN="${GITHUB_TOKEN}"
           TAG="${{ steps.version.outputs.tag }}"
 
-          # Capture stdout, stderr, and exit code separately
+          # Create temp files first and ensure cleanup on any exit
           TEMP_STDOUT=$(mktemp)
           TEMP_STDERR=$(mktemp)
+          trap 'rm -f "$TEMP_STDOUT" "$TEMP_STDERR"' EXIT
 
           if gh release view "$TAG" --json url --jq .url > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
             # Success: release exists
@@ -190,22 +191,18 @@ jobs:
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           else
-            # Failed: check if it's a "not found" error
+            # Failed: check if it's a "not found" error across different gh versions
             STDERR_CONTENT=$(cat "$TEMP_STDERR")
-            if echo "$STDERR_CONTENT" | grep -q "release not found\|could not find release\|HTTP 404"; then
+            if echo "$STDERR_CONTENT" | grep -Eiq "release not found|could not find release|not found|HTTP 404"; then
               echo "Release $TAG does not exist"
               echo "exists=false" >> "$GITHUB_OUTPUT"
               echo "release_url=" >> "$GITHUB_OUTPUT"
             else
               # Other error - fail fast
               echo "::error::Failed to check release status for $TAG: $STDERR_CONTENT"
-              rm -f "$TEMP_STDOUT" "$TEMP_STDERR"
               exit 1
             fi
           fi
-
-          # Cleanup
-          rm -f "$TEMP_STDOUT" "$TEMP_STDERR"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
