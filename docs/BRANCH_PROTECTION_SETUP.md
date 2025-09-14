@@ -21,8 +21,8 @@ To enforce coverage requirements and prevent merging of PRs with insufficient te
 - ✅ __Require status checks to pass before merging__
 - ✅ __Require branches to be up to date before merging__
 - Under "Status checks that are required", add:
-  - `test (20)` - for Node.js 20 tests
   - `test (22)` - for Node.js 22 tests
+  - `test (24)` - for Node.js 24 tests
 
 #### Additional Protection Settings (Recommended)
 
