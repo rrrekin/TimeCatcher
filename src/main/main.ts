@@ -218,17 +218,31 @@ ipcMain.handle('app:open-external-url', async (_, url: string) => {
       throw new Error('Only HTTP and HTTPS URLs are allowed')
     }
 
-    // Security checks - prevent local network access
-    if (
-      parsedUrl.hostname === 'localhost' ||
-      parsedUrl.hostname === '127.0.0.1' ||
-      parsedUrl.hostname.match(/^192\.168\.|^10\.|^172\.(1[6-9]|2[0-9]|3[01])\./)
-    ) {
-      throw new Error('Local network URLs are not allowed')
+    // Normalize hostname once for consistent checks
+    let hostname = (parsedUrl.hostname || '').toLowerCase()
+    // Strip IPv6 square brackets if present
+    if (hostname.startsWith('[') && hostname.endsWith(']')) {
+      hostname = hostname.slice(1, -1)
+    }
+
+    // Security checks - prevent local/loopback/private network access
+    const isRfc1918 =
+      /^192\.168\./.test(hostname) || /^10\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
+    const isLoopbackV4 = hostname === '127.0.0.1'
+    const isAnyV4 = hostname === '0.0.0.0'
+    const isLocalhost = hostname === 'localhost'
+    const isLoopbackV6 = hostname === '::1'
+    // IPv6 link-local fe80::/10 covers fe80, fe90, fea0, feb0 prefixes
+    const isLinkLocalV6 = /^fe(8|9|a|b)/i.test(hostname)
+    // IPv4-mapped IPv6 loopback and mapped 127.0.0.1
+    const isV4MappedLoopback = hostname.startsWith('::ffff:127.0.0.1') || hostname.endsWith('127.0.0.1')
+
+    if (isLocalhost || isLoopbackV4 || isAnyV4 || isRfc1918 || isLoopbackV6 || isLinkLocalV6 || isV4MappedLoopback) {
+      throw new Error('Local or private network URLs are not allowed')
     }
 
     // Ensure valid hostname
-    if (!parsedUrl.hostname || parsedUrl.hostname.length < 3) {
+    if (!hostname || hostname.length < 3) {
       throw new Error('Invalid hostname')
     }
 
