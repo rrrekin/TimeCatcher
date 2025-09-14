@@ -277,6 +277,7 @@ Keep the CLAUDE.md context file up-to-date with the latest changes and as compac
 
 ## Agent Coding Checklist
 
+- Always add a11y labels.
 - Tests: Always import `afterEach`, unmount and null wrappers to avoid DOM leakage. Use `vi.useFakeTimers()` + `vi.setSystemTime()` for time logic. Keep sorting tests under `describe('sortedTaskRecords')`. Assert current regex and `maxlength` omission. Run `npm run test:coverage:check` on Node 20/22.
 - IPC/runtime guards: Check `window.electronAPI` and method presence; show user-friendly errors if missing.
 - DOM timing: After opening dropdowns/toggles, `await nextTick()` before focusing/positioning.

@@ -202,6 +202,8 @@ vi.mock('@/composables/useTaskRecords', () => ({
 const mockApplyTheme = vi.fn()
 const mockSaveSettings = vi.fn()
 const mockInitializeTempSettings = vi.fn()
+const mockApplyRestoredSettings = vi.fn()
+const mockIsValidUrl = vi.fn(() => true)
 
 vi.mock('@/composables/useSettings', () => ({
   useSettings: () => ({
@@ -209,9 +211,15 @@ vi.mock('@/composables/useSettings', () => ({
     tempTheme: { value: 'light' },
     targetWorkHours: { value: 8 },
     tempTargetWorkHours: { value: 8 },
+    reportingAppButtonText: { value: 'Tempo' },
+    reportingAppUrl: { value: '' },
+    tempReportingAppButtonText: { value: 'Tempo' },
+    tempReportingAppUrl: { value: '' },
+    isValidUrl: mockIsValidUrl,
     applyTheme: mockApplyTheme,
     saveSettings: mockSaveSettings,
-    initializeTempSettings: mockInitializeTempSettings
+    initializeTempSettings: mockInitializeTempSettings,
+    applyRestoredSettings: mockApplyRestoredSettings
   })
 }))
 
@@ -935,6 +943,76 @@ describe('App Component', () => {
       const breakdown = vm.getEnhancedCategoryBreakdown
 
       expect(Array.isArray(breakdown)).toBe(true)
+    })
+  })
+
+  describe('Backup & Restore', () => {
+    beforeEach(() => {
+      // default mocks
+      global.window.electronAPI = createElectronAPIMock({
+        backupApp: vi.fn().mockResolvedValue({ ok: true }),
+        restoreApp: vi.fn().mockResolvedValue({ ok: true, settings: { theme: 'dark', targetWorkHours: 7 } })
+      })
+    })
+
+    it('backs up settings successfully', async () => {
+      const backupSpy = (global.window.electronAPI as any).backupApp as any
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(backupSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ theme: 'light', targetWorkHours: 8, reportingAppButtonText: 'Tempo' })
+      )
+      expect(wrapper.find('.toast').exists()).toBe(true)
+      expect(wrapper.text()).toContain('Backup saved successfully')
+    })
+
+    it('shows error toast when backup fails', async () => {
+      const backupSpy = vi.fn().mockResolvedValue({ ok: false, error: 'Disk full' })
+      global.window.electronAPI = createElectronAPIMock({ backupApp: backupSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(backupSpy).toHaveBeenCalled()
+      expect(wrapper.find('.toast').exists()).toBe(true)
+      expect(wrapper.text()).toContain('Backup failed')
+    })
+
+    it('restores backup successfully and reloads data', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: true, settings: { theme: 'dark', targetWorkHours: 6 } })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(restoreSpy).toHaveBeenCalled()
+      expect(mockApplyRestoredSettings).toHaveBeenCalledWith({ theme: 'dark', targetWorkHours: 6 })
+      expect(mockLoadCategories).toHaveBeenCalled()
+      expect(mockLoadTaskRecords).toHaveBeenCalled()
+      expect(wrapper.find('.toast').exists()).toBe(true)
+      expect(wrapper.text()).toContain('Restore completed successfully')
+    })
+
+    it('handles cancelled restore gracefully', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: false, cancelled: true })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(restoreSpy).toHaveBeenCalled()
+      expect(mockApplyRestoredSettings).not.toHaveBeenCalled()
+      // No toast for cancelled
+      expect(wrapper.find('.toast').exists()).toBe(false)
+    })
+
+    it('shows error toast when restore fails', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: false, error: 'Invalid file' })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(restoreSpy).toHaveBeenCalled()
+      expect(wrapper.find('.toast').exists()).toBe(true)
+      expect(wrapper.text()).toContain('Restore failed')
     })
   })
 

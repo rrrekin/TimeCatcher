@@ -24,9 +24,12 @@ describe('SetupModal Component', () => {
         isUpdatingCategory: false,
         isDeletingCategory: false,
         isSettingDefault: false,
-        editingCategoryId: null,
+        editingCategoryId: 0,
         editingCategoryName: '',
-        newCategoryName: ''
+        newCategoryName: '',
+        tempReportingAppButtonText: 'Tempo',
+        tempReportingAppUrl: '',
+        isValidUrl: () => true
       }
     })
   })
@@ -74,6 +77,96 @@ describe('SetupModal Component', () => {
       expect(cancelBtn.exists()).toBe(true)
       expect(saveBtn.text()).toBe('Save')
       expect(cancelBtn.text()).toBe('Cancel')
+    })
+  })
+
+  describe('Reporting App URL validation', () => {
+    it('shows error and invalid class for invalid URL', async () => {
+      await wrapper.setProps({
+        tempReportingAppButtonText: 'Tempo',
+        tempReportingAppUrl: 'http://invalid',
+        isValidUrl: () => false
+      })
+
+      const urlInput = wrapper.find('#reporting-app-url')
+      expect(urlInput.exists()).toBe(true)
+      expect(urlInput.classes()).toContain('invalid-url')
+
+      const error = wrapper.find('.url-error')
+      expect(error.exists()).toBe(true)
+      expect(error.text()).toContain('Please enter a valid URL')
+    })
+
+    it('hides error and class for valid URL', async () => {
+      await wrapper.setProps({
+        tempReportingAppButtonText: 'Tempo',
+        tempReportingAppUrl: 'https://example.com',
+        isValidUrl: () => true
+      })
+
+      const urlInput = wrapper.find('#reporting-app-url')
+      expect(urlInput.exists()).toBe(true)
+      expect(urlInput.classes()).not.toContain('invalid-url')
+
+      const error = wrapper.find('.url-error')
+      expect(error.exists()).toBe(false)
+    })
+
+    it('hides error and class for empty URL regardless of validator', async () => {
+      await wrapper.setProps({
+        tempReportingAppButtonText: 'Tempo',
+        tempReportingAppUrl: '',
+        isValidUrl: () => false
+      })
+
+      const urlInput = wrapper.find('#reporting-app-url')
+      expect(urlInput.exists()).toBe(true)
+      expect(urlInput.classes()).not.toContain('invalid-url')
+      expect(wrapper.find('.url-error').exists()).toBe(false)
+    })
+
+    it('emits updates for reporting app inputs', async () => {
+      await wrapper.setProps({
+        tempReportingAppButtonText: 'Tempo',
+        tempReportingAppUrl: '',
+        isValidUrl: () => true
+      })
+
+      const textInput = wrapper.find('#reporting-button-text')
+      await textInput.setValue('My App')
+      await textInput.trigger('input')
+      expect(wrapper.emitted('updateTempReportingAppButtonText')).toBeTruthy()
+      expect(wrapper.emitted('updateTempReportingAppButtonText')![0]).toEqual(['My App'])
+
+      const urlInput = wrapper.find('#reporting-app-url')
+      await urlInput.setValue('https://foo.example.com')
+      await urlInput.trigger('input')
+      expect(wrapper.emitted('updateTempReportingAppUrl')).toBeTruthy()
+      expect(wrapper.emitted('updateTempReportingAppUrl')![0]).toEqual(['https://foo.example.com'])
+    })
+  })
+
+  describe('Backup & Restore actions', () => {
+    it('renders backup and restore buttons and emits on click', async () => {
+      const backupBtn = wrapper.find('.backup-btn')
+      const restoreBtn = wrapper.find('.restore-btn')
+
+      expect(backupBtn.exists()).toBe(true)
+      expect(restoreBtn.exists()).toBe(true)
+
+      await backupBtn.trigger('click')
+      await restoreBtn.trigger('click')
+
+      expect(wrapper.emitted('backup')).toBeTruthy()
+      expect(wrapper.emitted('restoreBackup')).toBeTruthy()
+    })
+
+    it('disables backup and restore while busy', async () => {
+      await wrapper.setProps({ isAddingCategory: true })
+      const backupBtn = wrapper.find('.backup-btn')
+      const restoreBtn = wrapper.find('.restore-btn')
+      expect(backupBtn.element).toHaveProperty('disabled', true)
+      expect(restoreBtn.element).toHaveProperty('disabled', true)
     })
   })
 
