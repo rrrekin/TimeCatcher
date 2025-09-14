@@ -175,19 +175,25 @@ jobs:
         id: release_exists
         shell: bash
         run: |
+          set -euo pipefail
+          export GH_TOKEN="${GITHUB_TOKEN}"
           TAG="${{ steps.version.outputs.tag }}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists"
+
+          if RELEASE_JSON=$(gh release view "$TAG" --json url 2>/dev/null); then
+            RELEASE_URL=$(echo "$RELEASE_JSON" | jq -r '.url')
+            echo "Release $TAG already exists at: $RELEASE_URL"
             echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           else
             echo "Release $TAG does not exist"
             echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "release_url=" >> "$GITHUB_OUTPUT"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
-        if: steps.release_exists.outputs.exists == 'false'
+        if: ${{ !fromJSON(steps.release_exists.outputs.exists) }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -201,7 +207,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release already exists
-        if: steps.release_exists.outputs.exists == 'true'
+        id: existing_release
+        if: ${{ fromJSON(steps.release_exists.outputs.exists) }}
         run: |
           echo "::warning::Release ${{ steps.version.outputs.tag }} already exists. Skipping release creation."
-          echo "Existing release URL: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.tag }}"
+          echo "Existing release URL: ${{ steps.release_exists.outputs.release_url }}"
+          echo "release_url=${{ steps.release_exists.outputs.release_url }}" >> "$GITHUB_OUTPUT"
+          echo "Release ${{ steps.version.outputs.tag }} already exists: ${{ steps.release_exists.outputs.release_url }}" >> "$GITHUB_STEP_SUMMARY"
