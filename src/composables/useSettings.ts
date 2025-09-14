@@ -39,23 +39,48 @@ export function useSettings() {
       }
       // Remove any trailing dots (e.g., 'localhost.' -> 'localhost')
       hostname = hostname.replace(/\.+$/, '')
+
+      // Normalize IPv4-mapped IPv6 dotted-quad forms (e.g., ::ffff:127.0.0.1 -> 127.0.0.1)
+      const v4Mapped = hostname.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+      if (v4Mapped) {
+        hostname = v4Mapped[1] ?? hostname
+      }
+
+      // Expanded local/private checks
+      const isLocalhost = hostname === 'localhost'
+      const isAnyV4 = hostname === '0.0.0.0'
+      const isLoopbackV4 = /^127\./.test(hostname) // 127/8
+      const isLinkLocalV4 = /^169\.254\./.test(hostname) // 169.254/16
+      const isRfc1918 =
+        /^192\.168\./.test(hostname) || /^10\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
+      const isLoopbackV6 = hostname === '::1'
+      const isLinkLocalV6 = /^fe(8|9|a|b)/i.test(hostname) // fe80::/10 family
+      // Any remaining IPv4-mapped IPv6 not in dotted form, or explicit 127.0.0.1 suffix
+      const isV4MappedIPv6 = /^::ffff:/i.test(hostname) || /127\.0\.0\.1$/.test(hostname)
+
       if (
-        hostname === 'localhost' ||
-        /^127\./.test(hostname) ||
-        hostname === '0.0.0.0' ||
-        /^192\.168\./.test(hostname) ||
-        /^10\./.test(hostname) ||
-        /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname) ||
-        hostname === '::1' ||
-        /^fe(8|9|a|b)/i.test(hostname) || // IPv6 link-local fe80::/10 family
-        /^::ffff:/i.test(hostname) || // IPv4-mapped IPv6 notation
-        /127\.0\.0\.1$/.test(hostname) // Catch mapped or literal loopback suffix
+        isLocalhost ||
+        isAnyV4 ||
+        isLoopbackV4 ||
+        isLinkLocalV4 ||
+        isRfc1918 ||
+        isLoopbackV6 ||
+        isLinkLocalV6 ||
+        isV4MappedIPv6
       ) {
         return false
       }
 
-      // Ensure hostname exists and is not trivially short
-      if (!hostname || hostname.length < 3) {
+      // Ensure hostname looks valid: allow domains with dots, localhost, or IP addresses (IPv4/IPv6)
+      const isIpAddress = (h: string): boolean => {
+        const ipv4 = /^\d{1,3}(?:\.\d{1,3}){3}$/
+        if (ipv4.test(h)) return true
+        // Simple IPv6 heuristic: presence of ':' after normalization
+        return h.includes(':')
+      }
+      const looksLikeDomain = hostname.includes('.')
+      const isLocalHostName = hostname === 'localhost'
+      if (!hostname || !(looksLikeDomain || isLocalHostName || isIpAddress(hostname))) {
         return false
       }
       return true

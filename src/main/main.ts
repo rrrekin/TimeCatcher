@@ -224,11 +224,19 @@ ipcMain.handle('app:open-external-url', async (_, url: string) => {
     if (hostname.startsWith('[') && hostname.endsWith(']')) {
       hostname = hostname.slice(1, -1)
     }
+    // Remove any trailing dots (e.g., 'localhost.' -> 'localhost')
+    hostname = hostname.replace(/\.+$/, '')
+    // Normalize IPv4-mapped IPv6 dotted-quad forms (e.g., ::ffff:127.0.0.1 -> 127.0.0.1)
+    const v4Mapped = hostname.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i)
+    if (v4Mapped) {
+      hostname = v4Mapped[1] ?? hostname
+    }
 
     // Security checks - prevent local/loopback/private network access
     const isRfc1918 =
       /^192\.168\./.test(hostname) || /^10\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)
-    const isLoopbackV4 = /^127\./.test(hostname)
+    const isLoopbackV4 = /^127\./.test(hostname) // 127/8
+    const isLinkLocalV4 = /^169\.254\./.test(hostname) // 169.254/16
     const isAnyV4 = hostname === '0.0.0.0'
     const isLocalhost = hostname === 'localhost'
     const isLoopbackV6 = hostname === '::1'
@@ -237,12 +245,29 @@ ipcMain.handle('app:open-external-url', async (_, url: string) => {
     // IPv4-mapped IPv6 (any), or mapped 127.0.0.1 suffix
     const isV4Mapped = /^::ffff:/i.test(hostname) || /127\.0\.0\.1$/.test(hostname)
 
-    if (isLocalhost || isLoopbackV4 || isAnyV4 || isRfc1918 || isLoopbackV6 || isLinkLocalV6 || isV4Mapped) {
+    if (
+      isLocalhost ||
+      isLoopbackV4 ||
+      isLinkLocalV4 ||
+      isAnyV4 ||
+      isRfc1918 ||
+      isLoopbackV6 ||
+      isLinkLocalV6 ||
+      isV4Mapped
+    ) {
       throw new Error('Local or private network URLs are not allowed')
     }
 
-    // Ensure valid hostname
-    if (!hostname || hostname.length < 3) {
+    // Ensure hostname looks valid: allow domains with dots, localhost, or IP addresses (IPv4/IPv6)
+    const isIpAddress = (h: string): boolean => {
+      const ipv4 = /^\d{1,3}(?:\.\d{1,3}){3}$/
+      if (ipv4.test(h)) return true
+      // Simple IPv6 heuristic: presence of ':' after normalization
+      return h.includes(':')
+    }
+    const looksLikeDomain = hostname.includes('.')
+    const isLocalHostName = hostname === 'localhost'
+    if (!hostname || !(looksLikeDomain || isLocalHostName || isIpAddress(hostname))) {
       throw new Error('Invalid hostname')
     }
 
