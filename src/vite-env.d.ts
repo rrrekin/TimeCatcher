@@ -20,6 +20,7 @@ declare global {
     electronAPI: {
       // Application info
       getVersion(): Promise<string>
+      openExternalUrl(url: string): Promise<boolean>
 
       // Database operations
       getCategories(): Promise<any[]>

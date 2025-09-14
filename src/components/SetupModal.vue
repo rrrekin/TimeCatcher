@@ -60,6 +60,38 @@
         </div>
 
         <div class="setting-group">
+          <h4>Time Reporting Application</h4>
+          <div class="reporting-app-settings">
+            <div class="reporting-app-field">
+              <label for="reporting-button-text">Button text:</label>
+              <input
+                type="text"
+                id="reporting-button-text"
+                :value="tempReportingAppButtonText"
+                @input="$emit('updateTempReportingAppButtonText', ($event.target as HTMLInputElement).value)"
+                placeholder="Tempo"
+                class="reporting-app-input"
+              />
+            </div>
+            <div class="reporting-app-field">
+              <label for="reporting-app-url">Application URL:</label>
+              <input
+                type="text"
+                id="reporting-app-url"
+                :value="tempReportingAppUrl"
+                @input="$emit('updateTempReportingAppUrl', ($event.target as HTMLInputElement).value)"
+                placeholder="https://example.com/timetracking"
+                class="reporting-app-input"
+                :class="{ 'invalid-url': tempReportingAppUrl && !isValidUrl(tempReportingAppUrl) }"
+              />
+              <div v-if="tempReportingAppUrl && !isValidUrl(tempReportingAppUrl)" class="url-error">
+                Please enter a valid URL
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
           <h4>Task Categories</h4>
           <div class="categories-container">
             <div v-if="isLoadingCategories" class="loading-indicator">
@@ -196,6 +228,18 @@ const props = defineProps({
   newCategoryName: {
     type: String,
     required: true
+  },
+  tempReportingAppButtonText: {
+    type: String,
+    required: true
+  },
+  tempReportingAppUrl: {
+    type: String,
+    required: true
+  },
+  isValidUrl: {
+    type: Function as PropType<(url: string) => boolean>,
+    required: true
   }
 })
 
@@ -215,6 +259,8 @@ const emit = defineEmits<{
   addCategory: []
   cancelAddingCategory: []
   startAddingCategory: []
+  updateTempReportingAppButtonText: [text: string]
+  updateTempReportingAppUrl: [url: string]
 }>()
 
 // Flag to prevent blur save when cancelling
@@ -420,6 +466,51 @@ onUnmounted(() => {
 .hours-label {
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+.reporting-app-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reporting-app-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reporting-app-field label {
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.reporting-app-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.reporting-app-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+}
+
+.reporting-app-input.invalid-url {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+.url-error {
+  color: #e74c3c;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .categories-container {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { join } from 'path'
 import { dbService } from './database'
 import { TASK_TYPE_END } from '../shared/types'
@@ -195,6 +195,28 @@ ipcMain.handle('db:delete-task-record', async (_, id: number) => {
 // Application info handler
 ipcMain.handle('app:get-version', async () => {
   return app.getVersion()
+})
+
+// External URL handler
+ipcMain.handle('app:open-external-url', async (_, url: string) => {
+  try {
+    // Basic URL validation
+    if (!url || typeof url !== 'string') {
+      throw new Error('Invalid URL provided')
+    }
+
+    // Ensure URL has protocol
+    const urlToOpen = url.match(/^https?:\/\//) ? url : `https://${url}`
+
+    // Additional validation using URL constructor
+    new URL(urlToOpen)
+
+    await shell.openExternal(urlToOpen)
+    return true
+  } catch (error) {
+    console.error('Failed to open external URL:', error)
+    throw new Error(`Failed to open URL: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 })
 
 // Debug handler to view all data - only available in development

@@ -4,6 +4,7 @@ import type { TaskRecordInsert, TaskRecordUpdate } from '../shared/types'
 contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
+  openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('app:open-external-url', url),
 
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),
