@@ -166,7 +166,7 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 
 - Smart duration calculation using ALL records as boundaries
 - Task summarization with occurrence counts
-- Category breakdown with progress bars
+- Category breakdown: listed by category without progress bars
 - Status indicators: ⚠️ (missing end task), 😊 (target reached)
 - Configurable target work hours (default: 8)
 - __Dual time display__: Shows both actual time and rounded time in format: `ActualTime (RoundedTime)`. Rounding policy: each task's duration is first floored to the nearest whole minute, then the floored duration is rounded to the nearest 5-minute increment (e.g., 2m floored → 2m → 0m rounded; 7m floored → 7m → 5m rounded). Per-task floors occur before 5-minute rounding for the rounded totals.

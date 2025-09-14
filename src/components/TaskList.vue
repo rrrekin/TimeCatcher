@@ -149,6 +149,14 @@ import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
+// Helper for requestAnimationFrame with fallback for test environments
+const safeRequestAnimationFrame = (callback: FrameRequestCallback): number => {
+  if (typeof window !== 'undefined' && window.requestAnimationFrame) {
+    return window.requestAnimationFrame(callback)
+  }
+  return setTimeout(callback, 0) as unknown as number
+}
+
 // Generate unique component instance ID for ARIA references
 const componentId =
   typeof globalThis !== 'undefined' && globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function'
@@ -280,7 +288,7 @@ const highlightTask = (taskId: number) => {
   highlightedTasks.add(taskId)
 
   // Start fade immediately using requestAnimationFrame to ensure DOM update
-  requestAnimationFrame(() => {
+  safeRequestAnimationFrame(() => {
     fadingTasks.add(taskId)
   })
 
