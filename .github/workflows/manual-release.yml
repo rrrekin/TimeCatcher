@@ -171,7 +171,51 @@ jobs:
           path: release_artifacts
           merge-multiple: true
 
+      - name: Check if release exists
+        id: release_exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Ensure GITHUB_TOKEN is set before using gh
+          if [ -z "${GITHUB_TOKEN:-}" ]; then
+            echo "::error::GITHUB_TOKEN is not set. Please ensure the workflow has access to secrets.GITHUB_TOKEN." >&2
+            exit 1
+          fi
+          export GH_TOKEN="${GITHUB_TOKEN}"
+
+          TAG="${{ steps.version.outputs.tag }}"
+
+          # Create temp files first and ensure cleanup on any exit
+          TEMP_STDOUT=$(mktemp)
+          TEMP_STDERR=$(mktemp)
+          trap 'rm -f "$TEMP_STDOUT" "$TEMP_STDERR"' EXIT
+
+          # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present
+          if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
+            # Success: release exists
+            RELEASE_URL=$(printf "%s" "$(cat "$TEMP_STDOUT")")
+            echo "Release $TAG already exists at: $RELEASE_URL"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+          else
+            # Failed: check prioritized release-specific not-found messages across different gh versions
+            STDERR_CONTENT=$(cat "$TEMP_STDERR")
+            if echo "$STDERR_CONTENT" | grep -Eiq "(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404)"; then
+              echo "Release $TAG does not exist"
+              echo "exists=false" >> "$GITHUB_OUTPUT"
+              echo "release_url=" >> "$GITHUB_OUTPUT"
+            else
+              # Other error - fail fast
+              echo "::error::Failed to check release status for $TAG: $STDERR_CONTENT"
+              exit 1
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
+        if: ${{ !fromJSON(steps.release_exists.outputs.exists) }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -183,3 +227,12 @@ jobs:
             release_artifacts/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release already exists
+        id: existing_release
+        if: ${{ fromJSON(steps.release_exists.outputs.exists) }}
+        run: |
+          echo "::warning::Release ${{ steps.version.outputs.tag }} already exists. Skipping release creation."
+          echo "Existing release URL: ${{ steps.release_exists.outputs.release_url }}"
+          echo "release_url=${{ steps.release_exists.outputs.release_url }}" >> "$GITHUB_OUTPUT"
+          echo "Release [${{ steps.version.outputs.name }}](${{ steps.release_exists.outputs.release_url }}) already exists: ${{ steps.release_exists.outputs.release_url }}" >> "$GITHUB_STEP_SUMMARY"
