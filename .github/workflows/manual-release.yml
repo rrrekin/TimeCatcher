@@ -194,14 +194,14 @@ jobs:
           # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present
           if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
             # Success: release exists
-            RELEASE_URL=$(cat "$TEMP_STDOUT")
+            RELEASE_URL=$(printf "%s" "$(cat "$TEMP_STDOUT")")
             echo "Release $TAG already exists at: $RELEASE_URL"
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
           else
-            # Failed: check if it's a "not found" error across different gh versions
+            # Failed: check prioritized release-specific not-found messages across different gh versions
             STDERR_CONTENT=$(cat "$TEMP_STDERR")
-            if echo "$STDERR_CONTENT" | grep -Eiq "release not found|could not find release|not found|HTTP 404"; then
+            if echo "$STDERR_CONTENT" | grep -Eiq "(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404)"; then
               echo "Release $TAG does not exist"
               echo "exists=false" >> "$GITHUB_OUTPUT"
               echo "release_url=" >> "$GITHUB_OUTPUT"
