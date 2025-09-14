@@ -150,11 +150,12 @@ import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
 // Helper for requestAnimationFrame with fallback for test environments
-const safeRequestAnimationFrame = (callback: FrameRequestCallback): number => {
+const safeRequestAnimationFrame = (callback: FrameRequestCallback): void => {
   if (typeof window !== 'undefined' && window.requestAnimationFrame) {
-    return window.requestAnimationFrame(callback)
+    window.requestAnimationFrame(callback)
+  } else {
+    setTimeout(callback, 0)
   }
-  return setTimeout(callback, 0) as unknown as number
 }
 
 // Generate unique component instance ID for ARIA references
