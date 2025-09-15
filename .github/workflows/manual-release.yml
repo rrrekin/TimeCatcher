@@ -221,7 +221,7 @@ jobs:
             STDERR_CONTENT=$(cat "$TEMP_STDERR")
             if echo "$STDERR_CONTENT" | grep -Eiq '(Unknown JSON field|unknown field).*htmlUrl'; then
               if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url | jq -r '.url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
-                CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG
+                CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
                 RELEASE_URL="$CANONICAL_URL"
                 echo "Release $TAG already exists at: $RELEASE_URL"
                 echo "exists=true" >> "$GITHUB_OUTPUT"
