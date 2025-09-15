@@ -178,7 +178,7 @@ jobs:
           set -euo pipefail
 
           # Centralized not-found pattern for gh stderr detection (case-insensitive, extended)
-          NOT_FOUND_PATTERN='(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404)'
+          NOT_FOUND_PATTERN='(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404|Not Found)'
 
           # Ensure GITHUB_TOKEN is set before using gh
           if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -189,7 +189,7 @@ jobs:
 
           # Verify GitHub CLI (gh) is installed and meets a minimal version
           if ! command -v gh >/dev/null 2>&1; then
-            echo "::error::GitHub CLI (gh) is not installed on this runner. Please add a setup step (e.g., 'cli/gh-actions/setup-gh@v3') or use a runner with gh preinstalled." >&2
+            echo "::error::GitHub CLI (gh) is not installed on this runner. Please add a setup step (e.g., 'cli/gh-actions/setup-gh') or use a runner with gh preinstalled." >&2
             exit 1
           fi
           # Optional version check to ensure a sufficiently new gh; warn if too old
@@ -211,7 +211,7 @@ jobs:
           # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present (fallback if htmlUrl unsupported)
           if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
             # Success: release exists
-            CANONICAL_URL="https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+            CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
             RELEASE_URL="$CANONICAL_URL"
             echo "Release $TAG already exists at: $RELEASE_URL"
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -221,7 +221,7 @@ jobs:
             STDERR_CONTENT=$(cat "$TEMP_STDERR")
             if echo "$STDERR_CONTENT" | grep -Eiq '(Unknown JSON field|unknown field).*htmlUrl'; then
               if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url | jq -r '.url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
-                CANONICAL_URL="https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+                CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG
                 RELEASE_URL="$CANONICAL_URL"
                 echo "Release $TAG already exists at: $RELEASE_URL"
                 echo "exists=true" >> "$GITHUB_OUTPUT"
