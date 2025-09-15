@@ -25,6 +25,7 @@ function getChangedFiles() {
       .filter(file => !file.includes('.test.') && !file.includes('.spec.'))
       .filter(file => !file.endsWith('.d.ts')) // Exclude TypeScript declaration files
       .filter(file => !file.startsWith('src/main/')) // Exclude main process files (not covered by frontend tests)
+      .filter(file => !file.startsWith('src/test-utils/')) // Exclude test utility files
   }
 
   function tryGitDiff(base) {
