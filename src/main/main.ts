@@ -2,8 +2,9 @@ import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import { promises as fsp } from 'fs'
 import { join } from 'path'
 import { dbService } from './database'
-import { TASK_TYPE_END } from '../shared/types'
-import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError } from '../shared/types'
+import { normalizeCategories, normalizeTaskRecords } from './backupUtils'
+import { TASK_TYPE_END, TASK_TYPES } from '../shared/types'
+import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError, SettingsSnapshot } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production' && !app.isPackaged
 
@@ -281,7 +282,7 @@ ipcMain.handle('app:open-external-url', async (_, url: string) => {
 })
 
 // Backup handler
-ipcMain.handle('app:backup', async (_evt, settings: any) => {
+ipcMain.handle('app:backup', async (_evt, settings: SettingsSnapshot) => {
   try {
     const defaultPath = `timecatcher-backup-${new Date().toISOString().slice(0, 10)}.json`
     const { canceled, filePath } = await dialog.showSaveDialog({
@@ -290,7 +291,7 @@ ipcMain.handle('app:backup', async (_evt, settings: any) => {
       filters: [{ name: 'JSON', extensions: ['json'] }]
     })
     if (canceled || !filePath) {
-      return { ok: false }
+      return { cancelled: true }
     }
 
     // Collect database snapshot
@@ -315,7 +316,7 @@ ipcMain.handle('app:backup', async (_evt, settings: any) => {
     return { ok: true }
   } catch (error: any) {
     console.error('Backup failed:', error)
-    await dialog.showErrorBox('Backup failed', error?.message || 'Unknown error')
+    dialog.showErrorBox('Backup failed', error?.message || 'Unknown error')
     return { ok: false, error: error?.message || 'Backup failed' }
   }
 })
@@ -347,7 +348,7 @@ ipcMain.handle('app:restore', async () => {
     }
     const result = validate(parsed)
     if (!result.ok) {
-      await dialog.showErrorBox('Restore failed', result.error || 'Invalid backup')
+      dialog.showErrorBox('Restore failed', result.error || 'Invalid backup')
       return { ok: false, error: result.error || 'Invalid backup' }
     }
 
@@ -356,13 +357,11 @@ ipcMain.handle('app:restore', async () => {
       dbService.db.prepare('DELETE FROM task_records').run()
       dbService.db.prepare('DELETE FROM categories').run()
 
-      // Restore categories
+      // Restore categories using normalization helper
       const insertCat = dbService.db.prepare('INSERT INTO categories (name, is_default) VALUES (?, ?)')
-      for (const c of backup.database.categories as any[]) {
-        const name = String(c.name ?? '').trim()
-        const isDefault = c.is_default ? 1 : 0
-        if (!name) continue
-        insertCat.run(name, isDefault)
+      const normCats = normalizeCategories(backup.database.categories)
+      for (const c of normCats) {
+        insertCat.run(c.name, c.is_default ? 1 : 0)
       }
 
       // Restore task records
@@ -375,17 +374,12 @@ ipcMain.handle('app:restore', async () => {
         `INSERT INTO task_records (category_name, task_name, start_time, date, task_type)
          VALUES (?, ?, ?, ?, ?)`
       )
-      for (const r of backup.database.task_records as any[]) {
-        const categoryName = String(r.category_name ?? '').trim()
-        const taskName = String(r.task_name ?? '').trim()
-        const startTime = String(r.start_time ?? '').trim()
-        const date = String(r.date ?? '').trim()
-        const taskType = String(r.task_type ?? 'normal')
-        if (!categoryName || !taskName || !startTime || !date) continue
+      const normRecs = normalizeTaskRecords(backup.database.task_records)
+      for (const r of normRecs) {
         if (r.created_at) {
-          insertRecWithCreated.run(categoryName, taskName, startTime, date, taskType, r.created_at)
+          insertRecWithCreated.run(r.category_name, r.task_name, r.start_time, r.date, r.task_type, r.created_at)
         } else {
-          insertRec.run(categoryName, taskName, startTime, date, taskType)
+          insertRec.run(r.category_name, r.task_name, r.start_time, r.date, r.task_type)
         }
       }
     })
@@ -395,7 +389,7 @@ ipcMain.handle('app:restore', async () => {
     return { ok: true, settings: parsed.settings ?? {} }
   } catch (error: any) {
     console.error('Restore failed:', error)
-    await dialog.showErrorBox('Restore failed', error?.message || 'Unknown error')
+    dialog.showErrorBox('Restore failed', error?.message || 'Unknown error')
     return { ok: false, error: error?.message || 'Restore failed' }
   }
 })

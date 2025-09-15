@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { TaskRecordInsert, TaskRecordUpdate } from '../shared/types'
+import type { TaskRecordInsert, TaskRecordUpdate, SettingsSnapshot, BackupResult, RestoreResult } from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
@@ -20,7 +20,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteTaskRecord: (id: number) => ipcRenderer.invoke('db:delete-task-record', id),
   debugAll: () => ipcRenderer.invoke('db:debug-all'),
   // Backup & restore
-  backupApp: (settings: any): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('app:backup', settings),
-  restoreApp: (): Promise<{ ok: boolean; settings?: any; error?: string; cancelled?: boolean }> =>
-    ipcRenderer.invoke('app:restore')
+  backupApp: (settings: SettingsSnapshot): Promise<BackupResult> => ipcRenderer.invoke('app:backup', settings),
+  restoreApp: (): Promise<RestoreResult> => ipcRenderer.invoke('app:restore')
 })

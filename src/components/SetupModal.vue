@@ -170,8 +170,26 @@
         <div class="setting-group">
           <h4>Backup & Restore</h4>
           <div class="backup-actions">
-            <button class="backup-btn" @click="$emit('backup')" :disabled="isBusy">Backup…</button>
-            <button class="restore-btn" @click="$emit('restoreBackup')" :disabled="isBusy">Restore backup…</button>
+            <button
+              class="backup-btn"
+              data-testid="backup-button"
+              aria-label="Backup workspace"
+              title="Backup workspace"
+              @click="$emit('backup')"
+              :disabled="isBusy"
+            >
+              Backup…
+            </button>
+            <button
+              class="restore-btn"
+              data-testid="restore-button"
+              aria-label="Restore workspace from backup"
+              title="Restore workspace from backup"
+              @click="$emit('restoreBackup')"
+              :disabled="isBusy"
+            >
+              Restore backup…
+            </button>
           </div>
         </div>
       </div>

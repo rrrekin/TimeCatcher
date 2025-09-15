@@ -148,8 +148,8 @@ describe('SetupModal Component', () => {
 
   describe('Backup & Restore actions', () => {
     it('renders backup and restore buttons and emits on click', async () => {
-      const backupBtn = wrapper.find('.backup-btn')
-      const restoreBtn = wrapper.find('.restore-btn')
+      const backupBtn = wrapper.find('[data-testid="backup-button"]')
+      const restoreBtn = wrapper.find('[data-testid="restore-button"]')
 
       expect(backupBtn.exists()).toBe(true)
       expect(restoreBtn.exists()).toBe(true)
@@ -163,8 +163,8 @@ describe('SetupModal Component', () => {
 
     it('disables backup and restore while busy', async () => {
       await wrapper.setProps({ isAddingCategory: true })
-      const backupBtn = wrapper.find('.backup-btn')
-      const restoreBtn = wrapper.find('.restore-btn')
+      const backupBtn = wrapper.find('[data-testid="backup-button"]')
+      const restoreBtn = wrapper.find('[data-testid="restore-button"]')
       expect(backupBtn.element).toHaveProperty('disabled', true)
       expect(restoreBtn.element).toHaveProperty('disabled', true)
     })

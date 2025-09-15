@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import type { SettingsSnapshot } from '@/shared/types'
 
 type Theme = 'light' | 'dark' | 'auto'
 
@@ -227,19 +228,95 @@ export function useSettings() {
   }
 
   /**
+   * Validate theme string
+   */
+  const isValidTheme = (value: unknown): value is Theme => {
+    return typeof value === 'string' && ['light', 'dark', 'auto'].includes(value)
+  }
+
+  /**
+   * Validate target work hours
+   */
+  const isValidTargetWorkHours = (value: unknown): value is number => {
+    const num = Number(value)
+    return Number.isFinite(num) && num > 0 && num <= 24
+  }
+
+  /**
+   * Validate reporting app button text
+   */
+  const isValidButtonText = (value: unknown): boolean => {
+    if (typeof value !== 'string') return false
+    const trimmed = value.trim()
+    return trimmed.length > 0 && trimmed.length <= 100 // reasonable length limit
+  }
+
+  /**
+   * Sanitize and validate restored settings with strict key whitelisting
+   */
+  const sanitizeRestoredSettings = (input: unknown): Partial<SettingsSnapshot> => {
+    if (!input || typeof input !== 'object') {
+      return {}
+    }
+
+    const settings = input as Record<string, unknown>
+    const sanitized: Partial<SettingsSnapshot> = {}
+
+    // Whitelist of allowed setting keys
+    const allowedKeys: (keyof SettingsSnapshot)[] = [
+      'theme',
+      'targetWorkHours',
+      'reportingAppButtonText',
+      'reportingAppUrl'
+    ]
+
+    for (const key of allowedKeys) {
+      if (key in settings) {
+        const value = settings[key]
+
+        switch (key) {
+          case 'theme':
+            if (isValidTheme(value)) {
+              sanitized.theme = value
+            }
+            break
+          case 'targetWorkHours':
+            if (isValidTargetWorkHours(value)) {
+              sanitized.targetWorkHours = value
+            }
+            break
+          case 'reportingAppButtonText':
+            if (isValidButtonText(value)) {
+              sanitized.reportingAppButtonText = String(value).trim()
+            }
+            break
+          case 'reportingAppUrl':
+            const urlStr = typeof value === 'string' ? value.trim() : ''
+            // Empty string is valid (clears URL), only validate non-empty URLs
+            if (urlStr === '' || isValidUrl(urlStr)) {
+              sanitized.reportingAppUrl = urlStr
+            }
+            break
+        }
+      }
+    }
+
+    return sanitized
+  }
+
+  /**
    * Apply restored settings from backup: set values, validate, persist, and apply theme.
    */
-  const applyRestoredSettings = (settings: any) => {
+  const applyRestoredSettings = (settings: Partial<SettingsSnapshot>) => {
     try {
-      const theme =
-        typeof settings?.theme === 'string' && ['light', 'dark', 'auto'].includes(settings.theme)
-          ? (settings.theme as Theme)
-          : currentTheme.value
-      const hoursNum = Number(settings?.targetWorkHours)
-      const hours = Number.isFinite(hoursNum) && hoursNum > 0 && hoursNum <= 24 ? hoursNum : targetWorkHours.value
-      const buttonText = String(settings?.reportingAppButtonText ?? '').trim() || 'Tempo'
-      const urlRaw = String(settings?.reportingAppUrl ?? '').trim()
-      const url = urlRaw && isValidUrl(urlRaw) ? urlRaw : ''
+      // Sanitize and validate all input with key whitelisting
+      const sanitizedSettings = sanitizeRestoredSettings(settings)
+
+      // Apply validated settings or keep current values as fallback
+      const theme = sanitizedSettings.theme ?? currentTheme.value
+      const hours = sanitizedSettings.targetWorkHours ?? targetWorkHours.value
+      const buttonText = sanitizedSettings.reportingAppButtonText ?? reportingAppButtonText.value
+      const url = sanitizedSettings.reportingAppUrl ?? reportingAppUrl.value
 
       currentTheme.value = theme
       targetWorkHours.value = hours

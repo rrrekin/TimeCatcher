@@ -245,7 +245,8 @@ const {
   isValidUrl,
   applyTheme,
   saveSettings: saveSettingsComposable,
-  initializeTempSettings
+  initializeTempSettings,
+  applyRestoredSettings
 } = useSettings()
 
 const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
@@ -449,9 +450,13 @@ const backupApp = async () => {
       showToastMessage('Backup saved successfully', 'success')
     } else if (res?.error) {
       showToastMessage(`Backup failed: ${res.error}`, 'error')
+    } else {
+      // Unexpected response shape
+      showToastMessage('Backup returned unexpected response', 'error')
     }
   } catch (e) {
-    showToastMessage('Backup failed', 'error')
+    const message = (e as any)?.message || String(e)
+    showToastMessage(`Backup failed: ${message}`, 'error')
   }
 }
 
@@ -466,8 +471,7 @@ const restoreBackup = async () => {
       // Apply restored settings if provided
       const restored = res.settings || {}
       try {
-        // Apply and persist restored settings
-        const { applyRestoredSettings } = useSettings()
+        // Apply and persist restored settings using existing composable instance
         applyRestoredSettings(restored)
       } catch (e) {
         // Non-fatal; settings can be adjusted manually
@@ -476,6 +480,9 @@ const restoreBackup = async () => {
       // Reload data
       await loadCategoriesWrapper()
       await loadTaskRecordsWrapper()
+      // Re-sync SetupModal temporary fields and optionally close modal
+      initializeTempSettings()
+      isSetupModalOpen.value = false
       showToastMessage('Restore completed successfully', 'success')
     } else if (res?.cancelled) {
       // user cancelled - no toast necessary
@@ -766,9 +773,9 @@ onMounted(async () => {
     }
   }
   try {
-    mediaQueryList.addEventListener('change', mediaQueryHandler)
+    mediaQueryList?.addEventListener('change', mediaQueryHandler)
   } catch {
-    mediaQueryList.addListener?.(mediaQueryHandler as any)
+    mediaQueryList?.addListener?.(mediaQueryHandler as any)
   }
 
   // Wait a moment for database initialization to complete, then load categories
