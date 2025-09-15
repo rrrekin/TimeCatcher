@@ -177,78 +177,18 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Centralized not-found pattern for gh stderr detection (case-insensitive, extended)
-          NOT_FOUND_PATTERN='(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404|^Not Found$)'
-
-          # Ensure GITHUB_TOKEN is set before using gh
-          if [ -z "${GITHUB_TOKEN:-}" ]; then
-            echo "::error::GITHUB_TOKEN is not set. Please ensure the workflow has access to secrets.GITHUB_TOKEN." >&2
-            exit 1
-          fi
-          export GH_TOKEN="${GITHUB_TOKEN}"
-
-          # Verify GitHub CLI (gh) is installed and meets a minimal version
-          if ! command -v gh >/dev/null 2>&1; then
-            echo "::error::GitHub CLI (gh) is not installed on this runner. Please add a setup step (e.g., 'cli/gh-actions/setup-gh') or use a runner with gh preinstalled." >&2
-            exit 1
-          fi
-          # Optional version check to ensure a sufficiently new gh; warn if too old
-          MIN_GH_VERSION="2.0.0"
-          GH_VERSION_RAW="$(gh --version | head -n1)"
-          GH_VERSION="$(printf '%s' "$GH_VERSION_RAW" | awk '{print $3}')"
-          version_ge() { [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]; }
-          if [ -n "$GH_VERSION" ] && ! version_ge "$GH_VERSION" "$MIN_GH_VERSION"; then
-            echo "::warning::Detected gh version $GH_VERSION, which is older than the recommended minimum $MIN_GH_VERSION. The workflow will continue with compatibility fallbacks, but consider updating gh." >&2
-          fi
-
           TAG="${{ steps.version.outputs.tag }}"
-
-          # Create temp files first and ensure cleanup on any exit
-          TEMP_STDOUT=$(mktemp)
-          TEMP_STDERR=$(mktemp)
-          trap 'rm -f "$TEMP_STDOUT" "$TEMP_STDERR"' EXIT
-
-          # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present (fallback if htmlUrl unsupported)
           CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
-          if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
-            # Success: release exists
-            RELEASE_URL="$CANONICAL_URL"
-            echo "Release $TAG already exists at: $RELEASE_URL"
+
+          # Simple check using gh release view with basic JSON output
+          if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url > /dev/null 2>&1; then
+            echo "Release $TAG already exists at: $CANONICAL_URL"
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
+            echo "release_url=$CANONICAL_URL" >> "$GITHUB_OUTPUT"
           else
-            # First failure: check if it's due to an unknown 'htmlUrl' field (older gh CLI); if so, retry with only 'url'
-            STDERR_CONTENT=$(cat "$TEMP_STDERR")
-            if echo "$STDERR_CONTENT" | grep -Eiq '(Unknown JSON field|unknown field).*htmlUrl'; then
-              if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url --jq '.url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
-                RELEASE_URL="$CANONICAL_URL"
-                echo "Release $TAG already exists at: $RELEASE_URL"
-                echo "exists=true" >> "$GITHUB_OUTPUT"
-                echo "release_url=$RELEASE_URL" >> "$GITHUB_OUTPUT"
-              else
-                # Retry failed: evaluate not-found patterns or fail fast
-                STDERR_CONTENT=$(cat "$TEMP_STDERR")
-                if echo "$STDERR_CONTENT" | grep -Eiq "$NOT_FOUND_PATTERN"; then
-                  echo "Release $TAG does not exist"
-                  echo "exists=false" >> "$GITHUB_OUTPUT"
-                  echo "release_url=" >> "$GITHUB_OUTPUT"
-                else
-                  echo "::error::Failed to check release status for $TAG: $STDERR_CONTENT"
-                  exit 1
-                fi
-              fi
-            else
-              # Not an 'htmlUrl' field issue: check prioritized not-found messages across different gh versions
-              if echo "$STDERR_CONTENT" | grep -Eiq "$NOT_FOUND_PATTERN"; then
-                echo "Release $TAG does not exist"
-                echo "exists=false" >> "$GITHUB_OUTPUT"
-                echo "release_url=" >> "$GITHUB_OUTPUT"
-              else
-                # Other error - fail fast
-                echo "::error::Failed to check release status for $TAG: $STDERR_CONTENT"
-                exit 1
-              fi
-            fi
+            echo "Release $TAG does not exist"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "release_url=" >> "$GITHUB_OUTPUT"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -263,7 +203,12 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           body_path: CHANGELOG.md
           files: |
-            release_artifacts/**
+            release_artifacts/*.dmg
+            release_artifacts/*.exe
+            release_artifacts/*.AppImage
+            release_artifacts/*.snap
+            release_artifacts/*.blockmap
+            release_artifacts/*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
