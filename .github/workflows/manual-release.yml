@@ -178,7 +178,7 @@ jobs:
           set -euo pipefail
 
           # Centralized not-found pattern for gh stderr detection (case-insensitive, extended)
-          NOT_FOUND_PATTERN='(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404|Not Found)'
+          NOT_FOUND_PATTERN='(Could not resolve to a Release with the tag name|release not found|could not find release|HTTP 404|^Not Found$)'
 
           # Ensure GITHUB_TOKEN is set before using gh
           if [ -z "${GITHUB_TOKEN:-}" ]; then
@@ -209,9 +209,9 @@ jobs:
           trap 'rm -f "$TEMP_STDOUT" "$TEMP_STDERR"' EXIT
 
           # Pin the repository and request both htmlUrl and url, preferring htmlUrl when present (fallback if htmlUrl unsupported)
+          CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
           if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json htmlUrl,url --jq '.htmlUrl // .url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
             # Success: release exists
-            CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
             RELEASE_URL="$CANONICAL_URL"
             echo "Release $TAG already exists at: $RELEASE_URL"
             echo "exists=true" >> "$GITHUB_OUTPUT"
@@ -220,8 +220,7 @@ jobs:
             # First failure: check if it's due to an unknown 'htmlUrl' field (older gh CLI); if so, retry with only 'url'
             STDERR_CONTENT=$(cat "$TEMP_STDERR")
             if echo "$STDERR_CONTENT" | grep -Eiq '(Unknown JSON field|unknown field).*htmlUrl'; then
-              if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url | jq -r '.url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
-                CANONICAL_URL="${GITHUB_SERVER_URL%/}/$GITHUB_REPOSITORY/releases/tag/$TAG"
+              if gh -R "$GITHUB_REPOSITORY" release view "$TAG" --json url --jq '.url' > "$TEMP_STDOUT" 2> "$TEMP_STDERR"; then
                 RELEASE_URL="$CANONICAL_URL"
                 echo "Release $TAG already exists at: $RELEASE_URL"
                 echo "exists=true" >> "$GITHUB_OUTPUT"
