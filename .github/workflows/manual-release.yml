@@ -195,170 +195,97 @@ jobs:
             RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
           fi
 
-          # Debug: Show what we're working with
-          echo "DEBUG: RANGE=$RANGE"
-          echo "DEBUG: Checking git repository status..."
-          git status --porcelain || echo "DEBUG: git status failed"
-          echo "DEBUG: Current HEAD:"
-          git log --oneline -5 || echo "DEBUG: git log failed"
-
           # Initialize changelog with header
-          echo "DEBUG: Creating CHANGELOG.md..."
           echo "# What's Changed" > CHANGELOG.md
           echo >> CHANGELOG.md
-          echo "DEBUG: CHANGELOG.md created successfully"
 
           # Function to clean commit message (remove type prefix)
-          echo "DEBUG: Defining clean_commit_message function..."
           clean_commit_message() {
             local msg="$1"
-            echo "DEBUG: Cleaning message: '$msg'" >&2
             # Remove conventional commit prefix and format as bullet point
-            # Use parameter expansion instead of sed to avoid issues
             if [[ "$msg" == *": "* ]]; then
               result="- ${msg#*: }"
             else
               result="- $msg"
             fi
-            echo "DEBUG: Cleaned to: '$result'" >&2
             echo "$result"
           }
-          echo "DEBUG: clean_commit_message function defined"
 
           # Function to get commits by type and format them
-          echo "DEBUG: Defining get_commits_by_type function..."
           get_commits_by_type() {
             local pattern="$1"
             local section_title="$2"
             local emoji="$3"
-            echo "DEBUG: get_commits_by_type called with pattern='$pattern', title='$section_title', emoji='$emoji'"
 
-            echo "DEBUG: Running git log with pattern '$pattern'..."
             COMMITS=$(git log --no-merges \
               --grep="$pattern" \
               --pretty=format:'%s' \
               "$RANGE") || true
-            echo "DEBUG: git log completed, exit code: $?"
 
             if [ -n "$COMMITS" ]; then
-              echo "DEBUG: Found commits for $pattern:"
-              echo "$COMMITS" | while read -r line; do echo "DEBUG:   '$line'"; done
-              echo "DEBUG: Adding section: $emoji $section_title"
               echo "## $emoji $section_title" >> CHANGELOG.md
               echo >> CHANGELOG.md
-              echo "DEBUG: Processing each commit..."
               while IFS= read -r commit; do
-                echo "DEBUG: Processing commit: '$commit'"
                 clean_commit_message "$commit" >> CHANGELOG.md
               done <<< "$COMMITS"
               echo >> CHANGELOG.md
-              echo "DEBUG: Section completed successfully"
               return 0
             else
-              echo "DEBUG: No commits found for pattern '$pattern'"
               return 1
             fi
           }
-          echo "DEBUG: get_commits_by_type function defined"
 
           # Check for breaking changes first (highest priority)
-          echo "DEBUG: Checking for breaking changes..."
           BREAKING=$(git log --no-merges \
             --grep="!" \
             --pretty=format:'%s' \
             "$RANGE") || true
-          echo "DEBUG: Breaking changes search completed, exit code: $?"
 
           # Filter for actual breaking changes (those with ! in the type)
           if [ -n "$BREAKING" ]; then
-            echo "DEBUG: Found potential breaking changes:"
-            echo "$BREAKING" | while read -r line; do echo "DEBUG:   '$line'"; done
-            echo "DEBUG: Filtering for actual breaking changes..."
             BREAKING=$(echo "$BREAKING" | grep "!:" || true)
-            echo "DEBUG: Filtered breaking changes:"
-            echo "$BREAKING" | while read -r line; do echo "DEBUG:   '$line'"; done
-          else
-            echo "DEBUG: No potential breaking changes found"
           fi
 
-          echo "DEBUG: Checking for BREAKING CHANGE footer..."
           BREAKING_FOOTER=$(git log --no-merges \
             --grep="BREAKING CHANGE" \
             --pretty=format:'%s' \
             "$RANGE") || true
-          echo "DEBUG: BREAKING CHANGE footer search completed, exit code: $?"
 
           if [ -n "$BREAKING" ] || [ -n "$BREAKING_FOOTER" ]; then
-            echo "DEBUG: Adding BREAKING CHANGES section"
             echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
             echo >> CHANGELOG.md
             if [ -n "$BREAKING" ]; then
-              echo "DEBUG: Processing breaking changes with ! syntax..."
               while IFS= read -r commit; do
-                echo "DEBUG: Processing breaking commit: '$commit'"
                 clean_commit_message "$commit" >> CHANGELOG.md
               done <<< "$BREAKING"
             fi
             if [ -n "$BREAKING_FOOTER" ]; then
-              echo "DEBUG: Processing breaking changes with footer syntax..."
               while IFS= read -r commit; do
-                echo "DEBUG: Processing breaking footer commit: '$commit'"
                 clean_commit_message "$commit" >> CHANGELOG.md
               done <<< "$BREAKING_FOOTER"
             fi
             echo >> CHANGELOG.md
-            echo "DEBUG: BREAKING CHANGES section completed"
-          else
-            echo "DEBUG: No breaking changes found"
           fi
 
           # Generate sections for different commit types
-          echo "DEBUG: Starting commit type processing..."
           get_commits_by_type "^feat" "Features" "🚀" || true
-          echo "DEBUG: feat processing completed with exit code: $?"
-
           get_commits_by_type "^fix" "Bug Fixes" "🐛" || true
-          echo "DEBUG: fix processing completed with exit code: $?"
-
           get_commits_by_type "^perf" "Performance Improvements" "⚡" || true
-          echo "DEBUG: perf processing completed with exit code: $?"
-
           get_commits_by_type "^docs" "Documentation" "📚" || true
-          echo "DEBUG: docs processing completed with exit code: $?"
+      #          get_commits_by_type "^style" "Code Style" "🎨" || true
+      #          get_commits_by_type "^refactor" "Refactoring" "♻️" || true
+      #          get_commits_by_type "^test" "Testing" "✅" || true
+      #          get_commits_by_type "^build" "Build System" "🏗️" || true
+      #          get_commits_by_type "^ci" "CI/CD" "⚙️" || true
+      #          get_commits_by_type "^chore" "Other Changes" "🔧" || true
 
-          get_commits_by_type "^style" "Code Style" "🎨" || true
-          echo "DEBUG: style processing completed with exit code: $?"
-
-          get_commits_by_type "^refactor" "Refactoring" "♻️" || true
-          echo "DEBUG: refactor processing completed with exit code: $?"
-
-          get_commits_by_type "^test" "Testing" "✅" || true
-          echo "DEBUG: test processing completed with exit code: $?"
-
-          get_commits_by_type "^build" "Build System" "🏗️" || true
-          echo "DEBUG: build processing completed with exit code: $?"
-
-          get_commits_by_type "^ci" "CI/CD" "⚙️" || true
-          echo "DEBUG: ci processing completed with exit code: $?"
-
-          get_commits_by_type "^chore" "Other Changes" "🔧" || true
-          echo "DEBUG: chore processing completed with exit code: $?"
-
-          # If no categorized commits found, add fallback
-          echo "DEBUG: Checking if any sections were added..."
-          if ! grep -q "^## " CHANGELOG.md; then
-            echo "DEBUG: No sections found, adding fallback"
-            echo "## 🔧 Changes" >> CHANGELOG.md
-            echo >> CHANGELOG.md
-            echo "- Various improvements and fixes" >> CHANGELOG.md
-            echo >> CHANGELOG.md
-          else
-            echo "DEBUG: Sections were found in changelog"
-          fi
-
-          echo "DEBUG: Changelog generation completed"
-          echo "DEBUG: Final CHANGELOG.md content:"
-          cat CHANGELOG.md
+      # If no categorized commits found, add fallback
+      #          if ! grep -q "^## " CHANGELOG.md; then
+      #            echo "## 🔧 Changes" >> CHANGELOG.md
+      #            echo >> CHANGELOG.md
+      #            echo "- Various improvements and fixes" >> CHANGELOG.md
+      #            echo >> CHANGELOG.md
+      #          fi
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -382,7 +309,6 @@ jobs:
             release_artifacts/**/TimeCatcher-*.blockmap
             release_artifacts/**/TimeCatcher-*.zip
             release_artifacts/**/latest*.yml
-            release_artifacts/**/app-update.yml
             release_artifacts/**/*.zsync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
