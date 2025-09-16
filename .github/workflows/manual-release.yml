@@ -184,6 +184,8 @@ jobs:
         id: changelog
         shell: bash
         run: |
+          set -euo pipefail
+
           PREV="${{ steps.prev.outputs.tag }}"
           if [ -n "$PREV" ]; then
             echo "Generating changelog from $PREV to HEAD"
@@ -192,12 +194,98 @@ jobs:
             echo "Generating changelog from repository start to HEAD"
             RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
           fi
-          {
-            echo "## Changes"
-            echo
-            git log --no-merges --pretty=format:'- %s (%h) by %an' $RANGE
-            echo
-          } > CHANGELOG.md
+
+          # Initialize changelog with header
+          echo "# What's Changed" > CHANGELOG.md
+          echo >> CHANGELOG.md
+
+          # Function to clean commit message (remove type prefix)
+          clean_commit_message() {
+            local msg="$1"
+            # Remove conventional commit prefix and format as bullet point
+            if [[ "$msg" == *": "* ]]; then
+              result="- ${msg#*: }"
+            else
+              result="- $msg"
+            fi
+            echo "$result"
+          }
+
+          # Function to get commits by type and format them
+          get_commits_by_type() {
+            local pattern="$1"
+            local section_title="$2"
+            local emoji="$3"
+
+            COMMITS=$(git log --no-merges \
+              --grep="$pattern" \
+              --pretty=format:'%s' \
+              "$RANGE") || true
+
+            if [ -n "$COMMITS" ]; then
+              echo "## $emoji $section_title" >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$COMMITS"
+              echo >> CHANGELOG.md
+              return 0
+            else
+              return 1
+            fi
+          }
+
+          # Check for breaking changes first (highest priority)
+          BREAKING=$(git log --no-merges \
+            --grep="!" \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+
+          # Filter for actual breaking changes (those with ! in the type)
+          if [ -n "$BREAKING" ]; then
+            BREAKING=$(echo "$BREAKING" | grep "!:" || true)
+          fi
+
+          BREAKING_FOOTER=$(git log --no-merges \
+            --grep="BREAKING CHANGE" \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+
+          if [ -n "$BREAKING" ] || [ -n "$BREAKING_FOOTER" ]; then
+            echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
+            echo >> CHANGELOG.md
+            if [ -n "$BREAKING" ]; then
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING"
+            fi
+            if [ -n "$BREAKING_FOOTER" ]; then
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING_FOOTER"
+            fi
+            echo >> CHANGELOG.md
+          fi
+
+          # Generate sections for different commit types
+          get_commits_by_type "^feat" "Features" "🚀" || true
+          get_commits_by_type "^fix" "Bug Fixes" "🐛" || true
+          get_commits_by_type "^perf" "Performance Improvements" "⚡" || true
+          get_commits_by_type "^docs" "Documentation" "📚" || true
+      #          get_commits_by_type "^style" "Code Style" "🎨" || true
+      #          get_commits_by_type "^refactor" "Refactoring" "♻️" || true
+      #          get_commits_by_type "^test" "Testing" "✅" || true
+      #          get_commits_by_type "^build" "Build System" "🏗️" || true
+      #          get_commits_by_type "^ci" "CI/CD" "⚙️" || true
+      #          get_commits_by_type "^chore" "Other Changes" "🔧" || true
+
+      # If no categorized commits found, add fallback
+      #          if ! grep -q "^## " CHANGELOG.md; then
+      #            echo "## 🔧 Changes" >> CHANGELOG.md
+      #            echo >> CHANGELOG.md
+      #            echo "- Various improvements and fixes" >> CHANGELOG.md
+      #            echo >> CHANGELOG.md
+      #          fi
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -214,16 +302,14 @@ jobs:
           prerelease: ${{ fromJson(github.event.inputs.prerelease) }}
           body_path: CHANGELOG.md
           files: |
-            release_artifacts/**/*.dmg
-            release_artifacts/**/*.exe
-            release_artifacts/**/*.AppImage
-            release_artifacts/**/*.snap
-            release_artifacts/**/*.blockmap
-            release_artifacts/**/*.yml
-            release_artifacts/**/*.zip
-            release_artifacts/**/*.msi
-            release_artifacts/**/*.deb
-            release_artifacts/**/*.rpm
-            release_artifacts/**/*.tar.gz
+            release_artifacts/**/TimeCatcher-*.dmg
+            release_artifacts/**/TimeCatcher-*.exe
+            release_artifacts/**/TimeCatcher-*.AppImage
+            release_artifacts/**/TimeCatcher-*.snap
+            release_artifacts/**/TimeCatcher-*.blockmap
+            release_artifacts/**/TimeCatcher-*.zip
+            release_artifacts/**/latest*.yml
+            release_artifacts/timecatcher-windows/**/app-update.yml
+            release_artifacts/**/*.zsync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

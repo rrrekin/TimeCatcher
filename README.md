@@ -12,6 +12,14 @@
 
 Context-switch time tracking, my way
 
+## Downloads
+
+Download the latest release for your platform from the [Releases page](https://github.com/rrrekin/TimeCatcher/releases). Available formats include:
+
+- __macOS__: `.dmg` installer
+- __Windows__: `.exe` installer
+- __Linux__: `.AppImage` (portable) and `.snap` packages
+
 ## About This Project
 
 This is me trying vibe coding. I’m a senior Java backend dev poking at tech I don’t know at all to see how far AI agents can take me. I mostly played Product Owner — wrote the asks and sanity‑checked the result.
