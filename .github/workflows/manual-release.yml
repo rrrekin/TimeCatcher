@@ -207,8 +207,6 @@ jobs:
 
             COMMITS=$(git log --no-merges \
               --grep="$pattern" \
-              --regexp-ignore-case \
-              --extended-regexp \
               --pretty=format:'%s' \
               "$RANGE") || true
 
@@ -216,7 +214,7 @@ jobs:
               echo "## $emoji $section_title" >> CHANGELOG.md
               echo >> CHANGELOG.md
               echo "$COMMITS" | \
-              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
               sed 's/^/- /' >> CHANGELOG.md
               echo >> CHANGELOG.md
               return 0
@@ -226,15 +224,12 @@ jobs:
 
           # Check for breaking changes first (highest priority)
           BREAKING=$(git log --no-merges \
-            --grep="^[^:]*(\([^)]+\))?!:" \
-            --regexp-ignore-case \
-            --extended-regexp \
+            --grep="!" \
             --pretty=format:'%s' \
-            "$RANGE") || true
+            "$RANGE" | grep -E "^[^:]*(\([^)]*\))?!:" || true)
 
           BREAKING_FOOTER=$(git log --no-merges \
-            --grep="BREAKING CHANGE:" \
-            --regexp-ignore-case \
+            --grep="BREAKING CHANGE" \
             --pretty=format:'%s' \
             "$RANGE") || true
 
@@ -243,21 +238,36 @@ jobs:
             echo >> CHANGELOG.md
             if [ -n "$BREAKING" ]; then
               echo "$BREAKING" | \
-              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
               sed 's/^/- /' >> CHANGELOG.md
             fi
             if [ -n "$BREAKING_FOOTER" ]; then
               echo "$BREAKING_FOOTER" | \
-              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
               sed 's/^/- /' >> CHANGELOG.md
             fi
             echo >> CHANGELOG.md
           fi
 
           # Generate sections for different commit types
-          get_commits_by_type "^feat(\([^)]+\))?:" "Features" "🚀"
-          get_commits_by_type "^fix(\([^)]+\))?:" "Bug Fixes" "🐛"
-          get_commits_by_type "^perf(\([^)]+\))?:" "Performance Improvements" "⚡"
+          get_commits_by_type "^feat" "Features" "🚀"
+          get_commits_by_type "^fix" "Bug Fixes" "🐛"
+          get_commits_by_type "^perf" "Performance Improvements" "⚡"
+          get_commits_by_type "^docs" "Documentation" "📚"
+          get_commits_by_type "^style" "Code Style" "🎨"
+          get_commits_by_type "^refactor" "Refactoring" "♻️"
+          get_commits_by_type "^test" "Testing" "✅"
+          get_commits_by_type "^build" "Build System" "🏗️"
+          get_commits_by_type "^ci" "CI/CD" "⚙️"
+          get_commits_by_type "^chore" "Other Changes" "🔧"
+
+          # If no categorized commits found, add fallback
+          if ! grep -q "^## " CHANGELOG.md; then
+            echo "## 🔧 Changes" >> CHANGELOG.md
+            echo >> CHANGELOG.md
+            echo "- Various improvements and fixes" >> CHANGELOG.md
+            echo >> CHANGELOG.md
+          fi
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
