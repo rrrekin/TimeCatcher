@@ -195,91 +195,66 @@ jobs:
             RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
           fi
 
+          # Debug: Show what we're working with
+          echo "DEBUG: RANGE=$RANGE"
+          echo "DEBUG: Checking git repository status..."
+          git status --porcelain || echo "DEBUG: git status failed"
+          echo "DEBUG: Current HEAD:"
+          git log --oneline -5 || echo "DEBUG: git log failed"
+
           # Initialize changelog with header
+          echo "DEBUG: Creating CHANGELOG.md..."
           echo "# What's Changed" > CHANGELOG.md
           echo >> CHANGELOG.md
+          echo "DEBUG: CHANGELOG.md created successfully"
 
-          # Function to clean commit message (remove type prefix)
-          clean_commit_message() {
-            local msg="$1"
-            # Remove conventional commit prefix and format as bullet point
-            echo "$msg" | sed 's/^[^:]*: */- /'
-          }
+          # Simple approach - get all commits and categorize them manually
+          echo "DEBUG: Getting all commits in range..."
+          ALL_COMMITS=$(git log --no-merges --pretty=format:'%s' "$RANGE" 2>/dev/null || echo "")
+          echo "DEBUG: Found $(echo "$ALL_COMMITS" | wc -l) commits"
 
-          # Function to get commits by type and format them
-          get_commits_by_type() {
-            local pattern="$1"
-            local section_title="$2"
-            local emoji="$3"
-
-            COMMITS=$(git log --no-merges \
-              --grep="$pattern" \
-              --pretty=format:'%s' \
-              "$RANGE") || true
-
-            if [ -n "$COMMITS" ]; then
-              echo "## $emoji $section_title" >> CHANGELOG.md
-              echo >> CHANGELOG.md
-              while IFS= read -r commit; do
-                clean_commit_message "$commit" >> CHANGELOG.md
-              done <<< "$COMMITS"
-              echo >> CHANGELOG.md
-              return 0
-            fi
-            return 1
-          }
-
-          # Check for breaking changes first (highest priority)
-          BREAKING=$(git log --no-merges \
-            --grep="!" \
-            --pretty=format:'%s' \
-            "$RANGE") || true
-
-          # Filter for actual breaking changes (those with ! in the type)
-          if [ -n "$BREAKING" ]; then
-            BREAKING=$(echo "$BREAKING" | grep "!:" || true)
-          fi
-
-          BREAKING_FOOTER=$(git log --no-merges \
-            --grep="BREAKING CHANGE" \
-            --pretty=format:'%s' \
-            "$RANGE") || true
-
-          if [ -n "$BREAKING" ] || [ -n "$BREAKING_FOOTER" ]; then
-            echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
-            echo >> CHANGELOG.md
-            if [ -n "$BREAKING" ]; then
-              while IFS= read -r commit; do
-                clean_commit_message "$commit" >> CHANGELOG.md
-              done <<< "$BREAKING"
-            fi
-            if [ -n "$BREAKING_FOOTER" ]; then
-              while IFS= read -r commit; do
-                clean_commit_message "$commit" >> CHANGELOG.md
-              done <<< "$BREAKING_FOOTER"
-            fi
-            echo >> CHANGELOG.md
-          fi
-
-          # Generate sections for different commit types
-          get_commits_by_type "^feat" "Features" "🚀"
-          get_commits_by_type "^fix" "Bug Fixes" "🐛"
-          get_commits_by_type "^perf" "Performance Improvements" "⚡"
-          get_commits_by_type "^docs" "Documentation" "📚"
-          get_commits_by_type "^style" "Code Style" "🎨"
-          get_commits_by_type "^refactor" "Refactoring" "♻️"
-          get_commits_by_type "^test" "Testing" "✅"
-          get_commits_by_type "^build" "Build System" "🏗️"
-          get_commits_by_type "^ci" "CI/CD" "⚙️"
-          get_commits_by_type "^chore" "Other Changes" "🔧"
-
-          # If no categorized commits found, add fallback
-          if ! grep -q "^## " CHANGELOG.md; then
+          if [ -z "$ALL_COMMITS" ]; then
+            echo "DEBUG: No commits found, adding fallback content"
             echo "## 🔧 Changes" >> CHANGELOG.md
             echo >> CHANGELOG.md
             echo "- Various improvements and fixes" >> CHANGELOG.md
             echo >> CHANGELOG.md
+          else
+            echo "DEBUG: Processing commits..."
+
+            # Process each commit type
+            echo "$ALL_COMMITS" | grep "^feat" > /tmp/feat_commits.txt 2>/dev/null || touch /tmp/feat_commits.txt
+            echo "$ALL_COMMITS" | grep "^fix" > /tmp/fix_commits.txt 2>/dev/null || touch /tmp/fix_commits.txt
+
+            # Add Features section if we have feat commits
+            if [ -s /tmp/feat_commits.txt ]; then
+              echo "DEBUG: Adding Features section"
+              echo "## 🚀 Features" >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              while read -r line; do
+                echo "- ${line#feat: }" >> CHANGELOG.md
+              done < /tmp/feat_commits.txt
+              echo >> CHANGELOG.md
+            fi
+
+            # Add Bug Fixes section if we have fix commits
+            if [ -s /tmp/fix_commits.txt ]; then
+              echo "DEBUG: Adding Bug Fixes section"
+              echo "## 🐛 Bug Fixes" >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              while read -r line; do
+                echo "- ${line#fix: }" >> CHANGELOG.md
+              done < /tmp/fix_commits.txt
+              echo >> CHANGELOG.md
+            fi
+
+            # Cleanup temp files
+            rm -f /tmp/feat_commits.txt /tmp/fix_commits.txt
           fi
+
+          echo "DEBUG: Changelog generation completed"
+          echo "DEBUG: Final CHANGELOG.md content:"
+          cat CHANGELOG.md
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
