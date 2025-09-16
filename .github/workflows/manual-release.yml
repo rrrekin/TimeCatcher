@@ -199,6 +199,13 @@ jobs:
           echo "# What's Changed" > CHANGELOG.md
           echo >> CHANGELOG.md
 
+          # Function to clean commit message (remove type prefix)
+          clean_commit_message() {
+            local msg="$1"
+            # Remove conventional commit prefix and format as bullet point
+            echo "$msg" | sed 's/^[^:]*: */- /'
+          }
+
           # Function to get commits by type and format them
           get_commits_by_type() {
             local pattern="$1"
@@ -213,9 +220,9 @@ jobs:
             if [ -n "$COMMITS" ]; then
               echo "## $emoji $section_title" >> CHANGELOG.md
               echo >> CHANGELOG.md
-              echo "$COMMITS" | \
-              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
-              sed 's/^/- /' >> CHANGELOG.md
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$COMMITS"
               echo >> CHANGELOG.md
               return 0
             fi
@@ -226,7 +233,12 @@ jobs:
           BREAKING=$(git log --no-merges \
             --grep="!" \
             --pretty=format:'%s' \
-            "$RANGE" | grep -E "^[^:]*(\([^)]*\))?!:" || true)
+            "$RANGE") || true
+
+          # Filter for actual breaking changes (those with ! in the type)
+          if [ -n "$BREAKING" ]; then
+            BREAKING=$(echo "$BREAKING" | grep "!:" || true)
+          fi
 
           BREAKING_FOOTER=$(git log --no-merges \
             --grep="BREAKING CHANGE" \
@@ -237,14 +249,14 @@ jobs:
             echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
             echo >> CHANGELOG.md
             if [ -n "$BREAKING" ]; then
-              echo "$BREAKING" | \
-              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
-              sed 's/^/- /' >> CHANGELOG.md
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING"
             fi
             if [ -n "$BREAKING_FOOTER" ]; then
-              echo "$BREAKING_FOOTER" | \
-              sed -E 's/^[^:]*(\([^)]*\))?!?:[[:space:]]*//' | \
-              sed 's/^/- /' >> CHANGELOG.md
+              while IFS= read -r commit; do
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING_FOOTER"
             fi
             echo >> CHANGELOG.md
           fi
