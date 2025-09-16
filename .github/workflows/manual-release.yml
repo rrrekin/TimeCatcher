@@ -212,10 +212,15 @@ jobs:
           echo "DEBUG: Defining clean_commit_message function..."
           clean_commit_message() {
             local msg="$1"
-            echo "DEBUG: Cleaning message: '$msg'"
+            echo "DEBUG: Cleaning message: '$msg'" >&2
             # Remove conventional commit prefix and format as bullet point
-            result=$(echo "$msg" | sed 's/^[^:]*: */- /')
-            echo "DEBUG: Cleaned to: '$result'"
+            # Use parameter expansion instead of sed to avoid issues
+            if [[ "$msg" == *": "* ]]; then
+              result="- ${msg#*: }"
+            else
+              result="- $msg"
+            fi
+            echo "DEBUG: Cleaned to: '$result'" >&2
             echo "$result"
           }
           echo "DEBUG: clean_commit_message function defined"
@@ -309,34 +314,34 @@ jobs:
 
           # Generate sections for different commit types
           echo "DEBUG: Starting commit type processing..."
-          get_commits_by_type "^feat" "Features" "🚀"
+          get_commits_by_type "^feat" "Features" "🚀" || true
           echo "DEBUG: feat processing completed with exit code: $?"
 
-          get_commits_by_type "^fix" "Bug Fixes" "🐛"
+          get_commits_by_type "^fix" "Bug Fixes" "🐛" || true
           echo "DEBUG: fix processing completed with exit code: $?"
 
-          get_commits_by_type "^perf" "Performance Improvements" "⚡"
+          get_commits_by_type "^perf" "Performance Improvements" "⚡" || true
           echo "DEBUG: perf processing completed with exit code: $?"
 
-          get_commits_by_type "^docs" "Documentation" "📚"
+          get_commits_by_type "^docs" "Documentation" "📚" || true
           echo "DEBUG: docs processing completed with exit code: $?"
 
-          get_commits_by_type "^style" "Code Style" "🎨"
+          get_commits_by_type "^style" "Code Style" "🎨" || true
           echo "DEBUG: style processing completed with exit code: $?"
 
-          get_commits_by_type "^refactor" "Refactoring" "♻️"
+          get_commits_by_type "^refactor" "Refactoring" "♻️" || true
           echo "DEBUG: refactor processing completed with exit code: $?"
 
-          get_commits_by_type "^test" "Testing" "✅"
+          get_commits_by_type "^test" "Testing" "✅" || true
           echo "DEBUG: test processing completed with exit code: $?"
 
-          get_commits_by_type "^build" "Build System" "🏗️"
+          get_commits_by_type "^build" "Build System" "🏗️" || true
           echo "DEBUG: build processing completed with exit code: $?"
 
-          get_commits_by_type "^ci" "CI/CD" "⚙️"
+          get_commits_by_type "^ci" "CI/CD" "⚙️" || true
           echo "DEBUG: ci processing completed with exit code: $?"
 
-          get_commits_by_type "^chore" "Other Changes" "🔧"
+          get_commits_by_type "^chore" "Other Changes" "🔧" || true
           echo "DEBUG: chore processing completed with exit code: $?"
 
           # If no categorized commits found, add fallback
