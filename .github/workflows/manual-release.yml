@@ -210,15 +210,20 @@ jobs:
         with:
           tag_name: ${{ needs.check.outputs.tag }}
           name: ${{ needs.check.outputs.name }}
-          draft: ${{ github.event.inputs.draft == 'true' }}
-          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+          draft: ${{ fromJson(github.event.inputs.draft) }}
+          prerelease: ${{ fromJson(github.event.inputs.prerelease) }}
           body_path: CHANGELOG.md
           files: |
-            release_artifacts/*.dmg
-            release_artifacts/*.exe
-            release_artifacts/*.AppImage
-            release_artifacts/*.snap
-            release_artifacts/*.blockmap
-            release_artifacts/*.yml
+            release_artifacts/**/*.dmg
+            release_artifacts/**/*.exe
+            release_artifacts/**/*.AppImage
+            release_artifacts/**/*.snap
+            release_artifacts/**/*.blockmap
+            release_artifacts/**/*.yml
+            release_artifacts/**/*.zip
+            release_artifacts/**/*.msi
+            release_artifacts/**/*.deb
+            release_artifacts/**/*.rpm
+            release_artifacts/**/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
