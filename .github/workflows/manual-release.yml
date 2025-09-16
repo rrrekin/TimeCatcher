@@ -192,12 +192,23 @@ jobs:
             echo "Generating changelog from repository start to HEAD"
             RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
           fi
-          {
-            echo "## Changes"
-            echo
-            git log --no-merges --pretty=format:'- %s (%h) by %an' $RANGE
-            echo
-          } > CHANGELOG.md
+
+          # Generate feature-only changelog
+          echo "## New Features" > CHANGELOG.md
+          echo >> CHANGELOG.md
+
+          # Get feature commits and clean the messages
+          FEATURE_COMMITS=$(git log --no-merges --grep="^feat" --grep="^fix" --grep="^bugfix" --perl-regexp --pretty=format:'%s' $RANGE | \
+            sed -E 's/^(feat|fearure|fix|bugfix)(\([^)]+\))?:\s*//ig' | \
+            sed -E 's/ \(#[0-9]+\)$//' | \
+            sed 's/^/- /')
+
+          if [ -n "$FEATURE_COMMITS" ]; then
+            echo "$FEATURE_COMMITS" >> CHANGELOG.md
+          else
+            echo "- No new features in this release" >> CHANGELOG.md
+          fi
+          echo >> CHANGELOG.md
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -214,16 +225,11 @@ jobs:
           prerelease: ${{ fromJson(github.event.inputs.prerelease) }}
           body_path: CHANGELOG.md
           files: |
-            release_artifacts/**/*.dmg
-            release_artifacts/**/*.exe
-            release_artifacts/**/*.AppImage
-            release_artifacts/**/*.snap
-            release_artifacts/**/*.blockmap
-            release_artifacts/**/*.yml
-            release_artifacts/**/*.zip
-            release_artifacts/**/*.msi
-            release_artifacts/**/*.deb
-            release_artifacts/**/*.rpm
-            release_artifacts/**/*.tar.gz
+            release_artifacts/**/TimeCatcher-*.dmg
+            release_artifacts/**/TimeCatcher-*.exe
+            release_artifacts/**/TimeCatcher-*.AppImage
+            release_artifacts/**/TimeCatcher-*.snap
+            release_artifacts/**/TimeCatcher-*.blockmap
+            release_artifacts/**/TimeCatcher-*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
