@@ -12,21 +12,56 @@ TimeCatcher uses a semi-automatic semantic versioning system that automatically 
 
 ### After CI Success
 
-When a pull request is merged to the `main` branch and CI passes successfully, the version is automatically bumped based on the original PR title:
+When a pull request is merged to the `main` branch and CI passes successfully, the version is automatically bumped based on the original PR title using [Conventional Commits](https://www.conventionalcommits.org/) format:
 
-- __Default__: Patch version bump (e.g., `0.20.0` → `0.20.1`)
-- __Minor__: `[MINOR]`, `minor:`, or Conventional Commits `feat:` (e.g., `0.20.0` → `0.21.0`)
-- __Major__: `[MAJOR]`, `major:`, Conventional Commits `type!:` (e.g., `feat!: ...`), or `breaking change` (e.g., `0.20.0` → `1.0.0`)
+## Conventional Commits Format
 
-### Examples
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+## Version Bump Rules
+
+### PATCH Version Bumps (e.g., `0.20.0` → `0.20.1`)
+- `fix`: Bug fixes
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, semicolons)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Adding/updating tests
+- `build`: Build system changes
+- `ci`: CI/CD configuration changes
+- `chore`: Maintenance tasks
+
+### MINOR Version Bumps (e.g., `0.20.0` → `0.21.0`)
+- `feat`: New features
+
+### MAJOR Version Bumps (e.g., `0.20.0` → `1.0.0`)
+- Any type with `!` after type/scope: `feat!:`, `fix(core)!:`
+- Any commit with `BREAKING CHANGE:` footer
+
+## Examples
 
 ```text
-feat: add new feature                    → 0.20.0 → 0.21.0 (minor)
-feat(ui): introduce new theme            → 0.20.0 → 0.21.0 (minor)
-feat!: breaking API changes              → 0.20.0 → 1.0.0 (major)
-refactor(core)!: remove legacy ipc       → 0.20.0 → 1.0.0 (major)
-fix: resolve login bug                   → 0.20.0 → 0.20.1 (patch)
+feat: add task export functionality      → 0.20.0 → 0.21.0 (minor)
+feat(ui): implement dark mode toggle     → 0.20.0 → 0.21.0 (minor)
+fix: resolve timezone calculation bug    → 0.20.0 → 0.20.1 (patch)
+docs: update installation guide          → 0.20.0 → 0.20.1 (patch)
+perf: optimize database queries          → 0.20.0 → 0.20.1 (patch)
+feat!: redesign database schema          → 0.20.0 → 1.0.0 (major)
+fix(api)!: remove deprecated endpoints   → 0.20.0 → 1.0.0 (major)
 ```
+
+## Scope Examples (Optional)
+
+- `feat(ui): add settings panel`
+- `fix(core): resolve memory leak`
+- `docs(api): update IPC documentation`
+- `test(db): add integration tests`
 
 ## Manual Version Bumping
 
@@ -75,21 +110,31 @@ The `scripts/bump-version.js` script handles:
 
 ### PR Titles
 
-Use clear, descriptive PR titles with version indicators when needed:
+Use conventional commit format in PR titles for automatic version detection:
 
 ```bash
-# Patch (default) - no special indicator needed
+# PATCH version bumps
 fix: resolve task deletion bug
-feat: improve UI responsiveness
+docs: update API documentation
+style: fix code formatting issues
+refactor: improve component structure
+perf: optimize rendering performance
+test: add unit tests for utilities
+chore: update dependencies
 
-# Minor - you can rely on `feat:` or add [MINOR] tag explicitly
+# MINOR version bumps
 feat: add data export functionality
-feat: implement dark mode
+feat: implement dark mode toggle
+feat(ui): add new settings panel
 
-# Major - add [MAJOR] tag for breaking changes  
-feat: [MAJOR] redesign database schema
-feat: [MAJOR] migrate to Vue 4
+# MAJOR version bumps
+feat!: redesign database schema
+fix(api)!: remove deprecated endpoints
+feat: migrate to Vue 4
+
+BREAKING CHANGE: This removes the legacy API
 ```
+
 
 ### Version History
 

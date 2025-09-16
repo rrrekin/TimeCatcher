@@ -184,6 +184,8 @@ jobs:
         id: changelog
         shell: bash
         run: |
+          set -euo pipefail
+
           PREV="${{ steps.prev.outputs.tag }}"
           if [ -n "$PREV" ]; then
             echo "Generating changelog from $PREV to HEAD"
@@ -193,22 +195,72 @@ jobs:
             RANGE="$(git rev-list --max-parents=0 HEAD)..HEAD"
           fi
 
-          # Generate feature-only changelog
-          echo "## New Features" > CHANGELOG.md
+          # Initialize changelog with header
+          echo "# What's Changed" > CHANGELOG.md
           echo >> CHANGELOG.md
 
-          # Get feature commits and clean the messages
-          FEATURE_COMMITS=$(git log --no-merges --grep="^feat" --grep="^fix" --grep="^bugfix" --perl-regexp --pretty=format:'%s' $RANGE | \
-            sed -E 's/^(feat|fearure|fix|bugfix)(\([^)]+\))?:\s*//ig' | \
-            sed -E 's/ \(#[0-9]+\)$//' | \
-            sed 's/^/- /')
+          # Function to get commits by type and format them
+          get_commits_by_type() {
+            local pattern="$1"
+            local section_title="$2"
+            local emoji="$3"
 
-          if [ -n "$FEATURE_COMMITS" ]; then
-            echo "$FEATURE_COMMITS" >> CHANGELOG.md
-          else
-            echo "- No new features in this release" >> CHANGELOG.md
+            COMMITS=$(git log --no-merges \
+              --grep="$pattern" \
+              --regexp-ignore-case \
+              --extended-regexp \
+              --pretty=format:'%s' \
+              "$RANGE") || true
+
+            if [ -n "$COMMITS" ]; then
+              echo "## $emoji $section_title" >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              echo "$COMMITS" | \
+              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/ \(#[0-9]+\)$//' | \
+              sed 's/^/- /' >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              return 0
+            fi
+            return 1
+          }
+
+          # Check for breaking changes first (highest priority)
+          BREAKING=$(git log --no-merges \
+            --grep="^[^:]*(\([^)]+\))?!:" \
+            --regexp-ignore-case \
+            --extended-regexp \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+
+          BREAKING_FOOTER=$(git log --no-merges \
+            --grep="BREAKING CHANGE:" \
+            --regexp-ignore-case \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+
+          if [ -n "$BREAKING" ] || [ -n "$BREAKING_FOOTER" ]; then
+            echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
+            echo >> CHANGELOG.md
+            if [ -n "$BREAKING" ]; then
+              echo "$BREAKING" | \
+              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/ \(#[0-9]+\)$//' | \
+              sed 's/^/- /' >> CHANGELOG.md
+            fi
+            if [ -n "$BREAKING_FOOTER" ]; then
+              echo "$BREAKING_FOOTER" | \
+              sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
+              sed -E 's/ \(#[0-9]+\)$//' | \
+              sed 's/^/- /' >> CHANGELOG.md
+            fi
+            echo >> CHANGELOG.md
           fi
-          echo >> CHANGELOG.md
+
+          # Generate sections for different commit types
+          get_commits_by_type "^feat(\([^)]+\))?:" "Features" "🚀"
+          get_commits_by_type "^fix(\([^)]+\))?:" "Bug Fixes" "🐛"
+          get_commits_by_type "^perf(\([^)]+\))?:" "Performance Improvements" "⚡"
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -231,5 +283,8 @@ jobs:
             release_artifacts/**/TimeCatcher-*.snap
             release_artifacts/**/TimeCatcher-*.blockmap
             release_artifacts/**/TimeCatcher-*.zip
+            release_artifacts/**/latest*.yml
+            release_artifacts/**/app-update.yml
+            release_artifacts/**/*.zsync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

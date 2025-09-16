@@ -136,17 +136,24 @@ jobs:
             # Enable case-insensitive pattern matching
             shopt -s nocasematch
             
-            # Determine bump type from PR title with anchored, grouped patterns
-            # MAJOR: Explicit tags, breaking change indicators, or conventional commit breaking patterns
-            if [[ "$PR_TITLE" =~ (\[major\]|^major:|^.*!:.*|breaking[[:space:]]change) ]]; then
-              BUMP_TYPE="major"
-              echo "🚀 Detected MAJOR version bump from PR title"
-            elif [[ "$PR_TITLE" =~ (\[minor\]|^minor:) ]]; then
-              BUMP_TYPE="minor"
-              echo "📈 Detected MINOR version bump from PR title"
+            # Parse conventional commit format from PR title
+            if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([^)]+\))?!?:[[:space:]]* ]]; then
+              TYPE="${BASH_REMATCH[1]}"
+
+              # Check for breaking change indicators
+              if [[ "$PR_TITLE" =~ ^[^:]*(\([^)]+\))?!: ]] || [[ "$PR_TITLE" =~ BREAKING[[:space:]]CHANGE ]]; then
+                BUMP_TYPE="major"
+                echo "💥 Detected MAJOR version bump (breaking change) from conventional commit: $TYPE"
+              elif [[ "$TYPE" == "feat" ]]; then
+                BUMP_TYPE="minor"
+                echo "✨ Detected MINOR version bump from conventional commit: $TYPE (feature)"
+              else
+                BUMP_TYPE="patch"
+                echo "🔧 Detected PATCH version bump from conventional commit: $TYPE"
+              fi
             else
               BUMP_TYPE="patch"
-              echo "🔧 Default PATCH version bump"
+              echo "🔧 Default PATCH version bump (no conventional commit format detected)"
             fi
           else
             BUMP_TYPE="patch"

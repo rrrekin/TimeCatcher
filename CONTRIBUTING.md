@@ -55,12 +55,67 @@ Currently no automated tests are configured. Manual testing should cover:
 - Date navigation
 - Data persistence
 
+## Commit Message Guidelines
+
+TimeCatcher follows the [Conventional Commits](https://www.conventionalcommits.org/) specification for consistent commit messages and automatic version bumping.
+
+### Format
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### Supported Types
+
+- `feat`: New features → **MINOR** version bump
+- `fix`: Bug fixes → **PATCH** version bump
+- `docs`: Documentation changes → **PATCH** version bump
+- `style`: Code style changes (formatting, semicolons) → **PATCH** version bump
+- `refactor`: Code refactoring → **PATCH** version bump
+- `perf`: Performance improvements → **PATCH** version bump
+- `test`: Adding/updating tests → **PATCH** version bump
+- `build`: Build system changes → **PATCH** version bump
+- `ci`: CI/CD configuration → **PATCH** version bump
+- `chore`: Maintenance tasks → **PATCH** version bump
+
+### Breaking Changes
+
+For **MAJOR** version bumps, use one of these formats:
+
+- Add `!` after type/scope: `feat!: redesign API` or `fix(core)!: remove deprecated method`
+- Include `BREAKING CHANGE:` footer in commit body
+
+### Examples
+
+```bash
+feat: add task export functionality
+fix: resolve timezone calculation bug
+feat(ui): implement dark mode toggle
+fix!: remove deprecated API endpoints
+docs: update installation instructions
+test: add unit tests for date utilities
+```
+
+### Scope (Optional)
+
+Use scopes to indicate the area of change:
+- `ui`: User interface changes
+- `core`: Core application logic
+- `db`: Database-related changes
+- `api`: API/IPC changes
+- `build`: Build configuration
+
 ## Pull Requests
 
 When submitting pull requests:
 
-1. Ensure the build passes: `npm run build`
-2. Test all functionality manually
-3. Follow the existing code style
-4. Update documentation if needed
-5. Do not include `.claude/` directory in commits
+1. Use conventional commit format in PR titles for automatic version bumping
+2. Ensure the build passes: `npm run build`
+3. Test all functionality manually
+4. Follow the existing code style
+5. Update documentation if needed
+6. Do not include `.claude/` directory in commits
