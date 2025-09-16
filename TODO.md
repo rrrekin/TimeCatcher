@@ -16,7 +16,7 @@
   - Configure electron-builder publish to GitHub Releases for delta updates
   - Integrate app-side auto-updater with release feed validation
 - Changelog improvements
-  - ✅ **Adopted Conventional Commits and generate categorized changelogs**
+  - ✅ __Adopted Conventional Commits and generate categorized changelogs__
   - Auto-link PRs/authors/labels (completed - breaking-change sections implemented)
 - Release quality gates
   - Add CI jobs for lint, unit tests, typecheck before release starts

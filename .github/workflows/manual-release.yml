@@ -217,7 +217,6 @@ jobs:
               echo >> CHANGELOG.md
               echo "$COMMITS" | \
               sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
-              sed -E 's/ \(#[0-9]+\)$//' | \
               sed 's/^/- /' >> CHANGELOG.md
               echo >> CHANGELOG.md
               return 0
@@ -245,13 +244,11 @@ jobs:
             if [ -n "$BREAKING" ]; then
               echo "$BREAKING" | \
               sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
-              sed -E 's/ \(#[0-9]+\)$//' | \
               sed 's/^/- /' >> CHANGELOG.md
             fi
             if [ -n "$BREAKING_FOOTER" ]; then
               echo "$BREAKING_FOOTER" | \
               sed -E 's/^[^:]*(\([^)]+\))?!?:[[:space:]]*//' | \
-              sed -E 's/ \(#[0-9]+\)$//' | \
               sed 's/^/- /' >> CHANGELOG.md
             fi
             echo >> CHANGELOG.md

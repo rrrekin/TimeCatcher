@@ -61,7 +61,7 @@ TimeCatcher follows the [Conventional Commits](https://www.conventionalcommits.o
 
 ### Format
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -71,27 +71,27 @@ TimeCatcher follows the [Conventional Commits](https://www.conventionalcommits.o
 
 ### Supported Types
 
-- `feat`: New features → **MINOR** version bump
-- `fix`: Bug fixes → **PATCH** version bump
-- `docs`: Documentation changes → **PATCH** version bump
-- `style`: Code style changes (formatting, semicolons) → **PATCH** version bump
-- `refactor`: Code refactoring → **PATCH** version bump
-- `perf`: Performance improvements → **PATCH** version bump
-- `test`: Adding/updating tests → **PATCH** version bump
-- `build`: Build system changes → **PATCH** version bump
-- `ci`: CI/CD configuration → **PATCH** version bump
-- `chore`: Maintenance tasks → **PATCH** version bump
+- `feat`: New features → __MINOR__ version bump
+- `fix`: Bug fixes → __PATCH__ version bump
+- `docs`: Documentation changes → __PATCH__ version bump
+- `style`: Code style changes (formatting, semicolons) → __PATCH__ version bump
+- `refactor`: Code refactoring → __PATCH__ version bump
+- `perf`: Performance improvements → __PATCH__ version bump
+- `test`: Adding/updating tests → __PATCH__ version bump
+- `build`: Build system changes → __PATCH__ version bump
+- `ci`: CI/CD configuration → __PATCH__ version bump
+- `chore`: Maintenance tasks → __PATCH__ version bump
 
 ### Breaking Changes
 
-For **MAJOR** version bumps, use one of these formats:
+For __MAJOR__ version bumps, use one of these formats:
 
 - Add `!` after type/scope: `feat!: redesign API` or `fix(core)!: remove deprecated method`
 - Include `BREAKING CHANGE:` footer in commit body
 
 ### Examples
 
-```bash
+```text
 feat: add task export functionality
 fix: resolve timezone calculation bug
 feat(ui): implement dark mode toggle
@@ -103,6 +103,7 @@ test: add unit tests for date utilities
 ### Scope (Optional)
 
 Use scopes to indicate the area of change:
+
 - `ui`: User interface changes
 - `core`: Core application logic
 - `db`: Database-related changes

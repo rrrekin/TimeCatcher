@@ -16,7 +16,7 @@ When a pull request is merged to the `main` branch and CI passes successfully, t
 
 ## Conventional Commits Format
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -27,6 +27,7 @@ When a pull request is merged to the `main` branch and CI passes successfully, t
 ## Version Bump Rules
 
 ### PATCH Version Bumps (e.g., `0.20.0` → `0.20.1`)
+
 - `fix`: Bug fixes
 - `docs`: Documentation changes
 - `style`: Code style changes (formatting, semicolons)
@@ -38,9 +39,11 @@ When a pull request is merged to the `main` branch and CI passes successfully, t
 - `chore`: Maintenance tasks
 
 ### MINOR Version Bumps (e.g., `0.20.0` → `0.21.0`)
+
 - `feat`: New features
 
 ### MAJOR Version Bumps (e.g., `0.20.0` → `1.0.0`)
+
 - Any type with `!` after type/scope: `feat!:`, `fix(core)!:`
 - Any commit with `BREAKING CHANGE:` footer
 
@@ -134,7 +137,6 @@ feat: migrate to Vue 4
 
 BREAKING CHANGE: This removes the legacy API
 ```
-
 
 ### Version History
 
