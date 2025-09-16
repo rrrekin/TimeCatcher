@@ -208,48 +208,147 @@ jobs:
           echo >> CHANGELOG.md
           echo "DEBUG: CHANGELOG.md created successfully"
 
-          # Simple approach - get all commits and categorize them manually
-          echo "DEBUG: Getting all commits in range..."
-          ALL_COMMITS=$(git log --no-merges --pretty=format:'%s' "$RANGE" 2>/dev/null || echo "")
-          echo "DEBUG: Found $(echo "$ALL_COMMITS" | wc -l) commits"
+          # Function to clean commit message (remove type prefix)
+          echo "DEBUG: Defining clean_commit_message function..."
+          clean_commit_message() {
+            local msg="$1"
+            echo "DEBUG: Cleaning message: '$msg'"
+            # Remove conventional commit prefix and format as bullet point
+            result=$(echo "$msg" | sed 's/^[^:]*: */- /')
+            echo "DEBUG: Cleaned to: '$result'"
+            echo "$result"
+          }
+          echo "DEBUG: clean_commit_message function defined"
 
-          if [ -z "$ALL_COMMITS" ]; then
-            echo "DEBUG: No commits found, adding fallback content"
+          # Function to get commits by type and format them
+          echo "DEBUG: Defining get_commits_by_type function..."
+          get_commits_by_type() {
+            local pattern="$1"
+            local section_title="$2"
+            local emoji="$3"
+            echo "DEBUG: get_commits_by_type called with pattern='$pattern', title='$section_title', emoji='$emoji'"
+
+            echo "DEBUG: Running git log with pattern '$pattern'..."
+            COMMITS=$(git log --no-merges \
+              --grep="$pattern" \
+              --pretty=format:'%s' \
+              "$RANGE") || true
+            echo "DEBUG: git log completed, exit code: $?"
+
+            if [ -n "$COMMITS" ]; then
+              echo "DEBUG: Found commits for $pattern:"
+              echo "$COMMITS" | while read -r line; do echo "DEBUG:   '$line'"; done
+              echo "DEBUG: Adding section: $emoji $section_title"
+              echo "## $emoji $section_title" >> CHANGELOG.md
+              echo >> CHANGELOG.md
+              echo "DEBUG: Processing each commit..."
+              while IFS= read -r commit; do
+                echo "DEBUG: Processing commit: '$commit'"
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$COMMITS"
+              echo >> CHANGELOG.md
+              echo "DEBUG: Section completed successfully"
+              return 0
+            else
+              echo "DEBUG: No commits found for pattern '$pattern'"
+              return 1
+            fi
+          }
+          echo "DEBUG: get_commits_by_type function defined"
+
+          # Check for breaking changes first (highest priority)
+          echo "DEBUG: Checking for breaking changes..."
+          BREAKING=$(git log --no-merges \
+            --grep="!" \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+          echo "DEBUG: Breaking changes search completed, exit code: $?"
+
+          # Filter for actual breaking changes (those with ! in the type)
+          if [ -n "$BREAKING" ]; then
+            echo "DEBUG: Found potential breaking changes:"
+            echo "$BREAKING" | while read -r line; do echo "DEBUG:   '$line'"; done
+            echo "DEBUG: Filtering for actual breaking changes..."
+            BREAKING=$(echo "$BREAKING" | grep "!:" || true)
+            echo "DEBUG: Filtered breaking changes:"
+            echo "$BREAKING" | while read -r line; do echo "DEBUG:   '$line'"; done
+          else
+            echo "DEBUG: No potential breaking changes found"
+          fi
+
+          echo "DEBUG: Checking for BREAKING CHANGE footer..."
+          BREAKING_FOOTER=$(git log --no-merges \
+            --grep="BREAKING CHANGE" \
+            --pretty=format:'%s' \
+            "$RANGE") || true
+          echo "DEBUG: BREAKING CHANGE footer search completed, exit code: $?"
+
+          if [ -n "$BREAKING" ] || [ -n "$BREAKING_FOOTER" ]; then
+            echo "DEBUG: Adding BREAKING CHANGES section"
+            echo "## 💥 BREAKING CHANGES" >> CHANGELOG.md
+            echo >> CHANGELOG.md
+            if [ -n "$BREAKING" ]; then
+              echo "DEBUG: Processing breaking changes with ! syntax..."
+              while IFS= read -r commit; do
+                echo "DEBUG: Processing breaking commit: '$commit'"
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING"
+            fi
+            if [ -n "$BREAKING_FOOTER" ]; then
+              echo "DEBUG: Processing breaking changes with footer syntax..."
+              while IFS= read -r commit; do
+                echo "DEBUG: Processing breaking footer commit: '$commit'"
+                clean_commit_message "$commit" >> CHANGELOG.md
+              done <<< "$BREAKING_FOOTER"
+            fi
+            echo >> CHANGELOG.md
+            echo "DEBUG: BREAKING CHANGES section completed"
+          else
+            echo "DEBUG: No breaking changes found"
+          fi
+
+          # Generate sections for different commit types
+          echo "DEBUG: Starting commit type processing..."
+          get_commits_by_type "^feat" "Features" "🚀"
+          echo "DEBUG: feat processing completed with exit code: $?"
+
+          get_commits_by_type "^fix" "Bug Fixes" "🐛"
+          echo "DEBUG: fix processing completed with exit code: $?"
+
+          get_commits_by_type "^perf" "Performance Improvements" "⚡"
+          echo "DEBUG: perf processing completed with exit code: $?"
+
+          get_commits_by_type "^docs" "Documentation" "📚"
+          echo "DEBUG: docs processing completed with exit code: $?"
+
+          get_commits_by_type "^style" "Code Style" "🎨"
+          echo "DEBUG: style processing completed with exit code: $?"
+
+          get_commits_by_type "^refactor" "Refactoring" "♻️"
+          echo "DEBUG: refactor processing completed with exit code: $?"
+
+          get_commits_by_type "^test" "Testing" "✅"
+          echo "DEBUG: test processing completed with exit code: $?"
+
+          get_commits_by_type "^build" "Build System" "🏗️"
+          echo "DEBUG: build processing completed with exit code: $?"
+
+          get_commits_by_type "^ci" "CI/CD" "⚙️"
+          echo "DEBUG: ci processing completed with exit code: $?"
+
+          get_commits_by_type "^chore" "Other Changes" "🔧"
+          echo "DEBUG: chore processing completed with exit code: $?"
+
+          # If no categorized commits found, add fallback
+          echo "DEBUG: Checking if any sections were added..."
+          if ! grep -q "^## " CHANGELOG.md; then
+            echo "DEBUG: No sections found, adding fallback"
             echo "## 🔧 Changes" >> CHANGELOG.md
             echo >> CHANGELOG.md
             echo "- Various improvements and fixes" >> CHANGELOG.md
             echo >> CHANGELOG.md
           else
-            echo "DEBUG: Processing commits..."
-
-            # Process each commit type
-            echo "$ALL_COMMITS" | grep "^feat" > /tmp/feat_commits.txt 2>/dev/null || touch /tmp/feat_commits.txt
-            echo "$ALL_COMMITS" | grep "^fix" > /tmp/fix_commits.txt 2>/dev/null || touch /tmp/fix_commits.txt
-
-            # Add Features section if we have feat commits
-            if [ -s /tmp/feat_commits.txt ]; then
-              echo "DEBUG: Adding Features section"
-              echo "## 🚀 Features" >> CHANGELOG.md
-              echo >> CHANGELOG.md
-              while read -r line; do
-                echo "- ${line#feat: }" >> CHANGELOG.md
-              done < /tmp/feat_commits.txt
-              echo >> CHANGELOG.md
-            fi
-
-            # Add Bug Fixes section if we have fix commits
-            if [ -s /tmp/fix_commits.txt ]; then
-              echo "DEBUG: Adding Bug Fixes section"
-              echo "## 🐛 Bug Fixes" >> CHANGELOG.md
-              echo >> CHANGELOG.md
-              while read -r line; do
-                echo "- ${line#fix: }" >> CHANGELOG.md
-              done < /tmp/fix_commits.txt
-              echo >> CHANGELOG.md
-            fi
-
-            # Cleanup temp files
-            rm -f /tmp/feat_commits.txt /tmp/fix_commits.txt
+            echo "DEBUG: Sections were found in changelog"
           fi
 
           echo "DEBUG: Changelog generation completed"
