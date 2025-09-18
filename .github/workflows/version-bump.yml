@@ -142,7 +142,8 @@ jobs:
               TYPE="${BASH_REMATCH[1]}"
 
               # Check for breaking change indicators
-              if [[ "$PR_TITLE" =~ ^[^:]*(\([^)]+\))?!: ]] || [[ "$PR_TITLE" =~ BREAKING[[:space:]]CHANGE ]]; then
+              BREAKING_INDICATOR_PATTERN='^[^:]*(\([^)]+\))?!:'
+              if [[ "$PR_TITLE" =~ $BREAKING_INDICATOR_PATTERN ]] || [[ "$PR_TITLE" =~ BREAKING[[:space:]]CHANGE ]]; then
                 BUMP_TYPE="major"
                 echo "💥 Detected MAJOR version bump (breaking change) from conventional commit: $TYPE"
               elif [[ "$TYPE" == "feat" ]]; then
