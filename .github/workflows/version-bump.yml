@@ -88,7 +88,7 @@ jobs:
           if [ -z "$PR_INFO" ] || [ "$PR_INFO" = "null" ]; then
             echo "Direct API returned no results, trying fallback search..."
             SINCE_DATE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
-            
+
             PR_INFO=$(gh api repos/${{ github.repository }}/pulls \
               --method GET \
               --field state=closed \
@@ -132,12 +132,13 @@ jobs:
 
           if [ "$PR_FOUND" = "true" ] && [ ! -z "$PR_TITLE" ]; then
             echo "Analyzing PR title for version bump type: $PR_TITLE"
-            
+
             # Enable case-insensitive pattern matching
             shopt -s nocasematch
-            
+
             # Parse conventional commit format from PR title
-            if [[ "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([^)]+\))?!?:[[:space:]]* ]]; then
+            CONVENTIONAL_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([^)]+\))?!?:[[:space:]]*'
+            if [[ "$PR_TITLE" =~ $CONVENTIONAL_PATTERN ]]; then
               TYPE="${BASH_REMATCH[1]}"
 
               # Check for breaking change indicators
