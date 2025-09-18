@@ -114,7 +114,7 @@ readonly MAIN_TYPES=("feat" "fix" "perf" "docs")
 # Enhanced regex patterns
 readonly CONVENTIONAL_COMMIT_PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore)(\([^)]*\))?(!)?:[[:space:]]*(.*)'
 readonly BREAKING_EXCLAMATION_PATTERN='^[a-z]+(\([^)]*\))?!:[[:space:]]'
-readonly BREAKING_FOOTER_PATTERN='BREAKING[[:space:]]CHANGE:[[:space:]]'
+readonly BREAKING_FOOTER_PATTERN='BREAKING([[:space:]]|-)CHANGE:[[:space:]]'
 
 # Global variables
 RANGE=""
@@ -218,41 +218,114 @@ clean_commit_message() {
 # Detect breaking changes using multiple patterns
 detect_breaking_changes() {
     local range="$1"
-    local breaking_commits=()
+    local temp_file
+    local temp_exclamation
+    local temp_footer
 
     log_debug "Detecting breaking changes in range: $range"
 
+    # Create temporary files
+    temp_file=$(mktemp)
+    temp_exclamation=$(mktemp)
+    temp_footer=$(mktemp)
+
     # Method 1: Exclamation mark syntax (feat!:, fix(scope)!:)
+    git log --no-merges --pretty=format:'%s' "$range" 2>/dev/null > "$temp_exclamation" || true
+    # Append newline to ensure proper reading
+    echo >> "$temp_exclamation"
     while IFS= read -r commit; do
-        if [[ $commit =~ $BREAKING_EXCLAMATION_PATTERN ]]; then
-            breaking_commits+=("$commit")
+        if [[ -n "$commit" ]] && [[ $commit =~ $BREAKING_EXCLAMATION_PATTERN ]]; then
+            echo "$commit" >> "$temp_file"
             log_debug "Found breaking change (exclamation): $commit"
         fi
-    done < <(git log --no-merges --pretty=format:'%s' "$range" 2>/dev/null || true)
+    done < "$temp_exclamation"
 
     # Method 2: BREAKING CHANGE footer
+    log_debug "Searching for BREAKING CHANGE footer in range: $range"
+    git log --no-merges --grep="BREAKING CHANGE" --pretty=format:'%s' "$range" 2>/dev/null > "$temp_footer" || true
+    # Append newline to ensure proper reading
+    echo >> "$temp_footer"
     while IFS= read -r commit; do
-        if [[ $commit =~ $BREAKING_FOOTER_PATTERN ]]; then
-            breaking_commits+=("$commit")
+        if [[ -n "$commit" ]]; then
+            echo "$commit" >> "$temp_file"
             log_debug "Found breaking change (footer): $commit"
         fi
-    done < <(git log --no-merges --grep="BREAKING CHANGE" --pretty=format:'%s' "$range" 2>/dev/null || true)
+    done < "$temp_footer"
 
-    # Remove duplicates and return
-    printf '%s\n' "${breaking_commits[@]}" | sort -u
+    # Remove duplicates, return results, and clean up
+    if [[ -f "$temp_file" ]]; then
+        sort -u "$temp_file"
+        rm -f "$temp_file" "$temp_exclamation" "$temp_footer"
+    fi
 }
 
-# Get commits by type with improved filtering
+# Check if commit message indicates breaking change
+is_breaking_change_commit() {
+    local commit_msg="$1"
+
+    # Check for exclamation mark syntax (type! or type(scope)!)
+    if [[ $commit_msg =~ $BREAKING_EXCLAMATION_PATTERN ]]; then
+        return 0
+    fi
+
+    # Check for BREAKING CHANGE footer
+    if [[ $commit_msg =~ $BREAKING_FOOTER_PATTERN ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get commits by type with breaking change filtering
 get_commits_by_type() {
     local type="$1"
     local range="$2"
 
     log_debug "Getting commits of type '$type' in range: $range"
 
-    git log --no-merges \
-        --grep="^$type" \
-        --pretty=format:'%s' \
-        "$range" 2>/dev/null || true
+    # Get all commits of this type with hash and subject
+    # Use extended regex to match exact conventional commit format: type[(scope)][!]:
+    local all_commits
+    all_commits=$(git log --no-merges \
+        --extended-regexp \
+        --grep="^${type}(\([^)]*\))?(!)?: " \
+        --pretty=format:'%H|%s' \
+        "$range" 2>/dev/null || true)
+
+    # Filter out breaking changes to avoid duplicates
+    local filtered_commits=""
+    while IFS= read -r commit_line; do
+        if [[ -n "$commit_line" ]]; then
+            local commit_hash="${commit_line%%|*}"
+            local commit_subject="${commit_line#*|}"
+
+            # Check subject line for breaking change marker
+            local is_breaking=false
+            if is_breaking_change_commit "$commit_subject"; then
+                is_breaking=true
+            fi
+
+            # Also check full commit message for BREAKING CHANGE footer
+            if [[ "$is_breaking" == "false" ]]; then
+                local full_message
+                full_message=$(git show --format=%B --no-patch "$commit_hash" 2>/dev/null || echo "")
+                if [[ $full_message =~ $BREAKING_FOOTER_PATTERN ]]; then
+                    is_breaking=true
+                fi
+            fi
+
+            # Only include if not a breaking change
+            if [[ "$is_breaking" == "false" ]]; then
+                if [[ -n "$filtered_commits" ]]; then
+                    filtered_commits="$filtered_commits"$'\n'"$commit_subject"
+                else
+                    filtered_commits="$commit_subject"
+                fi
+            fi
+        fi
+    done <<< "$all_commits"
+
+    echo "$filtered_commits"
 }
 
 # Generate a changelog section

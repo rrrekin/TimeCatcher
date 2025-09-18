@@ -11,7 +11,9 @@ __Purpose__: Generates structured changelogs from git commits using Conventional
 __Features__:
 
 - Parses conventional commit messages (`type(scope): description`)
+- __Precise type matching__ using extended regex to avoid false positives
 - Detects breaking changes via `!` syntax and `BREAKING CHANGE:` footer
+- __Prevents duplicate entries__ between breaking changes and typed sections
 - Categorizes commits into sections with emoji indicators
 - Supports scoped commits with bold formatting
 - Configurable commit type inclusion (main types vs all types)
@@ -199,6 +201,7 @@ __Missing sections in changelog__:
 - Use `DEBUG=1` to see parsing details
 - Verify commit messages follow conventional format
 - Check that commit types are supported
+- Ensure commits use exact conventional format (e.g., `fix:` not `fixes:`)
 
 __Changelog generation hangs__:
 

@@ -72,6 +72,16 @@ setup_test_repo() {
     git add breaking.txt
     git commit -m "feat!: redesign API structure"
 
+    echo "Footer breaking" > footer.txt
+    git add footer.txt
+    git commit -m "feat: add feature with footer
+
+BREAKING CHANGE: This changes the API"
+
+    echo "Another feature" > feature2.txt
+    git add feature2.txt
+    git commit -m "feat: add normal feature after breaking"
+
     echo "Docs" > docs.txt
     git add docs.txt
     git commit -m "docs: update API documentation"
@@ -166,6 +176,46 @@ test_sections() {
     fi
 }
 
+# Test breaking change filtering
+test_breaking_change_filtering() {
+    log_info "Testing breaking change filtering (no duplicates)..."
+
+    cd "$TEST_REPO_DIR"
+
+    local initial_commit=$(git rev-list --max-parents=0 HEAD)
+    local range="${initial_commit}..HEAD"
+    local output_file="$TEST_OUTPUT_DIR/filtering_test.md"
+
+    if "$CHANGELOG_SCRIPT" "$range" "$output_file" > /dev/null 2>&1; then
+        # Check that both types of breaking changes appear only in BREAKING CHANGES section
+        local exclamation_breaking_count=$(grep -A 20 "💥 BREAKING CHANGES" "$output_file" | grep -c "redesign API structure" || echo "0")
+        local footer_breaking_count=$(grep -A 20 "💥 BREAKING CHANGES" "$output_file" | grep -c "add feature with footer" || echo "0")
+        local features_exclamation_count=$(grep -A 20 "🚀 Features" "$output_file" | grep -c "redesign API structure" || echo "0")
+        local features_footer_count=$(grep -A 20 "🚀 Features" "$output_file" | grep -c "add feature with footer" || echo "0")
+
+        if [[ $exclamation_breaking_count -eq 1 ]] && [[ $footer_breaking_count -eq 1 ]] &&
+           [[ $features_exclamation_count -eq 0 ]] && [[ $features_footer_count -eq 0 ]]; then
+            log_success "Breaking change filtering - no duplicates for both exclamation and footer types"
+            ((TESTS_PASSED++))
+        else
+            log_error "Breaking change filtering - found duplicates (breaking: exclamation=$exclamation_breaking_count, footer=$footer_breaking_count; features: exclamation=$features_exclamation_count, footer=$features_footer_count)"
+            ((TESTS_FAILED++))
+        fi
+
+        # Verification that normal features still appear in Features section
+        local normal_features_count=$(grep -A 20 "🚀 Features" "$output_file" | grep -c "add user authentication\|add normal feature after breaking" || echo "0")
+        if [[ $normal_features_count -ge 1 ]]; then
+            log_verbose "Normal features correctly appear in Features section"
+        else
+            log_error "Normal features missing from Features section"
+            ((TESTS_FAILED++))
+        fi
+    else
+        log_error "Breaking change filtering - script failed"
+        ((TESTS_FAILED++))
+    fi
+}
+
 # Test debug mode
 test_debug_mode() {
     log_info "Testing debug mode..."
@@ -238,6 +288,7 @@ main() {
     test_basic_functionality
     test_breaking_changes
     test_sections
+    test_breaking_change_filtering
     test_debug_mode
     cleanup
     print_summary
