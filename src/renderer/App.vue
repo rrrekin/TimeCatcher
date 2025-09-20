@@ -78,7 +78,10 @@
       :temp-target-work-hours="tempTargetWorkHours"
       :temp-reporting-app-button-text="tempReportingAppButtonText"
       :temp-reporting-app-url="tempReportingAppUrl"
+      :temp-eviction-enabled="tempEvictionEnabled"
+      :temp-eviction-days-to-keep="tempEvictionDaysToKeep"
       :is-valid-url="isValidUrl"
+      :is-valid-eviction-days-to-keep="isValidEvictionDaysToKeep"
       :categories="categories"
       :is-loading-categories="isLoadingCategories"
       :is-adding-category="isAddingCategory"
@@ -94,6 +97,8 @@
       @update-temp-target-work-hours="hours => (tempTargetWorkHours = hours)"
       @update-temp-reporting-app-button-text="text => (tempReportingAppButtonText = text)"
       @update-temp-reporting-app-url="url => (tempReportingAppUrl = url)"
+      @update-temp-eviction-enabled="enabled => (tempEvictionEnabled = enabled)"
+      @update-temp-eviction-days-to-keep="days => (tempEvictionDaysToKeep = days)"
       @start-edit-category="startEditCategory"
       @update-editing-category-name="name => (editingCategoryName = name)"
       @save-edit-category="saveEditCategory"
@@ -249,7 +254,12 @@ const {
   reportingAppUrl,
   tempReportingAppButtonText,
   tempReportingAppUrl,
+  evictionEnabled,
+  tempEvictionEnabled,
+  evictionDaysToKeep,
+  tempEvictionDaysToKeep,
   isValidUrl,
+  isValidEvictionDaysToKeep,
   applyTheme,
   saveSettings: saveSettingsComposable,
   initializeTempSettings,
@@ -450,7 +460,9 @@ const backupApp = async () => {
     theme: currentTheme.value,
     targetWorkHours: targetWorkHours.value,
     reportingAppButtonText: reportingAppButtonText.value,
-    reportingAppUrl: reportingAppUrl.value
+    reportingAppUrl: reportingAppUrl.value,
+    evictionEnabled: evictionEnabled?.value ?? true,
+    evictionDaysToKeep: evictionDaysToKeep?.value ?? 180
   }
   try {
     const res = await window.electronAPI.backupApp(settings)

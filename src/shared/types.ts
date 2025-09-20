@@ -56,6 +56,8 @@ export interface SettingsSnapshot {
   targetWorkHours: number
   reportingAppButtonText: string
   reportingAppUrl: string
+  evictionEnabled: boolean
+  evictionDaysToKeep: number
 }
 
 // IPC result types for backup/restore flows
@@ -91,6 +93,7 @@ export interface ElectronAPI {
   getTaskRecordsByDate: (date: string) => Promise<TaskRecordWithId[]>
   updateTaskRecord: (id: number, record: TaskRecordUpdate) => Promise<void>
   deleteTaskRecord: (id: number) => Promise<void>
+  deleteOldTaskRecords: (cutoffDate: string) => Promise<number>
   debugAll?: () => Promise<any>
 }
 

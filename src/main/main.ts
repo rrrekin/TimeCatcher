@@ -194,6 +194,15 @@ ipcMain.handle('db:delete-task-record', async (_, id: number) => {
   }
 })
 
+ipcMain.handle('db:delete-old-task-records', async (_, cutoffDate: string) => {
+  try {
+    return dbService.deleteOldTaskRecords(cutoffDate)
+  } catch (error) {
+    console.error('Failed to delete old task records:', error)
+    throw new Error(`Failed to delete old task records: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
 // Application info handler
 ipcMain.handle('app:get-version', async () => {
   return app.getVersion()

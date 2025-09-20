@@ -272,6 +272,12 @@ class DatabaseService {
     this.db.prepare('DELETE FROM task_records WHERE id = ?').run(id)
   }
 
+  deleteOldTaskRecords(cutoffDate: string): number {
+    const deleteStmt = this.db.prepare('DELETE FROM task_records WHERE date < ?')
+    const result = deleteStmt.run(cutoffDate)
+    return result.changes
+  }
+
   close() {
     this.db.close()
   }
