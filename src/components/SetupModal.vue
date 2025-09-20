@@ -165,6 +165,33 @@
             </button>
           </div>
         </div>
+
+        <!-- Backup & Restore -->
+        <div class="setting-group">
+          <h4>Backup & Restore</h4>
+          <div class="backup-actions">
+            <button
+              class="backup-btn"
+              data-testid="backup-button"
+              aria-label="Backup workspace"
+              title="Backup workspace"
+              @click="$emit('backup')"
+              :disabled="isBusy"
+            >
+              Backup…
+            </button>
+            <button
+              class="restore-btn"
+              data-testid="restore-button"
+              aria-label="Restore workspace from backup"
+              title="Restore workspace from backup"
+              @click="$emit('restoreBackup')"
+              :disabled="isBusy"
+            >
+              Restore backup…
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="modal-footer">
@@ -261,6 +288,8 @@ const emit = defineEmits<{
   startAddingCategory: []
   updateTempReportingAppButtonText: [text: string]
   updateTempReportingAppUrl: [url: string]
+  backup: []
+  restoreBackup: []
 }>()
 
 // Flag to prevent blur save when cancelling
@@ -748,5 +777,40 @@ onUnmounted(() => {
 .save-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Backup & Restore */
+.backup-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.backup-btn,
+.restore-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.backup-btn:not(:disabled):hover,
+.restore-btn:not(:disabled):hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.backup-btn:disabled,
+.restore-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  pointer-events: none;
 }
 </style>

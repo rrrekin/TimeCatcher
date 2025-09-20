@@ -4,6 +4,9 @@ const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
 
+// Load shared coverage exclude patterns
+const coverageExcludes = JSON.parse(fs.readFileSync(path.join(__dirname, '../config/coverage-excludes.json'), 'utf-8'))
+
 // Configuration
 const THRESHOLDS = {
   lines: 80,
@@ -17,14 +20,32 @@ function getChangedFiles() {
   const baseBranch = process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'origin/main'
 
   function filterSourceFiles(files) {
+    const excludePatterns = coverageExcludes.patterns.map(pattern => {
+      // Convert glob patterns to regex for filtering
+      if (pattern.endsWith('/**')) {
+        return new RegExp(`^${pattern.slice(0, -3).replace(/\*/g, '.*')}`)
+      }
+      if (pattern.includes('*')) {
+        return new RegExp(`^${pattern.replace(/\*/g, '.*')}$`)
+      }
+      return pattern
+    })
+
     return files
       .split('\n')
       .filter(file => file.trim())
       .filter(file => file.startsWith('src/'))
       .filter(file => file.endsWith('.ts') || file.endsWith('.vue'))
-      .filter(file => !file.includes('.test.') && !file.includes('.spec.'))
       .filter(file => !file.endsWith('.d.ts')) // Exclude TypeScript declaration files
-      .filter(file => !file.startsWith('src/main/')) // Exclude main process files (not covered by frontend tests)
+      .filter(file => {
+        // Apply shared exclude patterns
+        return !excludePatterns.some(pattern => {
+          if (pattern instanceof RegExp) {
+            return pattern.test(file)
+          }
+          return file.includes(pattern)
+        })
+      })
   }
 
   function tryGitDiff(base) {

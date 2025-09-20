@@ -42,10 +42,35 @@ export type TaskRecordWithId = TaskRecord & { id: number }
 export type TaskRecordInsert = Omit<TaskRecord, 'id' | 'created_at'>
 export type TaskRecordUpdate = Partial<Omit<TaskRecord, 'id' | 'created_at' | 'task_type'>>
 
+// Snapshot of user-configurable settings used for backup/restore
+export interface SettingsSnapshot {
+  theme: 'light' | 'dark' | 'auto'
+  targetWorkHours: number
+  reportingAppButtonText: string
+  reportingAppUrl: string
+}
+
+// IPC result types for backup/restore flows
+export interface BackupResult {
+  ok?: boolean
+  cancelled?: boolean
+  error?: string
+}
+
+export interface RestoreResult {
+  ok?: boolean
+  cancelled?: boolean
+  error?: string
+  settings?: Partial<SettingsSnapshot>
+}
+
 export interface ElectronAPI {
   // Application info
   getVersion: () => Promise<string>
   openExternalUrl: (url: string) => Promise<boolean>
+  // Backup & Restore
+  backupApp?: (settings: SettingsSnapshot) => Promise<BackupResult>
+  restoreApp?: () => Promise<RestoreResult>
   // Database operations
   getCategories: () => Promise<Category[]>
   addCategory: (name: string) => Promise<Category>

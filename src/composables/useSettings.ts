@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import type { SettingsSnapshot } from '@/shared/types'
 
 type Theme = 'light' | 'dark' | 'auto'
 
@@ -220,10 +221,135 @@ export function useSettings() {
     }
 
     applyTheme(currentTheme.value)
-    localStorage.setItem('theme', currentTheme.value)
-    localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
-    localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
-    localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+
+    // Persist settings with error handling for storage quota/access issues
+    try {
+      localStorage.setItem('theme', currentTheme.value)
+      localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+      localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+      localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+    } catch (error) {
+      console.warn('Failed to persist settings to localStorage:', error)
+      // Continue execution - theme is already applied and in-memory state is updated
+    }
+  }
+
+  /**
+   * Validate theme string
+   */
+  const isValidTheme = (value: unknown): value is Theme => {
+    return typeof value === 'string' && ['light', 'dark', 'auto'].includes(value)
+  }
+
+  /**
+   * Validate target work hours
+   */
+  const isValidTargetWorkHours = (value: unknown): value is number => {
+    const num = Number(value)
+    return Number.isFinite(num) && num > 0 && num <= 24
+  }
+
+  /**
+   * Validate reporting app button text
+   */
+  const isValidButtonText = (value: unknown): boolean => {
+    if (typeof value !== 'string') return false
+    const trimmed = value.trim()
+    return trimmed.length > 0 && trimmed.length <= 100 // reasonable length limit
+  }
+
+  /**
+   * Sanitize and validate restored settings with strict key whitelisting
+   */
+  const sanitizeRestoredSettings = (input: unknown): Partial<SettingsSnapshot> => {
+    if (!input || typeof input !== 'object') {
+      return {}
+    }
+
+    const settings = input as Record<string, unknown>
+    const sanitized: Partial<SettingsSnapshot> = {}
+
+    // Whitelist of allowed setting keys
+    const allowedKeys: (keyof SettingsSnapshot)[] = [
+      'theme',
+      'targetWorkHours',
+      'reportingAppButtonText',
+      'reportingAppUrl'
+    ]
+
+    for (const key of allowedKeys) {
+      if (key in settings) {
+        const value = settings[key]
+
+        switch (key) {
+          case 'theme':
+            if (isValidTheme(value)) {
+              sanitized.theme = value
+            }
+            break
+          case 'targetWorkHours':
+            if (isValidTargetWorkHours(value)) {
+              sanitized.targetWorkHours = value
+            }
+            break
+          case 'reportingAppButtonText':
+            if (isValidButtonText(value)) {
+              sanitized.reportingAppButtonText = String(value).trim()
+            }
+            break
+          case 'reportingAppUrl':
+            const urlStr = typeof value === 'string' ? value.trim() : ''
+            // Empty string is valid (clears URL), only validate non-empty URLs
+            if (urlStr === '' || isValidUrl(urlStr)) {
+              sanitized.reportingAppUrl = urlStr
+            }
+            break
+        }
+      }
+    }
+
+    return sanitized
+  }
+
+  /**
+   * Apply restored settings from backup: set values, validate, persist, and apply theme.
+   */
+  const applyRestoredSettings = (settings: Partial<SettingsSnapshot>) => {
+    try {
+      // Sanitize and validate all input with key whitelisting
+      const sanitizedSettings = sanitizeRestoredSettings(settings)
+
+      // Apply validated settings or keep current values as fallback
+      const theme = sanitizedSettings.theme ?? currentTheme.value
+      const hours = sanitizedSettings.targetWorkHours ?? targetWorkHours.value
+      const buttonText = sanitizedSettings.reportingAppButtonText ?? reportingAppButtonText.value
+      const url = sanitizedSettings.reportingAppUrl ?? reportingAppUrl.value
+
+      currentTheme.value = theme
+      targetWorkHours.value = hours
+      reportingAppButtonText.value = buttonText
+      reportingAppUrl.value = url
+
+      // Apply theme now
+      applyTheme(currentTheme.value)
+
+      // Persist with error handling for storage quota/access issues
+      try {
+        localStorage.setItem('theme', currentTheme.value)
+        localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+        localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+        localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+      } catch (error) {
+        console.warn('Failed to persist restored settings to localStorage:', error)
+        // Continue execution - theme is already applied and in-memory state is updated
+      }
+
+      // Sync temps
+      initializeTempSettings()
+    } catch (e) {
+      // Best-effort; do not throw in renderer composable
+      console.warn('Failed to apply restored settings:', e)
+    }
   }
 
   /**
@@ -280,6 +406,7 @@ export function useSettings() {
     applyTheme,
     loadSettings,
     saveSettings,
+    applyRestoredSettings,
     initializeTempSettings
   }
 }

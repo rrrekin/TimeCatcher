@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import coverageExcludes from './config/coverage-excludes.json'
 
 export default defineConfig({
   plugins: [vue()],
@@ -15,16 +16,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
-      exclude: [
-        'dist/',
-        'node_modules/',
-        '**/*.test.ts',
-        '**/*.test.js',
-        '**/*.spec.ts',
-        '**/*.spec.js',
-        'src/main/**', // Exclude Electron main process files
-        'coverage/**'
-      ],
+      exclude: coverageExcludes.patterns
       // Global thresholds removed - using per-file check in scripts/check-coverage.js
     }
   },
