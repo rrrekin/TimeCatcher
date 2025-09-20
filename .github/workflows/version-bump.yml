@@ -238,10 +238,11 @@ jobs:
             --base main \
             --head "$BRANCH_NAME"
 
-          # Merge PR immediately with head commit verification
+          # Merge PR immediately with head commit verification and custom commit message
           HEAD_SHA=$(git rev-parse HEAD)
           PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number -q .number)
-          gh pr merge "$PR_NUMBER" --admin --squash --delete-branch --match-head-commit "$HEAD_SHA"
+          gh pr merge "$PR_NUMBER" --admin --squash --delete-branch --match-head-commit "$HEAD_SHA" \
+            --subject "chore: bump $BUMP_TYPE version to $NEW_VERSION"
 
           echo "✅ Created PR for version $NEW_VERSION"
 
