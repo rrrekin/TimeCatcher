@@ -1,0 +1,13 @@
+{
+  "patterns": [
+    "dist/",
+    "node_modules/",
+    "**/*.test.ts",
+    "**/*.test.js",
+    "**/*.spec.ts",
+    "**/*.spec.js",
+    "src/main/**",
+    "src/test-utils/**",
+    "coverage/**"
+  ]
+}

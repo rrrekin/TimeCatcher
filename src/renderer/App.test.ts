@@ -197,20 +197,30 @@ const mockDeleteTaskRecord = vi.fn()
 const mockGetCurrentTime = vi.fn(() => '10:30')
 const mockParseTimeInput = vi.fn((time: string) => time)
 
+// Shared ref that tests can manipulate
+let hasEndTaskRef: any
+
 vi.mock('@/composables/useTaskRecords', () => ({
-  useTaskRecords: () => ({
-    taskRecords: ref(mockTaskRecords),
-    isLoadingTasks: ref(false),
-    hasEndTaskForSelectedDate: ref(false),
-    isSpecial: vi.fn((taskType: string) => taskType !== 'normal'),
-    getCurrentTime: mockGetCurrentTime,
-    parseTimeInput: mockParseTimeInput,
-    loadTaskRecords: mockLoadTaskRecords,
-    addTaskRecord: mockAddTaskRecord,
-    addSpecialTask: mockAddSpecialTask,
-    updateTaskRecord: mockUpdateTaskRecord,
-    deleteTaskRecord: mockDeleteTaskRecord
-  })
+  useTaskRecords: () => {
+    // Create the ref here so it's accessible to tests
+    if (!hasEndTaskRef) {
+      hasEndTaskRef = ref(false)
+    }
+
+    return {
+      taskRecords: ref(mockTaskRecords),
+      isLoadingTasks: ref(false),
+      hasEndTaskForSelectedDate: hasEndTaskRef,
+      isSpecial: vi.fn((taskType: string) => taskType !== 'normal'),
+      getCurrentTime: mockGetCurrentTime,
+      parseTimeInput: mockParseTimeInput,
+      loadTaskRecords: mockLoadTaskRecords,
+      addTaskRecord: mockAddTaskRecord,
+      addSpecialTask: mockAddSpecialTask,
+      updateTaskRecord: mockUpdateTaskRecord,
+      deleteTaskRecord: mockDeleteTaskRecord
+    }
+  }
 }))
 
 // Mock useSettings composable
@@ -986,6 +996,7 @@ describe('App Component', () => {
       )
       expect(wrapper.find('.toast').exists()).toBe(true)
       expect(wrapper.text()).toContain('Backup saved successfully')
+      wrapper.unmount()
     })
 
     it('shows error toast when backup fails', async () => {
@@ -997,6 +1008,7 @@ describe('App Component', () => {
       expect(backupSpy).toHaveBeenCalled()
       expect(wrapper.find('.toast').exists()).toBe(true)
       expect(wrapper.text()).toContain('Backup failed')
+      wrapper.unmount()
     })
 
     it('restores backup successfully and reloads data', async () => {
@@ -1011,6 +1023,7 @@ describe('App Component', () => {
       expect(mockLoadTaskRecords).toHaveBeenCalled()
       expect(wrapper.find('.toast').exists()).toBe(true)
       expect(wrapper.text()).toContain('Restore completed successfully')
+      wrapper.unmount()
     })
 
     it('handles cancelled restore gracefully', async () => {
@@ -1023,6 +1036,7 @@ describe('App Component', () => {
       expect(mockApplyRestoredSettings).not.toHaveBeenCalled()
       // No toast for cancelled
       expect(wrapper.find('.toast').exists()).toBe(false)
+      wrapper.unmount()
     })
 
     it('shows error toast when restore fails', async () => {
@@ -1034,6 +1048,7 @@ describe('App Component', () => {
       expect(restoreSpy).toHaveBeenCalled()
       expect(wrapper.find('.toast').exists()).toBe(true)
       expect(wrapper.text()).toContain('Restore failed')
+      wrapper.unmount()
     })
   })
 
@@ -1830,21 +1845,28 @@ describe('App Component', () => {
     })
 
     it('should prevent adding end task when one already exists', async () => {
-      // Mock that end task already exists
       const vm = wrapper.vm as any
-      // Cannot modify hasEndTaskForSelectedDate directly due to Vue reactivity
-      // Test the method exists and can be called
 
+      // Clear any previous calls
+      mockAddSpecialTask.mockClear()
+
+      // Set the shared ref to indicate an end task already exists
+      hasEndTaskRef.value = true
+
+      // Wait for reactivity to take effect
+      await nextTick()
+
+      // Attempt to add end task
       await vm.addEndTask()
 
-      // Should show error toast and not call addSpecialTask
-      // Note: The actual implementation might still call addSpecialTask but show error
-      // We test that the function exists and handles the scenario
-      expect(typeof vm.addEndTask).toBe('function')
-      expect(wrapper.find('.toast').exists()).toBe(true)
-      // The toast might be success or error depending on implementation
-      // We just verify that a toast is shown
-      expect(wrapper.find('.toast').classes()).toContain('toast')
+      // Verify addSpecialTask was NOT called because end task already exists
+      expect(mockAddSpecialTask).not.toHaveBeenCalled()
+
+      // Verify that the prevention logic is based on hasEndTaskForSelectedDate
+      expect(vm.hasEndTaskForSelectedDate).toBe(true)
+
+      // Reset for other tests
+      hasEndTaskRef.value = false
     })
 
     it('should handle invalid date scenarios', () => {
@@ -2580,6 +2602,23 @@ describe('App Component', () => {
 
   // Phase 1: Critical Branch Coverage Tests
   describe('Media Query Compatibility', () => {
+    let originalMatchMedia: typeof window.matchMedia
+
+    beforeEach(() => {
+      // Store original matchMedia to restore after each test
+      originalMatchMedia = window.matchMedia
+    })
+
+    afterEach(() => {
+      // Restore original matchMedia after each test
+      if (originalMatchMedia) {
+        Object.defineProperty(window, 'matchMedia', {
+          writable: true,
+          value: originalMatchMedia
+        })
+      }
+    })
+
     it('should use fallback addListener when addEventListener throws', async () => {
       // Mock window.matchMedia to simulate older browser
       const mockMediaQueryList = {
@@ -2600,7 +2639,9 @@ describe('App Component', () => {
       const wrapper = mount(App)
 
       // Wait for onMounted lifecycle to complete
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       await nextTick()
 
       // Verify fallback was used
@@ -2629,7 +2670,9 @@ describe('App Component', () => {
       const wrapper = mount(App)
 
       // Wait for component initialization
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       await nextTick()
 
       // Unmount to trigger cleanup
@@ -2650,7 +2693,9 @@ describe('App Component', () => {
       })
 
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
 
       // Test without setting URL - just verify the method structure works
       expect(typeof wrapper.vm.openReportingApp).toBe('function')
@@ -2664,7 +2709,9 @@ describe('App Component', () => {
       })
 
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
 
       // Test without URL - just verify the method structure works
       expect(typeof wrapper.vm.openReportingApp).toBe('function')
@@ -2676,7 +2723,9 @@ describe('App Component', () => {
     it('should handle taskToDelete with undefined task_name', async () => {
       global.window.electronAPI = createElectronAPIMock()
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       // Set up taskToDelete with undefined task_name
@@ -2702,7 +2751,9 @@ describe('App Component', () => {
     it('should handle different appVersion states', async () => {
       global.window.electronAPI = createElectronAPIMock()
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       // Test with empty string
@@ -2865,7 +2916,9 @@ describe('App Component', () => {
     it('should handle safeScrollToBottom when scrollToBottom rejects', async () => {
       global.window.electronAPI = createElectronAPIMock()
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       // Mock taskListRef with scrollToBottom that throws
@@ -2896,7 +2949,9 @@ describe('App Component', () => {
       })
 
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       await vm.backupApp()
@@ -2919,7 +2974,9 @@ describe('App Component', () => {
       })
 
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       await vm.restoreBackup()
@@ -2933,7 +2990,9 @@ describe('App Component', () => {
     it('should handle addSpecialTaskWrapper without scrolling when not today', async () => {
       global.window.electronAPI = createElectronAPIMock()
       const wrapper = mount(App)
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      vi.useFakeTimers()
+      await vi.advanceTimersByTimeAsync(1100)
+      vi.useRealTimers()
       const vm = wrapper.vm as any
 
       // Set date to not today

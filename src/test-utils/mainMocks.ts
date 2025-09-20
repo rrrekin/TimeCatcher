@@ -73,7 +73,10 @@ const prepare = (sql: string) => {
   return obj
 }
 
-const transaction = (fn: Function) => (arg: any) => fn(arg)
+const transaction =
+  (fn: Function) =>
+  (...args: any[]) =>
+    fn(...args)
 
 export const databaseMockFactory = () => ({
   dbService: {

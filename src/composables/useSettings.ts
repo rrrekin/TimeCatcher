@@ -221,10 +221,17 @@ export function useSettings() {
     }
 
     applyTheme(currentTheme.value)
-    localStorage.setItem('theme', currentTheme.value)
-    localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
-    localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
-    localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+
+    // Persist settings with error handling for storage quota/access issues
+    try {
+      localStorage.setItem('theme', currentTheme.value)
+      localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+      localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+      localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+    } catch (error) {
+      console.warn('Failed to persist settings to localStorage:', error)
+      // Continue execution - theme is already applied and in-memory state is updated
+    }
   }
 
   /**
@@ -323,14 +330,19 @@ export function useSettings() {
       reportingAppButtonText.value = buttonText
       reportingAppUrl.value = url
 
-      // Persist
-      localStorage.setItem('theme', currentTheme.value)
-      localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
-      localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
-      localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
-
       // Apply theme now
       applyTheme(currentTheme.value)
+
+      // Persist with error handling for storage quota/access issues
+      try {
+        localStorage.setItem('theme', currentTheme.value)
+        localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
+        localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
+        localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+      } catch (error) {
+        console.warn('Failed to persist restored settings to localStorage:', error)
+        // Continue execution - theme is already applied and in-memory state is updated
+      }
 
       // Sync temps
       initializeTempSettings()

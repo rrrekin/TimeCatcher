@@ -804,4 +804,108 @@ describe('useSettings', () => {
       expect(tempReportingAppUrl.value).toBe(reportingAppUrl.value)
     })
   })
+
+  describe('localStorage Error Handling', () => {
+    it('should handle localStorage quota/access errors in saveSettings gracefully', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      // Mock localStorage.setItem to throw an error (simulating quota exceeded or access denied)
+      const setItemErrorSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError: Storage quota exceeded')
+      })
+
+      const { saveSettings, tempTheme, tempTargetWorkHours, currentTheme, targetWorkHours } = useSettings()
+
+      // Set some temp values
+      tempTheme.value = 'dark'
+      tempTargetWorkHours.value = 6
+
+      // Save settings should not crash even when localStorage fails
+      expect(() => saveSettings()).not.toThrow()
+
+      // Verify theme was still applied (not dependent on localStorage)
+      expect(currentTheme.value).toBe('dark')
+      expect(targetWorkHours.value).toBe(6)
+
+      // Verify console warning was logged
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to persist settings to localStorage:', expect.any(Error))
+
+      setItemErrorSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle localStorage errors in applyRestoredSettings gracefully', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      // Mock localStorage.setItem to throw an error
+      const setItemErrorSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('Storage access denied')
+      })
+
+      const { applyRestoredSettings, currentTheme, targetWorkHours, tempTheme, tempTargetWorkHours } = useSettings()
+
+      const settings = {
+        theme: 'dark' as const,
+        targetWorkHours: 5
+      }
+
+      // Should not crash when localStorage fails
+      expect(() => applyRestoredSettings(settings)).not.toThrow()
+
+      // Verify in-memory state was still updated
+      expect(currentTheme.value).toBe('dark')
+      expect(targetWorkHours.value).toBe(5)
+
+      // Verify temp settings were still initialized
+      expect(tempTheme.value).toBe('dark')
+      expect(tempTargetWorkHours.value).toBe(5)
+
+      // Verify console warning was logged
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to persist restored settings to localStorage:', expect.any(Error))
+
+      setItemErrorSpy.mockRestore()
+      consoleSpy.mockRestore()
+    })
+
+    it('should continue applying theme even when localStorage persistence fails', () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      // Mock the document and applyTheme functionality
+      const mockDocumentElement = {
+        setAttribute: vi.fn(),
+        classList: {
+          remove: vi.fn(),
+          add: vi.fn()
+        },
+        style: {
+          setProperty: vi.fn()
+        }
+      }
+      const originalDocument = global.document
+      global.document = { documentElement: mockDocumentElement } as any
+
+      const setItemErrorSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('Storage error')
+      })
+
+      const { saveSettings, tempTheme, currentTheme } = useSettings()
+      tempTheme.value = 'dark'
+
+      // Should not crash and should apply theme
+      expect(() => saveSettings()).not.toThrow()
+
+      // Verify in-memory state was updated even when storage fails
+      expect(currentTheme.value).toBe('dark')
+
+      // Verify console warning was logged for storage failure
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to persist settings to localStorage:', expect.any(Error))
+
+      // Verify CSS properties were set (core part of theme application)
+      expect(mockDocumentElement.style.setProperty).toHaveBeenCalledWith('color-scheme', 'dark')
+
+      setItemErrorSpy.mockRestore()
+      consoleSpy.mockRestore()
+      global.document = originalDocument
+    })
+  })
 })

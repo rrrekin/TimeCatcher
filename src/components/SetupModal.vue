@@ -797,10 +797,20 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.backup-btn:hover,
-.restore-btn:hover {
+.backup-btn:not(:disabled):hover,
+.restore-btn:not(:disabled):hover {
   background: var(--primary);
   color: white;
   border-color: var(--primary);
+}
+
+.backup-btn:disabled,
+.restore-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border-color: var(--border-color);
+  pointer-events: none;
 }
 </style>
