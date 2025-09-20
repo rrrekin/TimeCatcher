@@ -999,7 +999,13 @@ describe('App Component', () => {
       const vm = wrapper.vm as any
       await vm.backupApp()
       expect(backupSpy).toHaveBeenCalledWith(
-        expect.objectContaining({ theme: 'light', targetWorkHours: 8, reportingAppButtonText: 'Tempo' })
+        expect.objectContaining({
+          theme: 'light',
+          targetWorkHours: 8,
+          reportingAppButtonText: 'Tempo',
+          evictionEnabled: true,
+          evictionDaysToKeep: 180
+        })
       )
       expect(wrapper.find('.toast').exists()).toBe(true)
       expect(wrapper.text()).toContain('Backup saved successfully')
@@ -2959,6 +2965,7 @@ describe('App Component', () => {
       vi.useFakeTimers()
       await vi.advanceTimersByTimeAsync(1100)
       vi.useRealTimers()
+      await nextTick() // Ensure component is fully initialized
       const vm = wrapper.vm as any
 
       await vm.backupApp()

@@ -166,6 +166,45 @@
           </div>
         </div>
 
+        <!-- Old Entries Cleanup -->
+        <div class="setting-group">
+          <h4>Old Entries Cleanup</h4>
+          <div class="eviction-settings">
+            <div class="eviction-enabled-setting">
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  :checked="tempEvictionEnabled"
+                  @change="$emit('updateTempEvictionEnabled', ($event.target as HTMLInputElement).checked)"
+                  class="eviction-checkbox"
+                />
+                <span class="checkmark"></span>
+                Enable old entries cleanup
+              </label>
+            </div>
+            <div class="eviction-days-setting" :class="{ disabled: !tempEvictionEnabled }">
+              <label for="eviction-days">Days of history to keep:</label>
+              <input
+                type="number"
+                id="eviction-days"
+                :value="tempEvictionDaysToKeep"
+                @input="onEvictionDaysInput($event)"
+                min="30"
+                max="3650"
+                step="1"
+                class="eviction-days-input"
+                :class="{ 'invalid-input': tempEvictionDaysToKeep < 30 || tempEvictionDaysToKeep > 3650 }"
+                :disabled="!tempEvictionEnabled"
+              />
+              <span class="days-label">days</span>
+            </div>
+            <div class="eviction-help-text">
+              Minimum 30 days to prevent accidental data loss. When enabled, old task entries are automatically removed
+              after creating an "End" task.
+            </div>
+          </div>
+        </div>
+
         <!-- Backup & Restore -->
         <div class="setting-group">
           <h4>Backup & Restore</h4>
@@ -267,6 +306,18 @@ const props = defineProps({
   isValidUrl: {
     type: Function as PropType<(url: string) => boolean>,
     required: true
+  },
+  tempEvictionEnabled: {
+    type: Boolean,
+    required: true
+  },
+  tempEvictionDaysToKeep: {
+    type: Number,
+    required: true
+  },
+  isValidEvictionDaysToKeep: {
+    type: Function as PropType<(value: unknown) => boolean>,
+    required: true
   }
 })
 
@@ -288,6 +339,8 @@ const emit = defineEmits<{
   startAddingCategory: []
   updateTempReportingAppButtonText: [text: string]
   updateTempReportingAppUrl: [url: string]
+  updateTempEvictionEnabled: [enabled: boolean]
+  updateTempEvictionDaysToKeep: [days: number]
   backup: []
   restoreBackup: []
 }>()
@@ -307,6 +360,12 @@ function onTargetHoursInput(e: Event) {
   const raw = parseFloat((e.target as HTMLInputElement).value)
   const clamped = Number.isFinite(raw) ? Math.min(24, Math.max(1, raw)) : 1
   emit('updateTempTargetWorkHours', clamped)
+}
+
+function onEvictionDaysInput(e: Event) {
+  const raw = parseInt((e.target as HTMLInputElement).value, 10)
+  const clamped = Number.isFinite(raw) ? Math.min(3650, Math.max(30, raw)) : 30
+  emit('updateTempEvictionDaysToKeep', clamped)
 }
 
 function handleEscapeCancel() {
@@ -812,5 +871,97 @@ onUnmounted(() => {
   color: var(--text-secondary);
   border-color: var(--border-color);
   pointer-events: none;
+}
+
+/* Eviction Settings */
+.eviction-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.eviction-enabled-setting {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.eviction-checkbox {
+  margin-right: 12px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkmark {
+  display: none;
+}
+
+.eviction-days-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.eviction-days-setting.disabled {
+  opacity: 0.5;
+}
+
+.eviction-days-setting label {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.eviction-days-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  width: 80px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.eviction-days-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+}
+
+.eviction-days-input:disabled {
+  cursor: not-allowed;
+  background: var(--border-color);
+  color: var(--text-muted);
+}
+
+.eviction-days-input.invalid-input {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+.days-label {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.eviction-help-text {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
 }
 </style>

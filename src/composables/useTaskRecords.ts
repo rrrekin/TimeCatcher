@@ -142,6 +142,12 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
       }
 
       await window.electronAPI.addTaskRecord(taskRecord)
+
+      // Trigger eviction after End task creation
+      if (taskType === TASK_TYPE_END) {
+        await triggerEvictionIfEnabled()
+      }
+
       // Set context before loading data
       if (updateContextSetter) {
         updateContextSetter(context)
@@ -226,6 +232,47 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
     } catch (error) {
       console.error('Failed to delete task record:', error)
       throw error
+    }
+  }
+
+  /**
+   * Trigger eviction if enabled in settings
+   */
+  const triggerEvictionIfEnabled = async (): Promise<void> => {
+    try {
+      // Get eviction settings from localStorage
+      const evictionEnabledStr = localStorage.getItem('evictionEnabled')
+      const evictionDaysToKeepStr = localStorage.getItem('evictionDaysToKeep')
+
+      // Check if eviction is enabled
+      const evictionEnabled = evictionEnabledStr === 'true'
+      if (!evictionEnabled) {
+        return
+      }
+
+      // Parse and validate days to keep
+      const evictionDaysToKeep = parseInt(evictionDaysToKeepStr || '180', 10)
+      if (isNaN(evictionDaysToKeep) || evictionDaysToKeep < 30) {
+        console.warn('Invalid eviction days setting, skipping eviction')
+        return
+      }
+
+      // Calculate cutoff date
+      const cutoffDate = new Date()
+      cutoffDate.setDate(cutoffDate.getDate() - evictionDaysToKeep)
+      const cutoffDateStr = toYMDLocal(cutoffDate)
+
+      // Call the deletion API
+      if (!window.electronAPI?.deleteOldTaskRecords) {
+        console.warn('Delete old task records API not available')
+        return
+      }
+
+      const deletedCount = await window.electronAPI.deleteOldTaskRecords(cutoffDateStr)
+      console.log(`Eviction completed: ${deletedCount} old task records deleted (older than ${cutoffDateStr})`)
+    } catch (error) {
+      console.error('Failed to trigger eviction:', error)
+      // Don't throw - eviction failure shouldn't block End task creation
     }
   }
 

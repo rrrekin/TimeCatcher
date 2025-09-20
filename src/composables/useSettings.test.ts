@@ -908,4 +908,233 @@ describe('useSettings', () => {
       global.document = originalDocument
     })
   })
+
+  describe('eviction settings', () => {
+    it('should load eviction settings from localStorage with defaults', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          const { evictionEnabled, evictionDaysToKeep } = useSettings()
+          return { evictionEnabled, evictionDaysToKeep }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Should use defaults
+      expect(wrapper.vm.evictionEnabled).toBe(true)
+      expect(wrapper.vm.evictionDaysToKeep).toBe(180)
+
+      wrapper.unmount()
+    })
+
+    it('should load eviction settings from localStorage with stored values', () => {
+      localStorageMock['evictionEnabled'] = 'false'
+      localStorageMock['evictionDaysToKeep'] = '365'
+
+      const TestComponent = defineComponent({
+        setup() {
+          const { evictionEnabled, evictionDaysToKeep } = useSettings()
+          return { evictionEnabled, evictionDaysToKeep }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      expect(wrapper.vm.evictionEnabled).toBe(false)
+      expect(wrapper.vm.evictionDaysToKeep).toBe(365)
+
+      wrapper.unmount()
+    })
+
+    it('should validate eviction days with minimum 30 days', () => {
+      const { isValidEvictionDaysToKeep } = useSettings()
+
+      expect(isValidEvictionDaysToKeep(29)).toBe(false)
+      expect(isValidEvictionDaysToKeep(30)).toBe(true)
+      expect(isValidEvictionDaysToKeep(180)).toBe(true)
+      expect(isValidEvictionDaysToKeep(3650)).toBe(true)
+      expect(isValidEvictionDaysToKeep(3651)).toBe(false)
+      expect(isValidEvictionDaysToKeep('invalid')).toBe(false)
+      expect(isValidEvictionDaysToKeep(null)).toBe(false)
+      expect(isValidEvictionDaysToKeep(undefined)).toBe(false)
+    })
+
+    it('should save eviction settings to localStorage', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          const { tempEvictionEnabled, tempEvictionDaysToKeep, saveSettings } = useSettings()
+          return { tempEvictionEnabled, tempEvictionDaysToKeep, saveSettings }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      wrapper.vm.tempEvictionEnabled = false
+      wrapper.vm.tempEvictionDaysToKeep = 90
+      wrapper.vm.saveSettings()
+
+      expect(setItemSpy).toHaveBeenCalledWith('evictionEnabled', 'false')
+      expect(setItemSpy).toHaveBeenCalledWith('evictionDaysToKeep', '90')
+
+      wrapper.unmount()
+    })
+
+    it('should use default values for invalid eviction days', () => {
+      localStorageMock['evictionDaysToKeep'] = '15' // Below minimum
+
+      const TestComponent = defineComponent({
+        setup() {
+          const { evictionDaysToKeep } = useSettings()
+          return { evictionDaysToKeep }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Should fallback to default
+      expect(wrapper.vm.evictionDaysToKeep).toBe(180)
+
+      wrapper.unmount()
+    })
+
+    it('should handle invalid eviction days in saveSettings', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          const { tempEvictionDaysToKeep, evictionDaysToKeep, saveSettings } = useSettings()
+          return { tempEvictionDaysToKeep, evictionDaysToKeep, saveSettings }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Set invalid value
+      wrapper.vm.tempEvictionDaysToKeep = 15 // Below minimum
+      wrapper.vm.saveSettings()
+
+      // Should keep the default value
+      expect(wrapper.vm.evictionDaysToKeep).toBe(180)
+
+      wrapper.unmount()
+    })
+
+    it('should include eviction settings in sanitizeRestoredSettings', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          const settings = useSettings()
+          return settings
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Test with valid eviction settings
+      const mockSettings = {
+        theme: 'dark',
+        targetWorkHours: 8,
+        reportingAppButtonText: 'Test',
+        reportingAppUrl: 'https://example.com',
+        evictionEnabled: false,
+        evictionDaysToKeep: 365,
+        invalidKey: 'should be ignored'
+      }
+
+      wrapper.vm.applyRestoredSettings(mockSettings)
+
+      expect(wrapper.vm.evictionEnabled).toBe(false)
+      expect(wrapper.vm.evictionDaysToKeep).toBe(365)
+
+      wrapper.unmount()
+    })
+
+    it('should reject invalid eviction settings during restore', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          const settings = useSettings()
+          return settings
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Test with invalid eviction settings
+      const mockSettings = {
+        theme: 'dark',
+        targetWorkHours: 8,
+        reportingAppButtonText: 'Test',
+        reportingAppUrl: 'https://example.com',
+        evictionEnabled: 'invalid',
+        evictionDaysToKeep: 15 // Below minimum
+      }
+
+      wrapper.vm.applyRestoredSettings(mockSettings)
+
+      // Should keep defaults for invalid values
+      expect(wrapper.vm.evictionEnabled).toBe(true) // Default
+      expect(wrapper.vm.evictionDaysToKeep).toBe(180) // Default
+
+      wrapper.unmount()
+    })
+
+    it('should guard against corrupted localStorage for eviction settings', () => {
+      // Test corrupted evictionEnabled values
+      localStorageMock['evictionEnabled'] = 'maybe' // Corrupted value
+      localStorageMock['evictionDaysToKeep'] = '45.7' // Non-integer
+
+      const TestComponent = defineComponent({
+        setup() {
+          const { evictionEnabled, evictionDaysToKeep } = useSettings()
+          return { evictionEnabled, evictionDaysToKeep }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Should keep defaults when corrupted
+      expect(wrapper.vm.evictionEnabled).toBe(true) // Default, not corrupted value
+      expect(wrapper.vm.evictionDaysToKeep).toBe(45) // Normalized to integer
+
+      wrapper.unmount()
+    })
+
+    it('should handle various corrupted localStorage scenarios', () => {
+      // Test different corruption scenarios
+      const corruptedValues = [
+        { enabled: 'yes', days: 'invalid', expectedEnabled: true, expectedDays: 180 },
+        { enabled: '1', days: '20', expectedEnabled: true, expectedDays: 180 }, // days below minimum
+        { enabled: 'TRUE', days: '4000', expectedEnabled: true, expectedDays: 180 }, // days above maximum
+        { enabled: 'false', days: '90.9', expectedEnabled: false, expectedDays: 90 } // valid false, normalized days
+      ]
+
+      corruptedValues.forEach(({ enabled, days, expectedEnabled, expectedDays }, index) => {
+        // Clear previous values
+        Object.keys(localStorageMock).forEach(key => delete localStorageMock[key])
+
+        localStorageMock['evictionEnabled'] = enabled
+        localStorageMock['evictionDaysToKeep'] = days
+
+        const TestComponent = defineComponent({
+          setup() {
+            const { evictionEnabled, evictionDaysToKeep } = useSettings()
+            return { evictionEnabled, evictionDaysToKeep }
+          },
+          template: '<div></div>'
+        })
+
+        const wrapper = mount(TestComponent)
+
+        expect(wrapper.vm.evictionEnabled).toBe(expectedEnabled)
+        expect(wrapper.vm.evictionDaysToKeep).toBe(expectedDays)
+
+        wrapper.unmount()
+      })
+    })
+  })
 })
