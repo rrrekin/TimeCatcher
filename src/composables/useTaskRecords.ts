@@ -5,7 +5,8 @@ import type {
   TaskRecordUpdate,
   TaskType,
   SpecialTaskType,
-  TaskRecordWithId
+  TaskRecordWithId,
+  UpdateContext
 } from '@/shared/types'
 import { SPECIAL_TASK_CATEGORY, SPECIAL_TASK_TYPES, TASK_TYPE_END } from '@/shared/types'
 import { toYMDLocal } from '@/utils/dateUtils'
@@ -13,7 +14,7 @@ import { toYMDLocal } from '@/utils/dateUtils'
 // Error message constants
 const DUPLICATE_END_TASK_MSG = 'An end task already exists for this day. Only one end task is allowed per day.'
 
-export function useTaskRecords(selectedDate: Ref<Date>) {
+export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (context: UpdateContext) => void) {
   const taskRecords: Ref<TaskRecordWithId[]> = ref([])
   const isLoadingTasks = ref(false)
 
@@ -93,13 +94,17 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
   /**
    * Add a new task record
    */
-  const addTaskRecord = async (record: TaskRecordInsert): Promise<void> => {
+  const addTaskRecord = async (record: TaskRecordInsert, context: UpdateContext = 'initial-load'): Promise<void> => {
     if (!window.electronAPI) {
       throw new Error('API not available. Please restart the application.')
     }
 
     try {
       await window.electronAPI.addTaskRecord(record)
+      // Set context before loading data
+      if (updateContextSetter) {
+        updateContextSetter(context)
+      }
       await loadTaskRecords()
     } catch (error) {
       console.error('Failed to add task record:', error)
@@ -110,7 +115,11 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
   /**
    * Add a special task (pause or end)
    */
-  const addSpecialTask = async (taskType: SpecialTaskType, taskName: string): Promise<void> => {
+  const addSpecialTask = async (
+    taskType: SpecialTaskType,
+    taskName: string,
+    context: UpdateContext = 'initial-load'
+  ): Promise<void> => {
     if (!window.electronAPI) {
       throw new Error('API not available. Please restart the application.')
     }
@@ -133,6 +142,10 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
       }
 
       await window.electronAPI.addTaskRecord(taskRecord)
+      // Set context before loading data
+      if (updateContextSetter) {
+        updateContextSetter(context)
+      }
       await loadTaskRecords()
     } catch (error) {
       console.error(`Failed to add ${taskType} task:`, error)
@@ -177,13 +190,21 @@ export function useTaskRecords(selectedDate: Ref<Date>) {
   /**
    * Update an existing task record
    */
-  const updateTaskRecord = async (id: number, updates: TaskRecordUpdate): Promise<void> => {
+  const updateTaskRecord = async (
+    id: number,
+    updates: TaskRecordUpdate,
+    context: UpdateContext = 'initial-load'
+  ): Promise<void> => {
     if (!window.electronAPI) {
       throw new Error('API not available. Please restart the application.')
     }
 
     try {
       await window.electronAPI.updateTaskRecord(id, updates)
+      // Set context before loading data
+      if (updateContextSetter) {
+        updateContextSetter(context)
+      }
       await loadTaskRecords()
     } catch (error) {
       console.error('Failed to update task record:', error)
