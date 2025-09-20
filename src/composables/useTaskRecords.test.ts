@@ -144,24 +144,12 @@ describe('useTaskRecords', () => {
   })
 
   // Advanced duplicate end task detection tests
-  it('should handle SQLite errno 19 duplicate end task error', async () => {
-    electronAPI.addTaskRecord.mockRejectedValue({ errno: 19 })
-    const { addSpecialTask } = useTaskRecords(selectedDate)
-    await expect(addSpecialTask(TASK_TYPE_END, 'End')).rejects.toThrow('An end task already exists')
-  })
-
-  it('should handle constraint message regex pattern for duplicate end task', async () => {
-    electronAPI.addTaskRecord.mockRejectedValue({
-      message: 'UNIQUE constraint failed: idx_end_per_day'
-    })
-    const { addSpecialTask } = useTaskRecords(selectedDate)
-    await expect(addSpecialTask(TASK_TYPE_END, 'End')).rejects.toThrow('An end task already exists')
-  })
-
-  it('should handle constraint violation regex pattern for duplicate end task', async () => {
-    electronAPI.addTaskRecord.mockRejectedValue({
-      message: 'constraint violation on idx_end_per_day'
-    })
+  it.each([
+    { errno: 19 },
+    { message: 'UNIQUE constraint failed: idx_end_per_day' },
+    { message: 'constraint violation on idx_end_per_day' }
+  ])('should handle duplicate end task DB error cases', async mockRejectionValue => {
+    electronAPI.addTaskRecord.mockRejectedValue(mockRejectionValue)
     const { addSpecialTask } = useTaskRecords(selectedDate)
     await expect(addSpecialTask(TASK_TYPE_END, 'End')).rejects.toThrow('An end task already exists')
   })
