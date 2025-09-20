@@ -145,7 +145,7 @@
 
 <script setup lang="ts">
 import { type PropType, ref, nextTick, computed, type Ref, watch, onUnmounted, toRaw, reactive } from 'vue'
-import type { TaskRecord, Category, TaskType, TaskRecordWithId } from '@/shared/types'
+import type { TaskRecord, Category, TaskType, TaskRecordWithId, UpdateContext } from '@/shared/types'
 import { DURATION_VISIBLE_BY_TASK_TYPE, TASK_TYPE_PAUSE, TASK_TYPE_END } from '@/shared/types'
 import { useListboxNavigation } from '@/composables/useListboxNavigation'
 
@@ -230,6 +230,10 @@ const props = defineProps({
   isSpecial: {
     type: Function as PropType<(taskType: TaskType) => boolean>,
     required: true
+  },
+  updateContext: {
+    type: String as PropType<UpdateContext>,
+    default: 'initial-load' as UpdateContext
   }
 })
 
@@ -303,19 +307,30 @@ const highlightTask = (taskId: number) => {
   highlightTimers.set(taskId, timer)
 }
 
-// Watch for task record changes to highlight new/modified tasks
+// Watch for task record changes to highlight new/modified tasks (source-aware)
 const previousTasksMap = ref<Map<number, TaskRecordWithId>>(new Map())
 
 watch(
-  () => props.taskRecords,
-  newRecords => {
+  [() => props.taskRecords, () => props.updateContext],
+  ([newRecords, updateContext]) => {
     const plainNewRecords = toRaw(newRecords)
-    if (previousTasksMap.value.size === 0) {
-      // Initial load - don't highlight anything
+
+    // Clear highlights for non-edit contexts that might interfere
+    if (updateContext === 'date-change' || updateContext === 'initial-load') {
+      highlightedTasks.clear()
+      fadingTasks.clear()
+      highlightTimers.forEach(timer => clearTimeout(timer))
+      highlightTimers.clear()
+    }
+
+    // Only highlight for actual edits
+    if (updateContext !== 'edit') {
+      // Just update snapshot without highlighting
       previousTasksMap.value = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
       return
     }
 
+    // Edit context: run highlighting logic
     const newRecordsMap = new Map(plainNewRecords.map((task: TaskRecordWithId) => [task.id, toRaw(task)]))
     const addedTaskIds = new Set<number>()
     const modifiedTaskIds = new Set<number>()

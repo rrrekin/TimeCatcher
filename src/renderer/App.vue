@@ -28,6 +28,7 @@
             :convert-to-time-input="convertToTimeInput"
             :get-current-time="getCurrentTime"
             :is-special="isSpecial"
+            :update-context="updateContext"
             @toggle-inline-dropdown="toggleInlineDropdown"
             @select-inline-category="selectInlineCategory"
             @handle-blur="handleBlur"
@@ -160,7 +161,8 @@ import {
   type TaskRecord,
   type TaskType,
   type SpecialTaskType,
-  type TaskRecordWithId
+  type TaskRecordWithId,
+  type UpdateContext
 } from '../shared/types'
 import { useCategories } from '@/composables/useCategories'
 import { useTaskRecords } from '@/composables/useTaskRecords'
@@ -206,6 +208,9 @@ const activeSection = ref('dashboard')
 const selectedDate = ref(new Date())
 const isSetupModalOpen = ref(false)
 
+// Update context for task highlighting
+const updateContext = ref<UpdateContext>('initial-load')
+
 // Composables
 const {
   categories,
@@ -231,7 +236,9 @@ const {
   addSpecialTask,
   updateTaskRecord,
   deleteTaskRecord
-} = useTaskRecords(selectedDate)
+} = useTaskRecords(selectedDate, context => {
+  updateContext.value = context
+})
 
 const {
   currentTheme,
@@ -253,6 +260,7 @@ const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategor
   useDurationCalculations(taskRecords)
 
 const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
+  updateContext.value = 'auto-refresh'
   taskRecords.value = [...taskRecords.value] // Trigger reactivity
 })
 
@@ -479,7 +487,7 @@ const restoreBackup = async () => {
       }
       // Reload data
       await loadCategoriesWrapper()
-      await loadTaskRecordsWrapper()
+      await loadTaskRecordsWrapper('initial-load') // Fresh start after restore
       // Re-sync SetupModal temporary fields and optionally close modal
       initializeTempSettings()
       isSetupModalOpen.value = false
@@ -627,8 +635,9 @@ const setDefaultCategoryWrapper = async (category: Category) => {
 }
 
 // Task record management functions - wrappers with UI state management
-const loadTaskRecordsWrapper = async () => {
+const loadTaskRecordsWrapper = async (context: UpdateContext = 'initial-load') => {
   try {
+    updateContext.value = context
     await loadTaskRecords()
   } catch (error) {
     showToastMessage('Failed to load task records. Please try again.', 'error')
@@ -672,7 +681,7 @@ const addTask = async () => {
       task_type: TASK_TYPE_NORMAL
     }
 
-    await addTaskRecord(taskRecord)
+    await addTaskRecord(taskRecord, 'edit')
     showToastMessage('Task added successfully!', 'success')
 
     // Scroll only when viewing today
@@ -692,7 +701,7 @@ const addTask = async () => {
 // Special task functions
 const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string, successMessage: string) => {
   try {
-    await addSpecialTask(taskType, taskName)
+    await addSpecialTask(taskType, taskName, 'edit')
     showToastMessage(successMessage, 'success')
 
     if (isToday.value) {
@@ -749,8 +758,8 @@ watch(
     // Stop any existing auto-refresh first
     stopAutoRefresh()
 
-    // Await loading the new task records
-    await loadTaskRecordsWrapper()
+    // Await loading the new task records with date-change context
+    await loadTaskRecordsWrapper('date-change')
 
     if (isToday.value) {
       await safeScrollToBottom()
@@ -794,7 +803,7 @@ onMounted(async () => {
   if (import.meta.env.DEV) {
     console.log('Loading task records...')
   }
-  await loadTaskRecordsWrapper()
+  await loadTaskRecordsWrapper('initial-load')
   if (import.meta.env.DEV) {
     console.log('App initialization complete')
   }
@@ -882,7 +891,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       task_type: TASK_TYPE_NORMAL
     }
 
-    await addTaskRecord(taskRecord)
+    await addTaskRecord(taskRecord, 'edit')
 
     // Check if the user is viewing today's date
     const todayString = toYMDLocalUtil(now)
@@ -931,7 +940,7 @@ const updateTaskField = async (
         'Update function not available. Please restart the application to enable inline editing.',
         'error'
       )
-      await loadTaskRecordsWrapper()
+      await loadTaskRecordsWrapper('error-recovery')
       return
     }
 
@@ -940,7 +949,7 @@ const updateTaskField = async (
     if (isNaN(numericRecordId)) {
       console.error('Invalid record ID:', recordId)
       showToastMessage('Invalid record ID. Please refresh the page.', 'error')
-      await loadTaskRecordsWrapper()
+      await loadTaskRecordsWrapper('error-recovery')
       return
     }
 
@@ -948,7 +957,7 @@ const updateTaskField = async (
     const currentRecord = taskRecords.value.find(r => r.id === numericRecordId)
     if (!currentRecord) {
       console.error('Record not found:', numericRecordId)
-      await loadTaskRecordsWrapper()
+      await loadTaskRecordsWrapper('error-recovery')
       return
     }
 
@@ -967,12 +976,12 @@ const updateTaskField = async (
       return
     }
 
-    await updateTaskRecord(numericRecordId, updates)
+    await updateTaskRecord(numericRecordId, updates, 'edit')
     showToastMessage(successMessage, 'success')
   } catch (error) {
     console.error('Failed to update task:', error)
     showToastMessage(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
-    await loadTaskRecordsWrapper() // Restore previous values on error
+    await loadTaskRecordsWrapper('error-recovery') // Restore previous values on error
   }
 }
 
@@ -986,7 +995,7 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
   const value = target.value
   if (!value.trim()) {
     // If field is empty, reload to restore previous value
-    await loadTaskRecordsWrapper()
+    await loadTaskRecordsWrapper('error-recovery')
     return
   }
 
@@ -1000,7 +1009,7 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
       // HTML time input provides HH:MM format, validate and normalize
       if (!value || value.length === 0) {
         showToastMessage('Time cannot be empty', 'error')
-        await loadTaskRecordsWrapper()
+        await loadTaskRecordsWrapper('error-recovery')
         return
       }
 
@@ -1008,7 +1017,7 @@ const handleBlur = async (recordId: number | undefined, field: string, event: Ev
       processedValue = parseTimeInput(value)
     } catch (timeError) {
       showToastMessage((timeError as Error).message, 'error')
-      await loadTaskRecordsWrapper() // Restore previous value on invalid time
+      await loadTaskRecordsWrapper('error-recovery') // Restore previous value on invalid time
       return
     }
   }
@@ -1034,7 +1043,7 @@ const handleCategoryChange = async (recordId: number | undefined, event: Event) 
   if (!categoryName) {
     console.error('Invalid category name:', target.value)
     showToastMessage('Invalid category selected. Please refresh the page.', 'error')
-    await loadTaskRecordsWrapper()
+    await loadTaskRecordsWrapper('error-recovery')
     return
   }
 

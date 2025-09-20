@@ -15,6 +15,14 @@ export const DURATION_VISIBLE_BY_TASK_TYPE: Record<TaskType, boolean> = {
   end: false
 } as const
 
+// Context for task record updates to control highlighting behavior
+export type UpdateContext =
+  | 'initial-load' // First app load
+  | 'date-change' // User navigated to different date
+  | 'edit' // User edited task data
+  | 'auto-refresh' // Background refresh (today only)
+  | 'error-recovery' // Restoring state after error
+
 export interface DatabaseError extends Error {
   code?: 'END_DUPLICATE' | 'SQLITE_CONSTRAINT' | 'SQLITE_CONSTRAINT_UNIQUE' | string
 }

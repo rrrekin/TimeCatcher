@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import TaskList from './TaskList.vue'
-import type { TaskRecord, Category, TaskRecordWithId } from '@/shared/types'
+import type { TaskRecord, Category, TaskRecordWithId, UpdateContext } from '@/shared/types'
 import { SPECIAL_TASK_TYPES } from '@/shared/types'
 
 describe('TaskList Component', () => {
@@ -51,6 +51,7 @@ describe('TaskList Component', () => {
         displayDate: '2024-01-15',
         hasEndTaskForSelectedDate: false,
         showInlineDropdown: {},
+        updateContext: 'initial-load' as UpdateContext,
         // Function props
         calculateDuration: vi.fn(() => '1h 30m'),
         convertToTimeInput: vi.fn(time => time),
@@ -275,12 +276,15 @@ describe('TaskList Component', () => {
   })
 
   describe('Task Highlighting', () => {
-    it('should highlight newly added tasks', async () => {
+    it('should highlight newly added tasks with edit context', async () => {
       // Start with initial tasks
       const initialTasks = [mockTaskRecords[0]]
-      await wrapper.setProps({ taskRecords: initialTasks })
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
 
-      // Add a new task
+      // Add a new task with edit context
       const newTask = {
         id: 3,
         category_name: 'Learning',
@@ -291,7 +295,8 @@ describe('TaskList Component', () => {
       }
 
       await wrapper.setProps({
-        taskRecords: [...initialTasks, newTask]
+        taskRecords: [...initialTasks, newTask],
+        updateContext: 'edit'
       })
 
       // Wait for DOM update
@@ -311,16 +316,22 @@ describe('TaskList Component', () => {
       expect(newTaskRow?.classes()).toContain('highlighted-task')
     })
 
-    it('should highlight modified tasks', async () => {
+    it('should highlight modified tasks with edit context', async () => {
       // Start with initial tasks to initialize the watcher's previousTasksMap
       const initialTasks = JSON.parse(JSON.stringify(mockTaskRecords))
-      await wrapper.setProps({ taskRecords: initialTasks })
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
 
-      // Modify a task
+      // Modify a task with edit context
       const modifiedTasks = JSON.parse(JSON.stringify(mockTaskRecords))
       modifiedTasks[0].task_name = 'Modified Task Name'
 
-      await wrapper.setProps({ taskRecords: modifiedTasks })
+      await wrapper.setProps({
+        taskRecords: modifiedTasks,
+        updateContext: 'edit'
+      })
 
       // Wait for DOM update and ensure all watchers have run
       await wrapper.vm.$nextTick()
@@ -349,6 +360,7 @@ describe('TaskList Component', () => {
           displayDate: '2024-01-15',
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
           calculateDuration: vi.fn(() => '1h 30m'),
           convertToTimeInput: vi.fn(time => time),
           getCurrentTime: vi.fn(() => '10:30'),
@@ -369,9 +381,12 @@ describe('TaskList Component', () => {
     it('should add fading class immediately after highlighting', async () => {
       // Start with initial tasks
       const initialTasks = [mockTaskRecords[0]]
-      await wrapper.setProps({ taskRecords: initialTasks })
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
 
-      // Add a new task
+      // Add a new task with edit context
       const newTask = {
         id: 3,
         category_name: 'Learning',
@@ -381,7 +396,8 @@ describe('TaskList Component', () => {
         task_type: 'normal' as const
       }
       await wrapper.setProps({
-        taskRecords: [...initialTasks, newTask]
+        taskRecords: [...initialTasks, newTask],
+        updateContext: 'edit'
       })
 
       // Wait for DOM update and requestAnimationFrame
@@ -403,9 +419,12 @@ describe('TaskList Component', () => {
     it('should handle re-highlighting of previously highlighted tasks', async () => {
       // Start with initial tasks
       const initialTasks = [mockTaskRecords[0]]
-      await wrapper.setProps({ taskRecords: initialTasks })
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
 
-      // Add a new task (first highlight)
+      // Add a new task (first highlight) with edit context
       const newTask = {
         id: 3,
         category_name: 'Learning',
@@ -415,20 +434,22 @@ describe('TaskList Component', () => {
         task_type: 'normal' as const
       }
       await wrapper.setProps({
-        taskRecords: [...initialTasks, newTask]
+        taskRecords: [...initialTasks, newTask],
+        updateContext: 'edit'
       })
 
       // Wait for first highlight
       await wrapper.vm.$nextTick()
       await new Promise(resolve => requestAnimationFrame(resolve))
 
-      // Modify the same task (should re-highlight)
+      // Modify the same task (should re-highlight) with edit context
       const modifiedTask = {
         ...newTask,
         task_name: 'Re-highlight Test Modified'
       }
       await wrapper.setProps({
-        taskRecords: [initialTasks[0], modifiedTask]
+        taskRecords: [initialTasks[0], modifiedTask],
+        updateContext: 'edit'
       })
 
       // Wait for re-highlight
@@ -497,9 +518,12 @@ describe('TaskList Component', () => {
 
       // Start with initial tasks
       const initialTasks = [mockTaskRecords[0]]
-      await wrapper.setProps({ taskRecords: initialTasks })
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
 
-      // Add a new task to trigger highlighting
+      // Add a new task to trigger highlighting with edit context
       const newTask = {
         id: 3,
         category_name: 'Learning',
@@ -509,7 +533,8 @@ describe('TaskList Component', () => {
         task_type: 'normal' as const
       }
       await wrapper.setProps({
-        taskRecords: [...initialTasks, newTask]
+        taskRecords: [...initialTasks, newTask],
+        updateContext: 'edit'
       })
 
       // Wait for DOM update
@@ -532,6 +557,211 @@ describe('TaskList Component', () => {
       expect(newTaskRow?.classes()).not.toContain('fading')
 
       vi.useRealTimers()
+    })
+
+    // Context-Aware Highlighting Tests
+    it('should NOT highlight tasks with date-change context', async () => {
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
+
+      // Change to different tasks with date-change context
+      const differentTasks = [
+        {
+          id: 10,
+          category_name: 'Work',
+          task_name: 'Different Day Task',
+          start_time: '09:30',
+          date: '2024-01-16',
+          task_type: 'normal' as const
+        }
+      ]
+
+      await wrapper.setProps({
+        taskRecords: differentTasks,
+        updateContext: 'date-change'
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // No tasks should be highlighted with date-change context
+      const taskRows = wrapper.findAll('tbody tr')
+      taskRows.forEach(row => {
+        expect(row.classes()).not.toContain('highlighted-task')
+        expect(row.classes()).not.toContain('fading')
+      })
+    })
+
+    it('should NOT highlight tasks with auto-refresh context', async () => {
+      // Start with initial tasks
+      await wrapper.setProps({
+        taskRecords: [mockTaskRecords[0]],
+        updateContext: 'initial-load'
+      })
+
+      // Trigger auto-refresh (same tasks, different context)
+      await wrapper.setProps({
+        taskRecords: [...mockTaskRecords], // Spread to create new array (auto-refresh behavior)
+        updateContext: 'auto-refresh'
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // No tasks should be highlighted with auto-refresh context
+      const taskRows = wrapper.findAll('tbody tr')
+      taskRows.forEach(row => {
+        expect(row.classes()).not.toContain('highlighted-task')
+        expect(row.classes()).not.toContain('fading')
+      })
+    })
+
+    it('should NOT highlight tasks with error-recovery context', async () => {
+      // Start with initial tasks
+      await wrapper.setProps({
+        taskRecords: [mockTaskRecords[0]],
+        updateContext: 'initial-load'
+      })
+
+      // Trigger error recovery (restoring previous state)
+      await wrapper.setProps({
+        taskRecords: mockTaskRecords,
+        updateContext: 'error-recovery'
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // No tasks should be highlighted with error-recovery context
+      const taskRows = wrapper.findAll('tbody tr')
+      taskRows.forEach(row => {
+        expect(row.classes()).not.toContain('highlighted-task')
+        expect(row.classes()).not.toContain('fading')
+      })
+    })
+
+    it('should clear existing highlights when using date-change context', async () => {
+      // Start with initial tasks
+      await wrapper.setProps({
+        taskRecords: [mockTaskRecords[0]],
+        updateContext: 'initial-load'
+      })
+
+      // Add a task with edit context (should highlight)
+      const newTask = {
+        id: 3,
+        category_name: 'Learning',
+        task_name: 'To Be Cleared',
+        start_time: '11:00',
+        date: '2024-01-15',
+        task_type: 'normal' as const
+      }
+
+      await wrapper.setProps({
+        taskRecords: [mockTaskRecords[0], newTask],
+        updateContext: 'edit'
+      })
+
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      // Verify task is highlighted
+      let taskRows = wrapper.findAll('tbody tr')
+      const highlightedRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'To Be Cleared'
+      })
+      expect(highlightedRow?.classes()).toContain('highlighted-task')
+
+      // Change to different tasks with date-change context (should clear highlights)
+      const differentTasks = [
+        {
+          id: 10,
+          category_name: 'Work',
+          task_name: 'Different Day Task',
+          start_time: '09:30',
+          date: '2024-01-16',
+          task_type: 'normal' as const
+        }
+      ]
+
+      await wrapper.setProps({
+        taskRecords: differentTasks,
+        updateContext: 'date-change'
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // All tasks should be unhighlighted
+      taskRows = wrapper.findAll('tbody tr')
+      taskRows.forEach(row => {
+        expect(row.classes()).not.toContain('highlighted-task')
+        expect(row.classes()).not.toContain('fading')
+      })
+    })
+
+    it('should highlight all types of task edits (task_name, category_name, start_time)', async () => {
+      // Start with initial tasks
+      const initialTasks = [mockTaskRecords[0]]
+      await wrapper.setProps({
+        taskRecords: initialTasks,
+        updateContext: 'initial-load'
+      })
+
+      // Wait for initial load
+      await wrapper.vm.$nextTick()
+
+      // Test 1: Edit task_name
+      let modifiedTasks = JSON.parse(JSON.stringify(initialTasks))
+      modifiedTasks[0].task_name = 'Edited Task Name'
+      await wrapper.setProps({
+        taskRecords: modifiedTasks,
+        updateContext: 'edit'
+      })
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      let taskRows = wrapper.findAll('tbody tr')
+      let editedRow = taskRows.find(row => {
+        const taskInput = row.find('input[type="text"]')
+        return taskInput.exists() && taskInput.element.value === 'Edited Task Name'
+      })
+      expect(editedRow?.classes()).toContain('highlighted-task')
+
+      // Test 2: Edit category_name
+      modifiedTasks = JSON.parse(JSON.stringify(modifiedTasks))
+      modifiedTasks[0].category_name = 'Learning'
+      await wrapper.setProps({
+        taskRecords: modifiedTasks,
+        updateContext: 'edit'
+      })
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      taskRows = wrapper.findAll('tbody tr')
+      editedRow = taskRows.find(row => {
+        const categoryButton = row.find('.dropdown-trigger .dropdown-value')
+        return categoryButton.exists() && categoryButton.text() === 'Learning'
+      })
+      expect(editedRow?.classes()).toContain('highlighted-task')
+
+      // Test 3: Edit start_time
+      modifiedTasks = JSON.parse(JSON.stringify(modifiedTasks))
+      modifiedTasks[0].start_time = '10:30'
+      await wrapper.setProps({
+        taskRecords: modifiedTasks,
+        updateContext: 'edit'
+      })
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => requestAnimationFrame(resolve))
+
+      taskRows = wrapper.findAll('tbody tr')
+      editedRow = taskRows.find(row => {
+        const timeInput = row.find('.time-input')
+        return timeInput.exists() && timeInput.element.value === '10:30'
+      })
+      expect(editedRow?.classes()).toContain('highlighted-task')
     })
   })
 

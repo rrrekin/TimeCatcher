@@ -749,13 +749,16 @@ describe('App Component', () => {
       await vm.addTask()
 
       expect(mockParseTimeInput).toHaveBeenCalledWith('10:00')
-      expect(mockAddTaskRecord).toHaveBeenCalledWith({
-        category_name: 'Work',
-        task_name: 'New Task',
-        start_time: '10:00',
-        date: expect.any(String),
-        task_type: 'normal'
-      })
+      expect(mockAddTaskRecord).toHaveBeenCalledWith(
+        {
+          category_name: 'Work',
+          task_name: 'New Task',
+          start_time: '10:00',
+          date: expect.any(String),
+          task_type: 'normal'
+        },
+        'edit'
+      )
     })
 
     it('should use current time when no time specified', async () => {
@@ -775,7 +778,8 @@ describe('App Component', () => {
       expect(mockAddTaskRecord).toHaveBeenCalledWith(
         expect.objectContaining({
           start_time: '11:30'
-        })
+        }),
+        'edit'
       )
     })
 
@@ -798,7 +802,7 @@ describe('App Component', () => {
       const vm = wrapper.vm as any
       await vm.addPauseTask()
 
-      expect(mockAddSpecialTask).toHaveBeenCalledWith('pause', '⏸ Pause')
+      expect(mockAddSpecialTask).toHaveBeenCalledWith('pause', '⏸ Pause', 'edit')
     })
 
     it('should add end task successfully', async () => {
@@ -813,7 +817,7 @@ describe('App Component', () => {
       // the addEndTask should work (no end task exists)
       await vm.addEndTask()
 
-      expect(mockAddSpecialTask).toHaveBeenCalledWith('end', '⏹ End')
+      expect(mockAddSpecialTask).toHaveBeenCalledWith('end', '⏹ End', 'edit')
     })
 
     it('should have end task prevention logic', () => {
@@ -842,13 +846,16 @@ describe('App Component', () => {
 
       await vm.replayTask(record)
 
-      expect(mockAddTaskRecord).toHaveBeenCalledWith({
-        category_name: 'Work',
-        task_name: 'Original Task',
-        start_time: '12:00',
-        date: expect.any(String),
-        task_type: 'normal'
-      })
+      expect(mockAddTaskRecord).toHaveBeenCalledWith(
+        {
+          category_name: 'Work',
+          task_name: 'Original Task',
+          start_time: '12:00',
+          date: expect.any(String),
+          task_type: 'normal'
+        },
+        'edit'
+      )
     })
 
     it('should prevent replaying special tasks', async () => {
@@ -1255,7 +1262,7 @@ describe('App Component', () => {
 
       await vm.handleBlur(1, 'task_name', mockInputEvent)
 
-      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { task_name: 'Updated Task Name' })
+      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { task_name: 'Updated Task Name' }, 'edit')
     })
 
     it('should handle blur event for start time input', async () => {
@@ -1271,7 +1278,7 @@ describe('App Component', () => {
 
       await vm.handleBlur(1, 'start_time', mockInputEvent)
 
-      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { start_time: '10:30' })
+      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { start_time: '10:30' }, 'edit')
     })
 
     it('should handle enter key event', async () => {
@@ -1287,7 +1294,7 @@ describe('App Component', () => {
 
       await vm.handleEnter(1, 'task_name', mockInputEvent)
 
-      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { task_name: 'Enter Task' })
+      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { task_name: 'Enter Task' }, 'edit')
     })
 
     it('should handle category change', async () => {
@@ -1309,7 +1316,7 @@ describe('App Component', () => {
 
       await vm.handleCategoryChange(1, mockSelectEvent)
 
-      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { category_name: 'Personal' })
+      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { category_name: 'Personal' }, 'edit')
     })
 
     it('should handle invalid record ID in blur', async () => {
@@ -1501,7 +1508,7 @@ describe('App Component', () => {
 
       await vm.selectInlineCategory(1, 'Personal')
 
-      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { category_name: 'Personal' })
+      expect(mockUpdateTaskRecord).toHaveBeenCalledWith(1, { category_name: 'Personal' }, 'edit')
       expect(vm.showInlineDropdown[1]).toBe(false)
     })
 
