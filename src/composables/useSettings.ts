@@ -198,15 +198,21 @@ export function useSettings() {
     // Load eviction settings
     const savedEvictionEnabled = localStorage.getItem('evictionEnabled')
     if (savedEvictionEnabled !== null) {
-      const enabled = savedEvictionEnabled === 'true'
-      evictionEnabled.value = enabled
+      // Only accept explicit 'true' or 'false' strings; reject corrupted values
+      if (savedEvictionEnabled === 'true') {
+        evictionEnabled.value = true
+      } else if (savedEvictionEnabled === 'false') {
+        evictionEnabled.value = false
+      }
+      // If corrupted (e.g., 'maybe'), keep current/default value
     }
 
     const savedEvictionDaysToKeep = localStorage.getItem('evictionDaysToKeep')
-    if (savedEvictionDaysToKeep) {
-      const days = parseInt(savedEvictionDaysToKeep, 10)
-      if (!isNaN(days) && days >= 30 && days <= 3650) {
-        evictionDaysToKeep.value = days
+    if (savedEvictionDaysToKeep !== null) {
+      // Use Number() for consistency with save validation
+      const days = Number(savedEvictionDaysToKeep)
+      if (Number.isFinite(days) && days >= 30 && days <= 3650) {
+        evictionDaysToKeep.value = Math.floor(days) // Normalize to integer
       }
     }
 

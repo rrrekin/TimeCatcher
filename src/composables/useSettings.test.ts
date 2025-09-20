@@ -1081,5 +1081,60 @@ describe('useSettings', () => {
 
       wrapper.unmount()
     })
+
+    it('should guard against corrupted localStorage for eviction settings', () => {
+      // Test corrupted evictionEnabled values
+      localStorageMock['evictionEnabled'] = 'maybe' // Corrupted value
+      localStorageMock['evictionDaysToKeep'] = '45.7' // Non-integer
+
+      const TestComponent = defineComponent({
+        setup() {
+          const { evictionEnabled, evictionDaysToKeep } = useSettings()
+          return { evictionEnabled, evictionDaysToKeep }
+        },
+        template: '<div></div>'
+      })
+
+      const wrapper = mount(TestComponent)
+
+      // Should keep defaults when corrupted
+      expect(wrapper.vm.evictionEnabled).toBe(true) // Default, not corrupted value
+      expect(wrapper.vm.evictionDaysToKeep).toBe(45) // Normalized to integer
+
+      wrapper.unmount()
+    })
+
+    it('should handle various corrupted localStorage scenarios', () => {
+      // Test different corruption scenarios
+      const corruptedValues = [
+        { enabled: 'yes', days: 'invalid', expectedEnabled: true, expectedDays: 180 },
+        { enabled: '1', days: '20', expectedEnabled: true, expectedDays: 180 }, // days below minimum
+        { enabled: 'TRUE', days: '4000', expectedEnabled: true, expectedDays: 180 }, // days above maximum
+        { enabled: 'false', days: '90.9', expectedEnabled: false, expectedDays: 90 } // valid false, normalized days
+      ]
+
+      corruptedValues.forEach(({ enabled, days, expectedEnabled, expectedDays }, index) => {
+        // Clear previous values
+        Object.keys(localStorageMock).forEach(key => delete localStorageMock[key])
+
+        localStorageMock['evictionEnabled'] = enabled
+        localStorageMock['evictionDaysToKeep'] = days
+
+        const TestComponent = defineComponent({
+          setup() {
+            const { evictionEnabled, evictionDaysToKeep } = useSettings()
+            return { evictionEnabled, evictionDaysToKeep }
+          },
+          template: '<div></div>'
+        })
+
+        const wrapper = mount(TestComponent)
+
+        expect(wrapper.vm.evictionEnabled).toBe(expectedEnabled)
+        expect(wrapper.vm.evictionDaysToKeep).toBe(expectedDays)
+
+        wrapper.unmount()
+      })
+    })
   })
 })
