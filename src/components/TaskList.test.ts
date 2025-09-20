@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, type VueWrapper } from '@vue/test-utils'
 import TaskList from './TaskList.vue'
 import type { TaskRecord, Category, TaskRecordWithId, UpdateContext } from '@/shared/types'
