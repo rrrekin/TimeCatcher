@@ -42,6 +42,25 @@ describe('validateCutoffDate', () => {
       expect(() => validateCutoffDate(nextWeekISO)).toThrow('Invalid cutoffDate: cannot be in the future')
     })
 
+    it('should reject dates that are less than 30 days before today', () => {
+      const today = new Date()
+
+      // Test yesterday (too recent)
+      const yesterday = new Date(today.getTime() - 1 * 24 * 60 * 60 * 1000)
+      const yesterdayISO = yesterday.toISOString().split('T')[0]
+
+      // Test 29 days ago (still too recent)
+      const twentyNineDaysAgo = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000)
+      const twentyNineDaysAgoISO = twentyNineDaysAgo.toISOString().split('T')[0]
+
+      expect(() => validateCutoffDate(yesterdayISO)).toThrow(
+        'Invalid cutoffDate: must be at least 30 days before today'
+      )
+      expect(() => validateCutoffDate(twentyNineDaysAgoISO)).toThrow(
+        'Invalid cutoffDate: must be at least 30 days before today'
+      )
+    })
+
     it('should reject dates with unreasonable years', () => {
       const veryOldDate = '1969-01-01'
       const veryFutureDate = '2050-01-01' // Far enough in future to trigger year check
@@ -57,28 +76,36 @@ describe('validateCutoffDate', () => {
   })
 
   describe('Valid inputs', () => {
-    it('should accept valid past dates', () => {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayISO = yesterday.toISOString().split('T')[0]
+    it('should accept dates that are exactly 30 days before today', () => {
+      const today = new Date()
+      const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString().split('T')[0]
 
-      const result = validateCutoffDate(yesterdayISO)
+      const result = validateCutoffDate(thirtyDaysAgoISO)
 
-      expect(result).toBe(yesterdayISO)
+      expect(result).toBe(thirtyDaysAgoISO)
     })
 
-    it('should accept today as cutoff date', () => {
-      const today = new Date().toISOString().split('T')[0]
+    it('should accept dates that are more than 30 days before today', () => {
+      const today = new Date()
 
-      const result = validateCutoffDate(today)
+      // Test 31 days ago
+      const thirtyOneDaysAgo = new Date(today.getTime() - 31 * 24 * 60 * 60 * 1000)
+      const thirtyOneDaysAgoISO = thirtyOneDaysAgo.toISOString().split('T')[0]
 
-      expect(result).toBe(today)
+      // Test 60 days ago
+      const sixtyDaysAgo = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000)
+      const sixtyDaysAgoISO = sixtyDaysAgo.toISOString().split('T')[0]
+
+      expect(validateCutoffDate(thirtyOneDaysAgoISO)).toBe(thirtyOneDaysAgoISO)
+      expect(validateCutoffDate(sixtyDaysAgoISO)).toBe(sixtyDaysAgoISO)
     })
 
-    it('should accept dates from the valid year range', () => {
-      const validDates = ['1970-01-01', '2000-06-15', '2020-12-25']
+    it('should accept old dates from the valid year range', () => {
+      // Use dates that are definitely more than 30 days old
+      const validOldDates = ['1970-01-01', '2000-06-15', '2020-12-25']
 
-      for (const date of validDates) {
+      for (const date of validOldDates) {
         const result = validateCutoffDate(date)
         expect(result).toBe(date)
       }
@@ -87,7 +114,7 @@ describe('validateCutoffDate', () => {
 
   describe('Edge cases', () => {
     it('should handle leap year dates correctly', () => {
-      // Test a leap year date (2020 was a leap year)
+      // Test a leap year date (2020 was a leap year) - this is definitely more than 30 days old
       const leapYearDate = '2020-02-29'
 
       const result = validateCutoffDate(leapYearDate)
@@ -96,11 +123,12 @@ describe('validateCutoffDate', () => {
     })
 
     it('should handle different ISO date formats correctly', () => {
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
+      // Use a date that's definitely more than 30 days old
+      const oldDate = new Date()
+      oldDate.setDate(oldDate.getDate() - 60) // 60 days ago
 
       // Test YYYY-MM-DD format
-      const dateOnly = yesterday.toISOString().split('T')[0]
+      const dateOnly = oldDate.toISOString().split('T')[0]
 
       const result = validateCutoffDate(dateOnly)
 

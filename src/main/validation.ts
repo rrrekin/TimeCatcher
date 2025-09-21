@@ -28,8 +28,15 @@ export function validateCutoffDate(cutoffDate: unknown): string {
   today.setHours(0, 0, 0, 0) // Zero out time for accurate date comparison
   parsedDate.setHours(0, 0, 0, 0) // Zero out time for accurate date comparison
 
+  // Ensure cutoff date is at least 30 days before today
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+
   if (parsedDate > today) {
     throw new Error('Invalid cutoffDate: cannot be in the future')
+  }
+
+  if (parsedDate > thirtyDaysAgo) {
+    throw new Error('Invalid cutoffDate: must be at least 30 days before today')
   }
 
   // Return the validated string
