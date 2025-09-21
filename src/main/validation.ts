@@ -42,3 +42,17 @@ export function validateCutoffDate(cutoffDate: unknown): string {
   // Return the validated string
   return cutoffDate
 }
+
+export function validateHttpPort(port: unknown): number {
+  // Ensure port is a number
+  if (typeof port !== 'number' || !Number.isInteger(port)) {
+    throw new Error('Invalid port: must be an integer')
+  }
+
+  // Validate port range (unprivileged user ports)
+  if (port < 1024 || port > 65535) {
+    throw new Error('Invalid port: must be between 1024 and 65535 (unprivileged range)')
+  }
+
+  return port
+}

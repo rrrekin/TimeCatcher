@@ -49,11 +49,13 @@
     <button
       type="button"
       class="setup-btn"
+      :class="{ 'has-error': httpServerError }"
       @click="$emit('openSetup')"
-      title="Open Settings"
-      aria-label="Open settings"
+      :title="httpServerError ? `Settings (HTTP Server Error: ${httpServerError})` : 'Open Settings'"
+      :aria-label="httpServerError ? `Open settings - HTTP Server Error: ${httpServerError}` : 'Open settings'"
     >
       <span class="setup-icon" aria-hidden="true">⚙️</span>
+      <span v-if="httpServerError" class="error-indicator" aria-hidden="true">🔴</span>
       Settings
     </button>
   </nav>
@@ -68,6 +70,7 @@ defineProps<{
   dateInputValue: string
   reportingAppButtonText: string
   reportingAppUrl: string
+  httpServerError?: string
 }>()
 
 // Emits
@@ -219,6 +222,7 @@ const dateInputId = useId()
   color: var(--text-primary);
   font-weight: 600;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .setup-btn:hover {
@@ -230,6 +234,31 @@ const dateInputId = useId()
 
 .setup-icon {
   font-size: 16px;
+}
+
+.setup-btn.has-error {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.setup-btn.has-error:hover {
+  background: #e74c3c;
+  border-color: #e74c3c;
+}
+
+.error-indicator {
+  font-size: 12px;
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .app-icon {

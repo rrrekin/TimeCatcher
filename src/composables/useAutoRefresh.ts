@@ -1,4 +1,4 @@
-import { ref, onUnmounted, watch, type Ref } from 'vue'
+import { ref, onUnmounted, watch, onMounted, type Ref } from 'vue'
 import { isToday } from '@/utils/dateUtils'
 
 /**
@@ -71,10 +71,36 @@ export function useAutoRefresh(selectedDate: Ref<Date>, refreshCallback: () => v
     restartAutoRefresh()
   })
 
+  // Listen for HTTP server task creation events
+  const handleHttpTaskCreated = (data: any) => {
+    const currentDateString = formatLocalDateString(selectedDate.value)
+
+    // Only refresh if the task was created for the currently viewed date
+    if (data.date === currentDateString) {
+      try {
+        refreshCallback()
+      } catch (error) {
+        console.error('[useAutoRefresh] Error during HTTP task creation refresh:', error)
+      }
+    }
+  }
+
+  // Set up HTTP server event listener if available
+  onMounted(() => {
+    if (typeof window !== 'undefined' && window.electronAPI?.onHttpServerTaskCreated) {
+      window.electronAPI.onHttpServerTaskCreated(handleHttpTaskCreated)
+    }
+  })
+
   // Cleanup on unmount
   onUnmounted(() => {
     stopAutoRefresh()
     stopWatcher()
+
+    // Clean up HTTP server event listener
+    if (typeof window !== 'undefined' && window.electronAPI?.removeHttpServerTaskCreatedListener) {
+      window.electronAPI.removeHttpServerTaskCreatedListener(handleHttpTaskCreated)
+    }
   })
 
   return {

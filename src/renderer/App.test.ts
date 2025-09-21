@@ -25,6 +25,9 @@ function createElectronAPIMock(overrides?: Partial<typeof global.window.electron
     // App operations
     getVersion: vi.fn().mockResolvedValue('1.0.0'),
     openExternalUrl: vi.fn(),
+    // HTTP server operations
+    startHttpServer: vi.fn().mockResolvedValue({ success: true, port: 14474 }),
+    stopHttpServer: vi.fn().mockResolvedValue(undefined),
     // Backup & restore operations
     backupApp: vi.fn(),
     restoreApp: vi.fn(),
@@ -240,7 +243,17 @@ vi.mock('@/composables/useSettings', () => ({
     reportingAppUrl: ref(''),
     tempReportingAppButtonText: ref('Tempo'),
     tempReportingAppUrl: ref(''),
+    evictionEnabled: ref(true),
+    tempEvictionEnabled: ref(true),
+    evictionDaysToKeep: ref(180),
+    tempEvictionDaysToKeep: ref(180),
+    httpServerEnabled: ref(false),
+    tempHttpServerEnabled: ref(false),
+    httpServerPort: ref(14474),
+    tempHttpServerPort: ref(14474),
     isValidUrl: mockIsValidUrl,
+    isValidEvictionDaysToKeep: vi.fn(() => true),
+    isValidHttpPort: vi.fn(() => true),
     applyTheme: mockApplyTheme,
     saveSettings: mockSaveSettings,
     initializeTempSettings: mockInitializeTempSettings,

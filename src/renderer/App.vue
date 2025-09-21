@@ -80,8 +80,11 @@
       :temp-reporting-app-url="tempReportingAppUrl"
       :temp-eviction-enabled="tempEvictionEnabled"
       :temp-eviction-days-to-keep="tempEvictionDaysToKeep"
+      :temp-http-server-enabled="tempHttpServerEnabled"
+      :temp-http-server-port="tempHttpServerPort"
       :is-valid-url="isValidUrl"
       :is-valid-eviction-days-to-keep="isValidEvictionDaysToKeep"
+      :is-valid-http-port="isValidHttpPort"
       :categories="categories"
       :is-loading-categories="isLoadingCategories"
       :is-adding-category="isAddingCategory"
@@ -99,6 +102,8 @@
       @update-temp-reporting-app-url="url => (tempReportingAppUrl = url)"
       @update-temp-eviction-enabled="enabled => (tempEvictionEnabled = enabled)"
       @update-temp-eviction-days-to-keep="days => (tempEvictionDaysToKeep = days)"
+      @update-temp-http-server-enabled="enabled => (tempHttpServerEnabled = enabled)"
+      @update-temp-http-server-port="port => (tempHttpServerPort = port)"
       @start-edit-category="startEditCategory"
       @update-editing-category-name="name => (editingCategoryName = name)"
       @save-edit-category="saveEditCategory"
@@ -258,8 +263,13 @@ const {
   tempEvictionEnabled,
   evictionDaysToKeep,
   tempEvictionDaysToKeep,
+  httpServerEnabled,
+  httpServerPort,
+  tempHttpServerEnabled,
+  tempHttpServerPort,
   isValidUrl,
   isValidEvictionDaysToKeep,
+  isValidHttpPort,
   applyTheme,
   saveSettings: saveSettingsComposable,
   initializeTempSettings,
@@ -271,7 +281,9 @@ const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategor
 
 const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
   updateContext.value = 'auto-refresh'
-  taskRecords.value = [...taskRecords.value] // Trigger reactivity
+  // Reload tasks from the database to include newly added entries (e.g., via HTTP server)
+  // Intentionally not awaited; useAutoRefresh wraps calls in try/catch
+  void loadTaskRecords()
 })
 
 // Media query references for cleanup
@@ -446,8 +458,57 @@ const closeSetupModal = () => {
 }
 
 const saveSettings = () => {
+  // Store previous HTTP server settings for comparison (with defensive checks for tests)
+  const previousHttpEnabled = httpServerEnabled?.value ?? false
+  const previousHttpPort = httpServerPort?.value ?? 14474
+
+  // Save settings (this will update the reactive refs)
   saveSettingsComposable()
+
+  // Handle HTTP server configuration changes in background
+  handleHttpServerConfigChange(previousHttpEnabled, previousHttpPort)
+
   closeSetupModal()
+}
+
+/**
+ * Handle HTTP server configuration changes after settings save
+ */
+const handleHttpServerConfigChange = async (previousEnabled: boolean, previousPort: number) => {
+  const currentEnabled = httpServerEnabled?.value ?? false
+  const currentPort = httpServerPort?.value ?? 14474
+
+  // Check if HTTP server settings have changed
+  const enabledChanged = previousEnabled !== currentEnabled
+  const portChanged = previousPort !== currentPort
+
+  if (!enabledChanged && !portChanged) {
+    // No HTTP server changes, nothing to do
+    return
+  }
+
+  try {
+    // Stop existing server if it was running
+    if (previousEnabled && window?.electronAPI?.stopHttpServer) {
+      await window.electronAPI.stopHttpServer()
+    }
+
+    // Start server with new configuration if enabled
+    if (currentEnabled && window?.electronAPI?.startHttpServer) {
+      const result = await window.electronAPI.startHttpServer(currentPort)
+      if (!result.success) {
+        console.error(`Failed to start HTTP server: ${result.error}`)
+        showToastMessage(`Failed to start HTTP server: ${result.error}`, 'error')
+      } else {
+        showToastMessage(`HTTP server started on port ${currentPort}`, 'success')
+      }
+    } else if (!currentEnabled) {
+      showToastMessage('HTTP server disabled', 'info')
+    }
+  } catch (error) {
+    console.error('Error handling HTTP server configuration change:', error)
+    showToastMessage('Error configuring HTTP server', 'error')
+  }
 }
 
 // Backup & Restore handlers
@@ -462,7 +523,9 @@ const backupApp = async () => {
     reportingAppButtonText: reportingAppButtonText.value,
     reportingAppUrl: reportingAppUrl.value,
     evictionEnabled: evictionEnabled?.value ?? true,
-    evictionDaysToKeep: evictionDaysToKeep?.value ?? 180
+    evictionDaysToKeep: evictionDaysToKeep?.value ?? 180,
+    httpServerEnabled: httpServerEnabled?.value ?? false,
+    httpServerPort: httpServerPort?.value ?? 14474
   }
   try {
     const res = await window.electronAPI.backupApp(settings)
@@ -823,6 +886,20 @@ onMounted(async () => {
   // Start auto-refresh for today's tasks
   if (isToday.value) {
     startAutoRefresh()
+  }
+
+  // Start HTTP server if enabled
+  if (httpServerEnabled.value) {
+    try {
+      if (typeof window !== 'undefined' && (window as any).electronAPI?.startHttpServer) {
+        const result = await (window as any).electronAPI.startHttpServer(httpServerPort.value)
+        if (!result.success) {
+          console.error(`Failed to start HTTP server: ${result.error}`)
+        }
+      }
+    } catch (error) {
+      console.error('Error starting HTTP server:', error)
+    }
   }
 
   // Fetch app version

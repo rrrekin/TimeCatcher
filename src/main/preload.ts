@@ -1,10 +1,45 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { TaskRecordInsert, TaskRecordUpdate, SettingsSnapshot, BackupResult, RestoreResult } from '../shared/types'
+import type {
+  TaskRecordInsert,
+  TaskRecordUpdate,
+  SettingsSnapshot,
+  BackupResult,
+  RestoreResult,
+  HttpServerStartResult,
+  HttpServerStatus
+} from '../shared/types'
+
+// Keep track of wrapped listeners so we can remove the exact same function reference later
+type HttpTaskCreatedCallback = (data: any) => void
+// event type is loosely typed here to avoid importing Electron types into renderer exposure
+type HttpTaskCreatedWrapped = (event: unknown, data: any) => void
+const httpTaskCreatedWrapperMap = new WeakMap<HttpTaskCreatedCallback, HttpTaskCreatedWrapped>()
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('app:open-external-url', url),
+
+  // HTTP Server
+  startHttpServer: (port: number): Promise<HttpServerStartResult> => ipcRenderer.invoke('http-server:start', port),
+  stopHttpServer: (): Promise<void> => ipcRenderer.invoke('http-server:stop'),
+  getHttpServerStatus: (): Promise<HttpServerStatus> => ipcRenderer.invoke('http-server:status'),
+  onHttpServerTaskCreated: (callback: (data: any) => void) => {
+    // If this callback was already registered, avoid adding a duplicate listener
+    const existing = httpTaskCreatedWrapperMap.get(callback)
+    if (existing) return
+
+    const wrapper: HttpTaskCreatedWrapped = (_event, data) => callback(data)
+    httpTaskCreatedWrapperMap.set(callback, wrapper)
+    ipcRenderer.on('http-server:task-created', wrapper as any)
+  },
+  removeHttpServerTaskCreatedListener: (callback: (data: any) => void) => {
+    const wrapper = httpTaskCreatedWrapperMap.get(callback)
+    if (wrapper) {
+      ipcRenderer.removeListener('http-server:task-created', wrapper as any)
+      httpTaskCreatedWrapperMap.delete(callback)
+    }
+  },
 
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),

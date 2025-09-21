@@ -58,6 +58,8 @@ export interface SettingsSnapshot {
   reportingAppUrl: string
   evictionEnabled: boolean
   evictionDaysToKeep: number
+  httpServerEnabled: boolean
+  httpServerPort: number
 }
 
 // IPC result types for backup/restore flows
@@ -74,6 +76,19 @@ export interface RestoreResult {
   settings?: Partial<SettingsSnapshot>
 }
 
+// HTTP Server types
+export interface HttpServerStatus {
+  running: boolean
+  port?: number
+  error?: string
+}
+
+export interface HttpServerStartResult {
+  success: boolean
+  error?: string
+  port?: number
+}
+
 export interface ElectronAPI {
   // Application info
   getVersion: () => Promise<string>
@@ -81,6 +96,12 @@ export interface ElectronAPI {
   // Backup & Restore
   backupApp?: (settings: SettingsSnapshot) => Promise<BackupResult>
   restoreApp?: () => Promise<RestoreResult>
+  // HTTP Server
+  startHttpServer?: (port: number) => Promise<HttpServerStartResult>
+  stopHttpServer?: () => Promise<void>
+  getHttpServerStatus?: () => Promise<HttpServerStatus>
+  onHttpServerTaskCreated?: (callback: (data: any) => void) => void
+  removeHttpServerTaskCreatedListener?: (callback: (data: any) => void) => void
   // Database operations
   getCategories: () => Promise<Category[]>
   addCategory: (name: string) => Promise<Category>

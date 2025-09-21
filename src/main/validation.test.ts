@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { validateCutoffDate } from './validation'
+import { validateCutoffDate, validateHttpPort } from './validation'
 
 describe('validateCutoffDate', () => {
   describe('Input validation', () => {
@@ -134,5 +134,39 @@ describe('validateCutoffDate', () => {
 
       expect(result).toBe(dateOnly)
     })
+  })
+})
+
+describe('validateHttpPort', () => {
+  it('should accept valid ports in unprivileged range', () => {
+    expect(validateHttpPort(1024)).toBe(1024)
+    expect(validateHttpPort(8080)).toBe(8080)
+    expect(validateHttpPort(65535)).toBe(65535)
+    expect(validateHttpPort(14474)).toBe(14474)
+  })
+
+  it('should reject ports below 1024', () => {
+    expect(() => validateHttpPort(1023)).toThrow('Invalid port: must be between 1024 and 65535')
+    expect(() => validateHttpPort(80)).toThrow('Invalid port: must be between 1024 and 65535')
+    expect(() => validateHttpPort(0)).toThrow('Invalid port: must be between 1024 and 65535')
+  })
+
+  it('should reject ports above 65535', () => {
+    expect(() => validateHttpPort(65536)).toThrow('Invalid port: must be between 1024 and 65535')
+    expect(() => validateHttpPort(99999)).toThrow('Invalid port: must be between 1024 and 65535')
+  })
+
+  it('should reject non-integer values', () => {
+    expect(() => validateHttpPort(1024.5)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort('1024' as any)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort(null as any)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort(undefined as any)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort({} as any)).toThrow('Invalid port: must be an integer')
+  })
+
+  it('should reject NaN and Infinity', () => {
+    expect(() => validateHttpPort(NaN)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort(Infinity)).toThrow('Invalid port: must be an integer')
+    expect(() => validateHttpPort(-Infinity)).toThrow('Invalid port: must be an integer')
   })
 })

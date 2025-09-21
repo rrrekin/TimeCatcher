@@ -29,7 +29,13 @@ describe('SetupModal Component', () => {
         newCategoryName: '',
         tempReportingAppButtonText: 'Tempo',
         tempReportingAppUrl: '',
-        isValidUrl: () => true
+        tempEvictionEnabled: true,
+        tempEvictionDaysToKeep: 180,
+        tempHttpServerEnabled: false,
+        tempHttpServerPort: 14474,
+        isValidUrl: () => true,
+        isValidEvictionDaysToKeep: () => true,
+        isValidHttpPort: () => true
       }
     })
   })
@@ -627,6 +633,271 @@ describe('SetupModal Component', () => {
       await categoryInput.trigger('blur')
 
       expect(wrapper.emitted('saveEditCategory')).toBeFalsy()
+    })
+  })
+
+  describe('HTTP Server Settings', () => {
+    it('should render HTTP server checkbox', () => {
+      const checkbox = wrapper.find('.http-server-checkbox')
+      expect(checkbox.exists()).toBe(true)
+      expect(checkbox.element.checked).toBe(false)
+    })
+
+    it('should emit updateTempHttpServerEnabled when checkbox is toggled', async () => {
+      const checkbox = wrapper.find('.http-server-checkbox')
+      await checkbox.setChecked(true)
+
+      expect(wrapper.emitted('updateTempHttpServerEnabled')).toBeTruthy()
+      expect(wrapper.emitted('updateTempHttpServerEnabled')![0]).toEqual([true])
+    })
+
+    it('should render HTTP server port input', () => {
+      const portInput = wrapper.find('#http-server-port')
+      expect(portInput.exists()).toBe(true)
+      expect(portInput.element.value).toBe('14474')
+    })
+
+    it('should test onHttpServerPortInput function with valid input', async () => {
+      // Enable HTTP server first to make port input functional
+      await wrapper.setProps({ tempHttpServerEnabled: true })
+
+      const portInput = wrapper.find('#http-server-port')
+      portInput.element.value = '8080'
+      await portInput.trigger('input')
+
+      expect(wrapper.emitted('updateTempHttpServerPort')).toBeTruthy()
+      expect(wrapper.emitted('updateTempHttpServerPort')![0]).toEqual([8080])
+    })
+
+    it('should test onHttpServerPortInput function with invalid input', async () => {
+      // Enable HTTP server first to make port input functional
+      await wrapper.setProps({ tempHttpServerEnabled: true })
+
+      const portInput = wrapper.find('#http-server-port')
+      portInput.element.value = 'invalid'
+      await portInput.trigger('input')
+
+      expect(wrapper.emitted('updateTempHttpServerPort')).toBeTruthy()
+      // Should fallback to default 14474 for invalid input
+      expect(wrapper.emitted('updateTempHttpServerPort')![0]).toEqual([14474])
+    })
+
+    it('should test onHttpServerPortBlur function with boundary values', async () => {
+      // Enable HTTP server first to make port input functional
+      await wrapper.setProps({ tempHttpServerEnabled: true })
+
+      const portInput = wrapper.find('#http-server-port')
+
+      // Test below minimum
+      portInput.element.value = '500'
+      await portInput.trigger('input')
+      await portInput.trigger('blur')
+
+      expect(wrapper.emitted('updateTempHttpServerPort')).toBeTruthy()
+      // Should clamp to minimum 1024
+      const emissions = wrapper.emitted('updateTempHttpServerPort') as any[]
+      expect(emissions[emissions.length - 1]).toEqual([1024])
+    })
+
+    it('should test onHttpServerPortBlur function with above maximum', async () => {
+      // Enable HTTP server first to make port input functional
+      await wrapper.setProps({ tempHttpServerEnabled: true })
+
+      const portInput = wrapper.find('#http-server-port')
+
+      // Test above maximum
+      portInput.element.value = '70000'
+      await portInput.trigger('input')
+      await portInput.trigger('blur')
+
+      expect(wrapper.emitted('updateTempHttpServerPort')).toBeTruthy()
+      // Should clamp to maximum 65535
+      const emissions = wrapper.emitted('updateTempHttpServerPort') as any[]
+      expect(emissions[emissions.length - 1]).toEqual([65535])
+    })
+
+    it('should show invalid styling for invalid port', async () => {
+      await wrapper.setProps({
+        tempHttpServerPort: 500,
+        isValidHttpPort: () => false
+      })
+
+      const portInput = wrapper.find('#http-server-port')
+      expect(portInput.classes()).toContain('invalid-input')
+    })
+
+    it('should disable port input when HTTP server is disabled', async () => {
+      await wrapper.setProps({ tempHttpServerEnabled: false })
+
+      const portInput = wrapper.find('#http-server-port')
+      expect(portInput.element.disabled).toBe(true)
+    })
+
+    it('should enable port input when HTTP server is enabled', async () => {
+      await wrapper.setProps({ tempHttpServerEnabled: true })
+
+      const portInput = wrapper.find('#http-server-port')
+      expect(portInput.element.disabled).toBe(false)
+    })
+
+    it('should apply disabled styling to port setting when HTTP server is disabled', async () => {
+      await wrapper.setProps({ tempHttpServerEnabled: false })
+
+      const portSetting = wrapper.find('.http-server-port-setting')
+      expect(portSetting.classes()).toContain('disabled')
+    })
+
+    it('should display correct port number in help text', async () => {
+      await wrapper.setProps({ tempHttpServerPort: 9000 })
+
+      const helpText = wrapper.find('.http-server-help code')
+      expect(helpText.text()).toContain('localhost:9000')
+    })
+  })
+
+  describe('Eviction Settings', () => {
+    it('should render eviction enabled checkbox', () => {
+      const checkbox = wrapper.find('.eviction-checkbox')
+      expect(checkbox.exists()).toBe(true)
+      expect(checkbox.element.checked).toBe(true)
+    })
+
+    it('should emit updateTempEvictionEnabled when checkbox is toggled', async () => {
+      const checkbox = wrapper.find('.eviction-checkbox')
+      await checkbox.setChecked(false)
+
+      expect(wrapper.emitted('updateTempEvictionEnabled')).toBeTruthy()
+      expect(wrapper.emitted('updateTempEvictionEnabled')![0]).toEqual([false])
+    })
+
+    it('should render eviction days input', () => {
+      const daysInput = wrapper.find('#eviction-days')
+      expect(daysInput.exists()).toBe(true)
+      expect(daysInput.element.value).toBe('180')
+    })
+
+    it('should test onEvictionDaysInput function with valid input', async () => {
+      const daysInput = wrapper.find('#eviction-days')
+      await daysInput.setValue('365')
+
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')).toBeTruthy()
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')![0]).toEqual([365])
+    })
+
+    it('should test onEvictionDaysInput function with below minimum', async () => {
+      const daysInput = wrapper.find('#eviction-days')
+      await daysInput.setValue('10')
+
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')).toBeTruthy()
+      // Should clamp to minimum 30
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')![0]).toEqual([30])
+    })
+
+    it('should test onEvictionDaysInput function with above maximum', async () => {
+      const daysInput = wrapper.find('#eviction-days')
+      await daysInput.setValue('5000')
+
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')).toBeTruthy()
+      // Should clamp to maximum 3650
+      expect(wrapper.emitted('updateTempEvictionDaysToKeep')![0]).toEqual([3650])
+    })
+
+    it('should show invalid styling for invalid days', async () => {
+      await wrapper.setProps({
+        tempEvictionDaysToKeep: 10,
+        isValidEvictionDaysToKeep: () => false
+      })
+
+      const daysInput = wrapper.find('#eviction-days')
+      expect(daysInput.classes()).toContain('invalid-input')
+    })
+
+    it('should disable days input when eviction is disabled', async () => {
+      await wrapper.setProps({ tempEvictionEnabled: false })
+
+      const daysInput = wrapper.find('#eviction-days')
+      expect(daysInput.element.disabled).toBe(true)
+    })
+
+    it('should apply disabled styling to days setting when eviction is disabled', async () => {
+      await wrapper.setProps({ tempEvictionEnabled: false })
+
+      const daysSetting = wrapper.find('.eviction-days-setting')
+      expect(daysSetting.classes()).toContain('disabled')
+    })
+  })
+
+  describe('Modal Interactions', () => {
+    it('should close modal when overlay is clicked and modal can close', async () => {
+      // Modal can close by default
+      const overlay = wrapper.find('.modal-overlay')
+      await overlay.trigger('click')
+
+      expect(wrapper.emitted('close')).toBeTruthy()
+    })
+
+    it('should not close modal when overlay is clicked and modal cannot close', async () => {
+      // Set modal to busy state
+      await wrapper.setProps({ isAddingCategory: true })
+
+      const overlay = wrapper.find('.modal-overlay')
+      await overlay.trigger('click')
+
+      expect(wrapper.emitted('close')).toBeFalsy()
+    })
+
+    it('should not close modal when clicking inside modal content', async () => {
+      const modal = wrapper.find('.modal')
+      await modal.trigger('click')
+
+      expect(wrapper.emitted('close')).toBeFalsy()
+    })
+
+    it('should handle escape key to close modal when possible', async () => {
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      document.dispatchEvent(escapeEvent)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.emitted('close')).toBeTruthy()
+    })
+
+    it('should not handle escape key when modal cannot close', async () => {
+      await wrapper.setProps({ isAddingCategory: true })
+
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape' })
+      document.dispatchEvent(escapeEvent)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.emitted('close')).toBeFalsy()
+    })
+
+    it('should emit updateTempTheme for all theme buttons', async () => {
+      const themeButtons = wrapper.findAll('.theme-btn')
+
+      // Test Light theme
+      await themeButtons[0].trigger('click')
+      expect(wrapper.emitted('updateTempTheme')).toBeTruthy()
+      let emissions = wrapper.emitted('updateTempTheme') as any[]
+      expect(emissions[emissions.length - 1]).toEqual(['light'])
+
+      // Test Dark theme
+      await themeButtons[1].trigger('click')
+      emissions = wrapper.emitted('updateTempTheme') as any[]
+      expect(emissions[emissions.length - 1]).toEqual(['dark'])
+
+      // Test Auto theme
+      await themeButtons[2].trigger('click')
+      emissions = wrapper.emitted('updateTempTheme') as any[]
+      expect(emissions[emissions.length - 1]).toEqual(['auto'])
+    })
+
+    it('should show active class on selected theme button', async () => {
+      await wrapper.setProps({ tempTheme: 'dark' })
+
+      const themeButtons = wrapper.findAll('.theme-btn')
+      expect(themeButtons[0].classes()).not.toContain('active') // Light
+      expect(themeButtons[1].classes()).toContain('active') // Dark
+      expect(themeButtons[2].classes()).not.toContain('active') // Auto
     })
   })
 })

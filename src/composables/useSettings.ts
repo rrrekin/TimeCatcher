@@ -16,6 +16,10 @@ export function useSettings() {
   const tempEvictionEnabled = ref(true)
   const evictionDaysToKeep = ref(180)
   const tempEvictionDaysToKeep = ref(180)
+  const httpServerEnabled = ref(false)
+  const tempHttpServerEnabled = ref(false)
+  const httpServerPort = ref(14474)
+  const tempHttpServerPort = ref(14474)
 
   // Media query for OS theme detection
   let mediaQueryList: MediaQueryList | null = null
@@ -216,6 +220,26 @@ export function useSettings() {
       }
     }
 
+    // Load HTTP server settings
+    const savedHttpServerEnabled = localStorage.getItem('httpServerEnabled')
+    if (savedHttpServerEnabled !== null) {
+      // Only accept explicit 'true' or 'false' strings; reject corrupted values
+      if (savedHttpServerEnabled === 'true') {
+        httpServerEnabled.value = true
+      } else if (savedHttpServerEnabled === 'false') {
+        httpServerEnabled.value = false
+      }
+      // If corrupted, keep current/default value (false)
+    }
+
+    const savedHttpServerPort = localStorage.getItem('httpServerPort')
+    if (savedHttpServerPort !== null) {
+      const port = Number(savedHttpServerPort)
+      if (isValidHttpPort(port)) {
+        httpServerPort.value = port
+      }
+    }
+
     applyTheme(currentTheme.value)
   }
 
@@ -262,6 +286,19 @@ export function useSettings() {
       // Note: tempEvictionDaysToKeep remains invalid, evictionDaysToKeep keeps valid value
     }
 
+    // Validate and update HTTP server settings
+    httpServerEnabled.value = tempHttpServerEnabled.value
+    const coercedPort = Number(tempHttpServerPort.value)
+    if (isValidHttpPort(coercedPort)) {
+      httpServerPort.value = coercedPort
+    } else {
+      // Keep old value or use safe default if current value is also invalid
+      if (!isValidHttpPort(httpServerPort.value)) {
+        httpServerPort.value = 14474 // Safe default
+      }
+      // Note: tempHttpServerPort remains invalid, httpServerPort keeps valid value
+    }
+
     applyTheme(currentTheme.value)
 
     // Persist settings with error handling for storage quota/access issues
@@ -272,6 +309,8 @@ export function useSettings() {
       localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
       localStorage.setItem('evictionEnabled', evictionEnabled.value.toString())
       localStorage.setItem('evictionDaysToKeep', evictionDaysToKeep.value.toString())
+      localStorage.setItem('httpServerEnabled', httpServerEnabled.value.toString())
+      localStorage.setItem('httpServerPort', httpServerPort.value.toString())
     } catch (error) {
       console.warn('Failed to persist settings to localStorage:', error)
       // Continue execution - theme is already applied and in-memory state is updated
@@ -318,6 +357,16 @@ export function useSettings() {
   }
 
   /**
+   * Validate HTTP server port (unprivileged port range)
+   */
+  const isValidHttpPort = (value: unknown): value is number => {
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+      return false
+    }
+    return value >= 1024 && value <= 65535
+  }
+
+  /**
    * Sanitize and validate restored settings with strict key whitelisting
    */
   const sanitizeRestoredSettings = (input: unknown): Partial<SettingsSnapshot> => {
@@ -335,7 +384,9 @@ export function useSettings() {
       'reportingAppButtonText',
       'reportingAppUrl',
       'evictionEnabled',
-      'evictionDaysToKeep'
+      'evictionDaysToKeep',
+      'httpServerEnabled',
+      'httpServerPort'
     ]
 
     for (const key of allowedKeys) {
@@ -375,6 +426,16 @@ export function useSettings() {
               sanitized.evictionDaysToKeep = value
             }
             break
+          case 'httpServerEnabled':
+            if (typeof value === 'boolean') {
+              sanitized.httpServerEnabled = value
+            }
+            break
+          case 'httpServerPort':
+            if (isValidHttpPort(value)) {
+              sanitized.httpServerPort = value
+            }
+            break
         }
       }
     }
@@ -397,6 +458,8 @@ export function useSettings() {
       const url = sanitizedSettings.reportingAppUrl ?? reportingAppUrl.value
       const evictionEnabledValue = sanitizedSettings.evictionEnabled ?? evictionEnabled.value
       const evictionDaysValue = sanitizedSettings.evictionDaysToKeep ?? evictionDaysToKeep.value
+      const httpEnabledValue = sanitizedSettings.httpServerEnabled ?? httpServerEnabled.value
+      const httpPortValue = sanitizedSettings.httpServerPort ?? httpServerPort.value
 
       currentTheme.value = theme
       targetWorkHours.value = hours
@@ -404,6 +467,8 @@ export function useSettings() {
       reportingAppUrl.value = url
       evictionEnabled.value = evictionEnabledValue
       evictionDaysToKeep.value = evictionDaysValue
+      httpServerEnabled.value = httpEnabledValue
+      httpServerPort.value = httpPortValue
 
       // Apply theme now
       applyTheme(currentTheme.value)
@@ -416,6 +481,8 @@ export function useSettings() {
         localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
         localStorage.setItem('evictionEnabled', evictionEnabled.value.toString())
         localStorage.setItem('evictionDaysToKeep', evictionDaysToKeep.value.toString())
+        localStorage.setItem('httpServerEnabled', httpServerEnabled.value.toString())
+        localStorage.setItem('httpServerPort', httpServerPort.value.toString())
       } catch (error) {
         console.warn('Failed to persist restored settings to localStorage:', error)
         // Continue execution - theme is already applied and in-memory state is updated
@@ -439,6 +506,8 @@ export function useSettings() {
     tempReportingAppUrl.value = reportingAppUrl.value
     tempEvictionEnabled.value = evictionEnabled.value
     tempEvictionDaysToKeep.value = evictionDaysToKeep.value
+    tempHttpServerEnabled.value = httpServerEnabled.value
+    tempHttpServerPort.value = httpServerPort.value
   }
 
   // Load settings on mount and setup OS theme detection
@@ -485,8 +554,13 @@ export function useSettings() {
     tempEvictionEnabled,
     evictionDaysToKeep,
     tempEvictionDaysToKeep,
+    httpServerEnabled,
+    tempHttpServerEnabled,
+    httpServerPort,
+    tempHttpServerPort,
     isValidUrl,
     isValidEvictionDaysToKeep,
+    isValidHttpPort,
     applyTheme,
     loadSettings,
     saveSettings,

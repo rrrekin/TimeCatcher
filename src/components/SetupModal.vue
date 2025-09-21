@@ -205,6 +205,49 @@
           </div>
         </div>
 
+        <!-- HTTP Server -->
+        <div class="setting-group">
+          <h4>HTTP Server</h4>
+          <div class="http-server-settings">
+            <div class="http-server-enabled-setting">
+              <label class="checkbox-container">
+                <input
+                  type="checkbox"
+                  :checked="tempHttpServerEnabled"
+                  @change="$emit('updateTempHttpServerEnabled', ($event.target as HTMLInputElement).checked)"
+                  class="http-server-checkbox"
+                />
+                <span class="checkmark"></span>
+                Enable HTTP server
+              </label>
+            </div>
+            <div class="http-server-port-setting" :class="{ disabled: !tempHttpServerEnabled }">
+              <label for="http-server-port">Port number:</label>
+              <input
+                type="number"
+                id="http-server-port"
+                :value="tempHttpServerPort"
+                @input="onHttpServerPortInput($event)"
+                @blur="onHttpServerPortBlur($event)"
+                min="1024"
+                max="65535"
+                step="1"
+                class="http-server-port-input"
+                :class="{ 'invalid-input': !isValidHttpPort(tempHttpServerPort) }"
+                :disabled="!tempHttpServerEnabled"
+              />
+            </div>
+            <div class="http-server-help">
+              <p class="setting-description">
+                When enabled, allows creating task entries via HTTP GET requests to localhost. Use:
+                <code
+                  >http://localhost:{{ tempHttpServerPort }}/create-task?task=TaskName&amp;category=CategoryName</code
+                >
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Backup & Restore -->
         <div class="setting-group">
           <h4>Backup & Restore</h4>
@@ -318,6 +361,18 @@ const props = defineProps({
   isValidEvictionDaysToKeep: {
     type: Function as PropType<(value: unknown) => boolean>,
     required: true
+  },
+  tempHttpServerEnabled: {
+    type: Boolean,
+    required: true
+  },
+  tempHttpServerPort: {
+    type: Number,
+    required: true
+  },
+  isValidHttpPort: {
+    type: Function as PropType<(value: unknown) => boolean>,
+    required: true
   }
 })
 
@@ -341,6 +396,8 @@ const emit = defineEmits<{
   updateTempReportingAppUrl: [url: string]
   updateTempEvictionEnabled: [enabled: boolean]
   updateTempEvictionDaysToKeep: [days: number]
+  updateTempHttpServerEnabled: [enabled: boolean]
+  updateTempHttpServerPort: [port: number]
   backup: []
   restoreBackup: []
 }>()
@@ -366,6 +423,19 @@ function onEvictionDaysInput(e: Event) {
   const raw = parseInt((e.target as HTMLInputElement).value, 10)
   const clamped = Number.isFinite(raw) ? Math.min(3650, Math.max(30, raw)) : 30
   emit('updateTempEvictionDaysToKeep', clamped)
+}
+
+function onHttpServerPortInput(e: Event) {
+  const raw = parseInt((e.target as HTMLInputElement).value, 10)
+  // Allow free typing - only emit the raw value without clamping
+  emit('updateTempHttpServerPort', Number.isFinite(raw) ? raw : 14474)
+}
+
+function onHttpServerPortBlur(e: Event) {
+  const raw = parseInt((e.target as HTMLInputElement).value, 10)
+  // Clamp to valid range when user finishes typing
+  const clamped = Number.isFinite(raw) ? Math.min(65535, Math.max(1024, raw)) : 14474
+  emit('updateTempHttpServerPort', clamped)
 }
 
 function handleEscapeCancel() {
@@ -963,5 +1033,82 @@ onUnmounted(() => {
   background: var(--bg-secondary);
   border-radius: 6px;
   border-left: 3px solid var(--primary);
+}
+
+/* HTTP Server */
+.http-server-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.http-server-enabled-setting {
+  display: flex;
+  align-items: center;
+}
+
+.http-server-port-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.http-server-port-setting.disabled {
+  opacity: 0.5;
+}
+
+.http-server-port-setting label {
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.http-server-port-input {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+  width: 100px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.http-server-port-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
+}
+
+.http-server-port-input:disabled {
+  cursor: not-allowed;
+  background: var(--border-color);
+  color: var(--text-muted);
+}
+
+.http-server-port-input.invalid-input {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+}
+
+.http-server-help {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
+}
+
+.http-server-help code {
+  background: var(--bg-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
 }
 </style>
