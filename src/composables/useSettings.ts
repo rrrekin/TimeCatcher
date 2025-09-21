@@ -12,6 +12,10 @@ export function useSettings() {
   const reportingAppUrl = ref('')
   const tempReportingAppButtonText = ref('Tempo')
   const tempReportingAppUrl = ref('')
+  const evictionEnabled = ref(true)
+  const tempEvictionEnabled = ref(true)
+  const evictionDaysToKeep = ref(180)
+  const tempEvictionDaysToKeep = ref(180)
 
   // Media query for OS theme detection
   let mediaQueryList: MediaQueryList | null = null
@@ -191,6 +195,27 @@ export function useSettings() {
       }
     }
 
+    // Load eviction settings
+    const savedEvictionEnabled = localStorage.getItem('evictionEnabled')
+    if (savedEvictionEnabled !== null) {
+      // Only accept explicit 'true' or 'false' strings; reject corrupted values
+      if (savedEvictionEnabled === 'true') {
+        evictionEnabled.value = true
+      } else if (savedEvictionEnabled === 'false') {
+        evictionEnabled.value = false
+      }
+      // If corrupted (e.g., 'maybe'), keep current/default value
+    }
+
+    const savedEvictionDaysToKeep = localStorage.getItem('evictionDaysToKeep')
+    if (savedEvictionDaysToKeep !== null) {
+      // Use Number() for consistency with save validation
+      const days = Number(savedEvictionDaysToKeep)
+      if (Number.isFinite(days) && days >= 30 && days <= 3650) {
+        evictionDaysToKeep.value = Math.floor(days) // Normalize to integer
+      }
+    }
+
     applyTheme(currentTheme.value)
   }
 
@@ -220,6 +245,23 @@ export function useSettings() {
       reportingAppUrl.value = trimmedUrl
     }
 
+    // Validate and update eviction settings
+    evictionEnabled.value = tempEvictionEnabled.value
+    const coercedDays = Number(tempEvictionDaysToKeep.value)
+    if (Number.isFinite(coercedDays) && coercedDays >= 30 && coercedDays <= 3650) {
+      evictionDaysToKeep.value = coercedDays
+    } else {
+      // Keep old value or use safe default if current value is also invalid
+      if (
+        !Number.isFinite(evictionDaysToKeep.value) ||
+        evictionDaysToKeep.value < 30 ||
+        evictionDaysToKeep.value > 3650
+      ) {
+        evictionDaysToKeep.value = 180 // Safe default
+      }
+      // Note: tempEvictionDaysToKeep remains invalid, evictionDaysToKeep keeps valid value
+    }
+
     applyTheme(currentTheme.value)
 
     // Persist settings with error handling for storage quota/access issues
@@ -228,6 +270,8 @@ export function useSettings() {
       localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
       localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
       localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+      localStorage.setItem('evictionEnabled', evictionEnabled.value.toString())
+      localStorage.setItem('evictionDaysToKeep', evictionDaysToKeep.value.toString())
     } catch (error) {
       console.warn('Failed to persist settings to localStorage:', error)
       // Continue execution - theme is already applied and in-memory state is updated
@@ -259,6 +303,21 @@ export function useSettings() {
   }
 
   /**
+   * Validate eviction enabled setting
+   */
+  const isValidEvictionEnabled = (value: unknown): value is boolean => {
+    return typeof value === 'boolean'
+  }
+
+  /**
+   * Validate eviction days to keep (minimum 30 days)
+   */
+  const isValidEvictionDaysToKeep = (value: unknown): value is number => {
+    const num = Number(value)
+    return Number.isFinite(num) && num >= 30 && num <= 3650 // 30 days to 10 years
+  }
+
+  /**
    * Sanitize and validate restored settings with strict key whitelisting
    */
   const sanitizeRestoredSettings = (input: unknown): Partial<SettingsSnapshot> => {
@@ -274,7 +333,9 @@ export function useSettings() {
       'theme',
       'targetWorkHours',
       'reportingAppButtonText',
-      'reportingAppUrl'
+      'reportingAppUrl',
+      'evictionEnabled',
+      'evictionDaysToKeep'
     ]
 
     for (const key of allowedKeys) {
@@ -304,6 +365,16 @@ export function useSettings() {
               sanitized.reportingAppUrl = urlStr
             }
             break
+          case 'evictionEnabled':
+            if (isValidEvictionEnabled(value)) {
+              sanitized.evictionEnabled = value
+            }
+            break
+          case 'evictionDaysToKeep':
+            if (isValidEvictionDaysToKeep(value)) {
+              sanitized.evictionDaysToKeep = value
+            }
+            break
         }
       }
     }
@@ -324,11 +395,15 @@ export function useSettings() {
       const hours = sanitizedSettings.targetWorkHours ?? targetWorkHours.value
       const buttonText = sanitizedSettings.reportingAppButtonText ?? reportingAppButtonText.value
       const url = sanitizedSettings.reportingAppUrl ?? reportingAppUrl.value
+      const evictionEnabledValue = sanitizedSettings.evictionEnabled ?? evictionEnabled.value
+      const evictionDaysValue = sanitizedSettings.evictionDaysToKeep ?? evictionDaysToKeep.value
 
       currentTheme.value = theme
       targetWorkHours.value = hours
       reportingAppButtonText.value = buttonText
       reportingAppUrl.value = url
+      evictionEnabled.value = evictionEnabledValue
+      evictionDaysToKeep.value = evictionDaysValue
 
       // Apply theme now
       applyTheme(currentTheme.value)
@@ -339,6 +414,8 @@ export function useSettings() {
         localStorage.setItem('targetWorkHours', targetWorkHours.value.toString())
         localStorage.setItem('reportingAppButtonText', reportingAppButtonText.value)
         localStorage.setItem('reportingAppUrl', reportingAppUrl.value)
+        localStorage.setItem('evictionEnabled', evictionEnabled.value.toString())
+        localStorage.setItem('evictionDaysToKeep', evictionDaysToKeep.value.toString())
       } catch (error) {
         console.warn('Failed to persist restored settings to localStorage:', error)
         // Continue execution - theme is already applied and in-memory state is updated
@@ -360,6 +437,8 @@ export function useSettings() {
     tempTargetWorkHours.value = targetWorkHours.value
     tempReportingAppButtonText.value = reportingAppButtonText.value
     tempReportingAppUrl.value = reportingAppUrl.value
+    tempEvictionEnabled.value = evictionEnabled.value
+    tempEvictionDaysToKeep.value = evictionDaysToKeep.value
   }
 
   // Load settings on mount and setup OS theme detection
@@ -402,7 +481,12 @@ export function useSettings() {
     reportingAppUrl,
     tempReportingAppButtonText,
     tempReportingAppUrl,
+    evictionEnabled,
+    tempEvictionEnabled,
+    evictionDaysToKeep,
+    tempEvictionDaysToKeep,
     isValidUrl,
+    isValidEvictionDaysToKeep,
     applyTheme,
     loadSettings,
     saveSettings,

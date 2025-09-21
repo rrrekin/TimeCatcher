@@ -3,6 +3,7 @@ import { promises as fsp } from 'fs'
 import { join } from 'path'
 import { dbService } from './database'
 import { normalizeCategories, normalizeTaskRecords } from './backupUtils'
+import { validateCutoffDate } from './validation'
 import { TASK_TYPE_END, TASK_TYPES } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError, SettingsSnapshot } from '../shared/types'
 
@@ -191,6 +192,24 @@ ipcMain.handle('db:delete-task-record', async (_, id: number) => {
   } catch (error) {
     console.error('Failed to delete task record:', error)
     throw new Error(`Failed to delete task record: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('db:delete-old-task-records', async (_, cutoffDate: string) => {
+  // Validate cutoffDate early - throw validation error immediately if invalid
+  try {
+    validateCutoffDate(cutoffDate)
+  } catch (validationError) {
+    // Validation failed - throw error early without attempting database operation
+    throw validationError
+  }
+
+  // Validation passed - proceed with database operation
+  try {
+    return await dbService.deleteOldTaskRecords(cutoffDate)
+  } catch (error) {
+    console.error('Failed to delete old task records:', error)
+    throw new Error(`Failed to delete old task records: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 })
 
