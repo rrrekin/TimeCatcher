@@ -281,7 +281,9 @@ const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategor
 
 const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
   updateContext.value = 'auto-refresh'
-  taskRecords.value = [...taskRecords.value] // Trigger reactivity
+  // Reload tasks from the database to include newly added entries (e.g., via HTTP server)
+  // Intentionally not awaited; useAutoRefresh wraps calls in try/catch
+  void loadTaskRecords()
 })
 
 // Media query references for cleanup

@@ -147,7 +147,10 @@ export class HttpServerManager extends EventEmitter {
       const month = String(now.getMonth() + 1).padStart(2, '0')
       const day = String(now.getDate()).padStart(2, '0')
       const date = `${year}-${month}-${day}` // YYYY-MM-DD (local date)
-      const startTime = now.toISOString() // ISO timestamp with milliseconds (UTC)
+      // Use HH:mm local time to match manual task entry behavior in the renderer
+      const hours = String(now.getHours()).padStart(2, '0')
+      const minutes = String(now.getMinutes()).padStart(2, '0')
+      const startTime = `${hours}:${minutes}`
 
       // Create task record
       const taskRecord: TaskRecordInsert = {

@@ -218,7 +218,7 @@ describe('HttpServerManager', () => {
       expect(dbCall.category_name).toBe('Default')
       expect(dbCall.task_type).toBe('normal')
       expect(dbCall.date).toMatch(/^\d{4}-\d{2}-\d{2}$/) // YYYY-MM-DD format
-      expect(dbCall.start_time).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/) // ISO timestamp
+      expect(dbCall.start_time).toMatch(/^\d{2}:\d{2}$/) // HH:mm local time
 
       // Verify taskCreated event was emitted
       expect(taskCreatedHandler).toHaveBeenCalledTimes(1)
