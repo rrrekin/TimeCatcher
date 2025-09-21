@@ -9,6 +9,12 @@ import type {
   HttpServerStatus
 } from '../shared/types'
 
+// Keep track of wrapped listeners so we can remove the exact same function reference later
+type HttpTaskCreatedCallback = (data: any) => void
+// event type is loosely typed here to avoid importing Electron types into renderer exposure
+type HttpTaskCreatedWrapped = (event: unknown, data: any) => void
+const httpTaskCreatedWrapperMap = new WeakMap<HttpTaskCreatedCallback, HttpTaskCreatedWrapped>()
+
 contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
@@ -19,10 +25,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopHttpServer: (): Promise<void> => ipcRenderer.invoke('http-server:stop'),
   getHttpServerStatus: (): Promise<HttpServerStatus> => ipcRenderer.invoke('http-server:status'),
   onHttpServerTaskCreated: (callback: (data: any) => void) => {
-    ipcRenderer.on('http-server:task-created', (_, data) => callback(data))
+    // If this callback was already registered, avoid adding a duplicate listener
+    const existing = httpTaskCreatedWrapperMap.get(callback)
+    if (existing) return
+
+    const wrapper: HttpTaskCreatedWrapped = (_event, data) => callback(data)
+    httpTaskCreatedWrapperMap.set(callback, wrapper)
+    ipcRenderer.on('http-server:task-created', wrapper as any)
   },
   removeHttpServerTaskCreatedListener: (callback: (data: any) => void) => {
-    ipcRenderer.removeListener('http-server:task-created', callback)
+    const wrapper = httpTaskCreatedWrapperMap.get(callback)
+    if (wrapper) {
+      ipcRenderer.removeListener('http-server:task-created', wrapper as any)
+      httpTaskCreatedWrapperMap.delete(callback)
+    }
   },
 
   // Database operations

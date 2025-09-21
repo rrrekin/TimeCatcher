@@ -167,7 +167,7 @@ describe('useAutoRefresh', () => {
 
       // Simulate the HTTP task created handler directly since onMounted doesn't fire in tests
       const handleHttpTaskCreated = (data: any) => {
-        const currentDateString = selectedDate.value.toISOString().split('T')[0]
+        const currentDateString = formatLocalDateString(selectedDate.value)
 
         // Only refresh if the task was created for the currently viewed date
         if (data.date === currentDateString) {
@@ -182,7 +182,7 @@ describe('useAutoRefresh', () => {
       // Set today's date
       const today = new Date()
       selectedDate.value = today
-      const todayString = today.toISOString().split('T')[0]
+      const todayString = formatLocalDateString(today)
 
       // Simulate HTTP task creation for today
       handleHttpTaskCreated({ date: todayString })
@@ -195,7 +195,7 @@ describe('useAutoRefresh', () => {
 
       // Simulate the HTTP task created handler directly
       const handleHttpTaskCreated = (data: any) => {
-        const currentDateString = selectedDate.value.toISOString().split('T')[0]
+        const currentDateString = formatLocalDateString(selectedDate.value)
 
         if (data.date === currentDateString) {
           try {
@@ -226,7 +226,7 @@ describe('useAutoRefresh', () => {
 
       // Simulate the HTTP task created handler directly
       const handleHttpTaskCreated = (data: any) => {
-        const currentDateString = selectedDate.value.toISOString().split('T')[0]
+        const currentDateString = formatLocalDateString(selectedDate.value)
 
         if (data.date === currentDateString) {
           try {
@@ -240,7 +240,7 @@ describe('useAutoRefresh', () => {
       // Set today's date
       const today = new Date()
       selectedDate.value = today
-      const todayString = today.toISOString().split('T')[0]
+      const todayString = formatLocalDateString(today)
 
       // Simulate HTTP task creation with error
       handleHttpTaskCreated({ date: todayString })
@@ -413,7 +413,7 @@ describe('useAutoRefresh', () => {
       // Set today's date
       const today = new Date()
       wrapper.vm.selectedDate = today
-      const todayString = today.toISOString().split('T')[0]
+      const todayString = formatLocalDateString(today)
 
       // Trigger the actual event handler
       registeredHandler({ date: todayString })

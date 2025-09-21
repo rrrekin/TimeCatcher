@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createServer } from 'net'
 import { httpServerManager } from './httpServer'
 import { dbService } from './database'
 
@@ -9,6 +10,32 @@ vi.mock('./database', () => ({
     addTaskRecord: vi.fn()
   }
 }))
+
+/**
+ * Helper function to find an available ephemeral port
+ */
+async function getAvailablePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer()
+
+    server.listen(0, () => {
+      const address = server.address()
+      if (address && typeof address !== 'string') {
+        const port = address.port
+        server.close(() => {
+          resolve(port)
+        })
+      } else {
+        server.close()
+        reject(new Error('Failed to get port from server address'))
+      }
+    })
+
+    server.on('error', err => {
+      reject(err)
+    })
+  })
+}
 
 describe('HttpServerManager', () => {
   beforeEach(() => {
@@ -34,50 +61,72 @@ describe('HttpServerManager', () => {
     })
 
     it('should accept valid ports', async () => {
-      // Use a port that's likely to be available for testing
-      const testPort = 14474
+      // Probe for an actually free ephemeral port
+      const testPort = await getAvailablePort()
       const result = await httpServerManager.start(testPort)
 
-      // The test might fail if port is in use, which is acceptable
-      if (result.success) {
-        expect(result.port).toBe(testPort)
-        expect(httpServerManager.getStatus().running).toBe(true)
-      }
+      expect(result.success).toBe(true)
+      expect(result.port).toBe(testPort)
+      expect(httpServerManager.getStatus().running).toBe(true)
     })
   })
 
   describe('server lifecycle', () => {
     it('should start and stop server correctly', async () => {
-      const testPort = 14475
+      const testPort = await getAvailablePort()
 
       // Initially not running
       expect(httpServerManager.getStatus().running).toBe(false)
 
       // Start server
       const startResult = await httpServerManager.start(testPort)
-      if (startResult.success) {
-        expect(httpServerManager.getStatus().running).toBe(true)
-        expect(httpServerManager.getStatus().port).toBe(testPort)
+      expect(startResult.success).toBe(true)
+      expect(httpServerManager.getStatus().running).toBe(true)
+      expect(httpServerManager.getStatus().port).toBe(testPort)
 
-        // Stop server
-        await httpServerManager.stop()
-        expect(httpServerManager.getStatus().running).toBe(false)
-        expect(httpServerManager.getStatus().port).toBeUndefined()
-      }
+      // Stop server
+      await httpServerManager.stop()
+      expect(httpServerManager.getStatus().running).toBe(false)
+      expect(httpServerManager.getStatus().port).toBeUndefined()
     })
 
     it('should handle starting server on occupied port', async () => {
-      const testPort = 14476
+      const testPort = await getAvailablePort()
+      let occupyingServer: any = null
 
-      // Start first instance
-      const firstResult = await httpServerManager.start(testPort)
-      if (firstResult.success) {
-        // Try to start second instance on same port (this will fail because we're reusing the same manager)
-        // In real scenario, this would be testing port conflict
-        const secondResult = await httpServerManager.start(testPort)
-        expect(secondResult.success).toBe(true) // Manager stops the first and starts new one
+      try {
+        // Create a separate server to occupy the port
+        occupyingServer = createServer()
+        await new Promise<void>((resolve, reject) => {
+          occupyingServer.listen(testPort, '127.0.0.1', () => {
+            resolve()
+          })
+          occupyingServer.on('error', reject)
+        })
+
+        // Set up error handler to catch the emitted error event and prevent unhandled error
+        const errorHandler = vi.fn()
+        httpServerManager.on('error', errorHandler)
+
+        // Now try to start httpServerManager on the same occupied port
+        const result = await httpServerManager.start(testPort)
+        expect(result.success).toBe(false)
+        expect(result.error).toMatch(/Failed to start server.*EADDRINUSE/)
+
+        // Verify error handler was called
+        expect(errorHandler).toHaveBeenCalled()
+
+        // Clean up error listener
+        httpServerManager.removeListener('error', errorHandler)
+      } finally {
+        // Clean up the occupying server
+        if (occupyingServer) {
+          await new Promise<void>(resolve => {
+            occupyingServer.close(() => resolve())
+          })
+        }
       }
-    })
+    }, 10000) // Increase timeout to 10 seconds
   })
 
   describe('status reporting', () => {
@@ -89,44 +138,42 @@ describe('HttpServerManager', () => {
     })
 
     it('should report correct status when running', async () => {
-      const testPort = 14477
+      const testPort = await getAvailablePort()
       const result = await httpServerManager.start(testPort)
 
-      if (result.success) {
-        const status = httpServerManager.getStatus()
-        expect(status.running).toBe(true)
-        expect(status.port).toBe(testPort)
-        expect(status.error).toBeUndefined()
-      }
+      expect(result.success).toBe(true)
+      const status = httpServerManager.getStatus()
+      expect(status.running).toBe(true)
+      expect(status.port).toBe(testPort)
+      expect(status.error).toBeUndefined()
     })
   })
 
   describe('event emission', () => {
     it('should emit started event when server starts', async () => {
-      const testPort = 14478
+      const testPort = await getAvailablePort()
       const startedHandler = vi.fn()
 
       httpServerManager.on('started', startedHandler)
 
       const result = await httpServerManager.start(testPort)
-      if (result.success) {
-        expect(startedHandler).toHaveBeenCalledWith(testPort)
-      }
+      expect(result.success).toBe(true)
+      expect(startedHandler).toHaveBeenCalledWith(testPort)
 
       httpServerManager.removeListener('started', startedHandler)
     })
 
     it('should emit stopped event when server stops', async () => {
-      const testPort = 14479
+      const testPort = await getAvailablePort()
       const stoppedHandler = vi.fn()
 
       const result = await httpServerManager.start(testPort)
-      if (result.success) {
-        httpServerManager.on('stopped', stoppedHandler)
-        await httpServerManager.stop()
-        expect(stoppedHandler).toHaveBeenCalled()
-        httpServerManager.removeListener('stopped', stoppedHandler)
-      }
+      expect(result.success).toBe(true)
+
+      httpServerManager.on('stopped', stoppedHandler)
+      await httpServerManager.stop()
+      expect(stoppedHandler).toHaveBeenCalled()
+      httpServerManager.removeListener('stopped', stoppedHandler)
     })
   })
 
@@ -148,20 +195,129 @@ describe('HttpServerManager', () => {
       })
     })
 
-    it('should emit taskCreated event when task is successfully created', async () => {
-      const testPort = 14480
+    it('should create task via HTTP request and emit taskCreated event', async () => {
+      const testPort = await getAvailablePort()
       const taskCreatedHandler = vi.fn()
 
       httpServerManager.on('taskCreated', taskCreatedHandler)
 
       const result = await httpServerManager.start(testPort)
-      if (result.success) {
-        // This would normally be tested with actual HTTP requests
-        // For unit testing, we're just verifying the event emission setup
-        expect(httpServerManager.listenerCount('taskCreated')).toBe(1)
-      }
+      expect(result.success).toBe(true)
+
+      // Make actual HTTP request to create a task
+      const response = await fetch(`http://127.0.0.1:${testPort}/create-task?task=Integration%20Test&category=Default`)
+
+      // Verify HTTP response
+      expect(response.status).toBe(204)
+      expect(response.headers.get('Access-Control-Allow-Origin')).toBe('*')
+
+      // Verify database service was called
+      expect(vi.mocked(dbService.addTaskRecord)).toHaveBeenCalledTimes(1)
+      const dbCall = vi.mocked(dbService.addTaskRecord).mock.calls[0][0]
+      expect(dbCall.task_name).toBe('Integration Test')
+      expect(dbCall.category_name).toBe('Default')
+      expect(dbCall.task_type).toBe('normal')
+      expect(dbCall.date).toMatch(/^\d{4}-\d{2}-\d{2}$/) // YYYY-MM-DD format
+      expect(dbCall.start_time).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/) // ISO timestamp
+
+      // Verify taskCreated event was emitted
+      expect(taskCreatedHandler).toHaveBeenCalledTimes(1)
+      const eventData = taskCreatedHandler.mock.calls[0][0]
+      expect(eventData.date).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+      expect(eventData.taskRecord).toBeDefined()
 
       httpServerManager.removeListener('taskCreated', taskCreatedHandler)
+    })
+
+    it('should handle missing task parameter', async () => {
+      const testPort = await getAvailablePort()
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      // Make request without task parameter
+      const response = await fetch(`http://127.0.0.1:${testPort}/create-task`)
+
+      expect(response.status).toBe(400)
+      expect(await response.text()).toBe('Missing required parameter: task')
+      expect(vi.mocked(dbService.addTaskRecord)).not.toHaveBeenCalled()
+    })
+
+    it('should use default category when category parameter is missing', async () => {
+      const testPort = await getAvailablePort()
+      const taskCreatedHandler = vi.fn()
+
+      httpServerManager.on('taskCreated', taskCreatedHandler)
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      // Make request without category parameter
+      const response = await fetch(`http://127.0.0.1:${testPort}/create-task?task=No%20Category%20Test`)
+
+      expect(response.status).toBe(204)
+      expect(vi.mocked(dbService.getDefaultCategory)).toHaveBeenCalledTimes(1)
+      expect(vi.mocked(dbService.addTaskRecord)).toHaveBeenCalledTimes(1)
+
+      const dbCall = vi.mocked(dbService.addTaskRecord).mock.calls[0][0]
+      expect(dbCall.task_name).toBe('No Category Test')
+      expect(dbCall.category_name).toBe('Default')
+
+      httpServerManager.removeListener('taskCreated', taskCreatedHandler)
+    })
+
+    it('should handle database errors gracefully', async () => {
+      const testPort = await getAvailablePort()
+
+      // Mock database error
+      vi.mocked(dbService.addTaskRecord).mockRejectedValueOnce(new Error('Database error'))
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      const response = await fetch(`http://127.0.0.1:${testPort}/create-task?task=Error%20Test`)
+
+      expect(response.status).toBe(500)
+      expect(await response.text()).toBe('Internal server error')
+    })
+
+    it('should handle root endpoint', async () => {
+      const testPort = await getAvailablePort()
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      const response = await fetch(`http://127.0.0.1:${testPort}/`)
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Content-Type')).toBe('text/plain')
+      expect(await response.text()).toBe('TimeCatcher HTTP Server is running')
+    })
+
+    it('should handle unknown endpoints', async () => {
+      const testPort = await getAvailablePort()
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      const response = await fetch(`http://127.0.0.1:${testPort}/unknown`)
+
+      expect(response.status).toBe(404)
+      expect(await response.text()).toBe('Not found')
+    })
+
+    it('should reject non-GET methods', async () => {
+      const testPort = await getAvailablePort()
+
+      const result = await httpServerManager.start(testPort)
+      expect(result.success).toBe(true)
+
+      const response = await fetch(`http://127.0.0.1:${testPort}/create-task?task=Test`, {
+        method: 'POST'
+      })
+
+      expect(response.status).toBe(405)
+      expect(await response.text()).toBe('Method not allowed')
     })
   })
 })

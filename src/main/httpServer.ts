@@ -143,8 +143,11 @@ export class HttpServerManager extends EventEmitter {
 
       // Create current timestamp and date
       const now = new Date()
-      const startTime = now.toISOString()
-      const date = now.toISOString().split('T')[0] // YYYY-MM-DD format
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const date = `${year}-${month}-${day}` // YYYY-MM-DD (local date)
+      const startTime = now.toISOString() // ISO timestamp with milliseconds (UTC)
 
       // Create task record
       const taskRecord: TaskRecordInsert = {
