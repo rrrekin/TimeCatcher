@@ -1,10 +1,29 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { TaskRecordInsert, TaskRecordUpdate, SettingsSnapshot, BackupResult, RestoreResult } from '../shared/types'
+import type {
+  TaskRecordInsert,
+  TaskRecordUpdate,
+  SettingsSnapshot,
+  BackupResult,
+  RestoreResult,
+  HttpServerStartResult,
+  HttpServerStatus
+} from '../shared/types'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('app:open-external-url', url),
+
+  // HTTP Server
+  startHttpServer: (port: number): Promise<HttpServerStartResult> => ipcRenderer.invoke('http-server:start', port),
+  stopHttpServer: (): Promise<void> => ipcRenderer.invoke('http-server:stop'),
+  getHttpServerStatus: (): Promise<HttpServerStatus> => ipcRenderer.invoke('http-server:status'),
+  onHttpServerTaskCreated: (callback: (data: any) => void) => {
+    ipcRenderer.on('http-server:task-created', (_, data) => callback(data))
+  },
+  removeHttpServerTaskCreatedListener: (callback: (data: any) => void) => {
+    ipcRenderer.removeListener('http-server:task-created', callback)
+  },
 
   // Database operations
   getCategories: () => ipcRenderer.invoke('db:get-categories'),

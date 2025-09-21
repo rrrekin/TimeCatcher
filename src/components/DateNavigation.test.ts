@@ -234,5 +234,101 @@ describe('DateNavigation', () => {
       expect(emitted).toHaveProperty('openSetup')
       expect(emitted.openSetup?.length).toBe(1)
     })
+
+    it('renders normal settings button when no HTTP server error', () => {
+      const wrapper = mount(DateNavigation, { props: minimalProps })
+
+      const settingsBtn = wrapper.get('button[aria-label="Open settings"]')
+      expect(settingsBtn.classes()).not.toContain('has-error')
+      expect(settingsBtn.attributes('title')).toBe('Open Settings')
+      expect(settingsBtn.attributes('aria-label')).toBe('Open settings')
+
+      const errorIndicator = wrapper.find('.error-indicator')
+      expect(errorIndicator.exists()).toBe(false)
+    })
+
+    it('renders error state when HTTP server error is provided', () => {
+      const errorMessage = 'Failed to start server: EADDRINUSE'
+      const wrapper = mount(DateNavigation, {
+        props: {
+          ...minimalProps,
+          httpServerError: errorMessage
+        }
+      })
+
+      const settingsBtn = wrapper.get(
+        'button[aria-label="Open settings - HTTP Server Error: Failed to start server: EADDRINUSE"]'
+      )
+      expect(settingsBtn.classes()).toContain('has-error')
+      expect(settingsBtn.attributes('title')).toBe('Settings (HTTP Server Error: Failed to start server: EADDRINUSE)')
+      expect(settingsBtn.attributes('aria-label')).toBe(
+        'Open settings - HTTP Server Error: Failed to start server: EADDRINUSE'
+      )
+    })
+
+    it('renders error indicator when HTTP server error is provided', () => {
+      const wrapper = mount(DateNavigation, {
+        props: {
+          ...minimalProps,
+          httpServerError: 'Port in use'
+        }
+      })
+
+      const errorIndicator = wrapper.get('.error-indicator')
+      expect(errorIndicator.exists()).toBe(true)
+      expect(errorIndicator.attributes('aria-hidden')).toBe('true')
+      expect(errorIndicator.text()).toBe('🔴')
+    })
+
+    it('handles empty HTTP server error message', () => {
+      const wrapper = mount(DateNavigation, {
+        props: {
+          ...minimalProps,
+          httpServerError: ''
+        }
+      })
+
+      const settingsBtn = wrapper.get('.setup-btn')
+      expect(settingsBtn.classes()).not.toContain('has-error')
+      expect(settingsBtn.attributes('title')).toBe('Open Settings')
+
+      const errorIndicator = wrapper.find('.error-indicator')
+      expect(errorIndicator.exists()).toBe(false)
+    })
+
+    it('handles long HTTP server error messages', () => {
+      const longError =
+        'Very long error message that might exceed typical display limits and needs to be handled gracefully in the UI'
+      const wrapper = mount(DateNavigation, {
+        props: {
+          ...minimalProps,
+          httpServerError: longError
+        }
+      })
+
+      const settingsBtn = wrapper.get('.setup-btn')
+      expect(settingsBtn.classes()).toContain('has-error')
+      expect(settingsBtn.attributes('title')).toBe(`Settings (HTTP Server Error: ${longError})`)
+      expect(settingsBtn.attributes('aria-label')).toBe(`Open settings - HTTP Server Error: ${longError}`)
+
+      const errorIndicator = wrapper.get('.error-indicator')
+      expect(errorIndicator.exists()).toBe(true)
+    })
+
+    it('maintains button functionality when in error state', async () => {
+      const wrapper = mount(DateNavigation, {
+        props: {
+          ...minimalProps,
+          httpServerError: 'Server error'
+        }
+      })
+
+      const settingsBtn = wrapper.get('.setup-btn.has-error')
+      await settingsBtn.trigger('click')
+
+      const emitted = wrapper.emitted()
+      expect(emitted).toHaveProperty('openSetup')
+      expect(emitted.openSetup?.length).toBe(1)
+    })
   })
 })

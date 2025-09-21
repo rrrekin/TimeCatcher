@@ -3,11 +3,15 @@ import { promises as fsp } from 'fs'
 import { join } from 'path'
 import { dbService } from './database'
 import { normalizeCategories, normalizeTaskRecords } from './backupUtils'
-import { validateCutoffDate } from './validation'
+import { validateCutoffDate, validateHttpPort } from './validation'
+import { httpServerManager } from './httpServer'
 import { TASK_TYPE_END, TASK_TYPES } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError, SettingsSnapshot } from '../shared/types'
 
 const isDevelopment = process.env.NODE_ENV !== 'production' && !app.isPackaged
+
+// Global reference to main window for HTTP server event forwarding
+let mainWindow: BrowserWindow | null = null
 
 function isDuplicateEndConstraint(error: unknown): boolean {
   if (!error || typeof error !== 'object') {
@@ -25,7 +29,7 @@ function isDuplicateEndConstraint(error: unknown): boolean {
 }
 
 function createWindow(): void {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 1050,
@@ -35,6 +39,11 @@ function createWindow(): void {
       contextIsolation: true,
       preload: join(__dirname, 'preload.js')
     }
+  })
+
+  // Handle window closed
+  mainWindow.on('closed', () => {
+    mainWindow = null
   })
 
   if (isDevelopment) {
@@ -48,12 +57,26 @@ function createWindow(): void {
 app.whenReady().then(() => {
   createWindow()
 
+  // Set up HTTP server event forwarding
+  httpServerManager.on('taskCreated', data => {
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('http-server:task-created', data)
+    }
+  })
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
 app.on('window-all-closed', async function () {
+  try {
+    // Stop HTTP server if running
+    await httpServerManager.stop()
+  } catch (error) {
+    console.error('Failed to stop HTTP server:', error)
+  }
+
   try {
     dbService.close()
   } catch (error) {
@@ -427,3 +450,30 @@ if (isDevelopment) {
     }
   })
 }
+
+// HTTP Server management handlers
+ipcMain.handle('http-server:start', async (_, port: number) => {
+  try {
+    const validatedPort = validateHttpPort(port)
+    return await httpServerManager.start(validatedPort)
+  } catch (error) {
+    console.error('Failed to start HTTP server:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+})
+
+ipcMain.handle('http-server:stop', async () => {
+  try {
+    await httpServerManager.stop()
+  } catch (error) {
+    console.error('Failed to stop HTTP server:', error)
+    throw new Error(`Failed to stop HTTP server: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
+})
+
+ipcMain.handle('http-server:status', async () => {
+  return httpServerManager.getStatus()
+})

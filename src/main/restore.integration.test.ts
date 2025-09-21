@@ -35,6 +35,7 @@ vi.mock('electron', () => {
       loadURL() {}
       loadFile() {}
       webContents = { openDevTools() {} }
+      on() {} // Add missing event listener method
       constructor(_: any) {}
     },
     ipcMain: {
