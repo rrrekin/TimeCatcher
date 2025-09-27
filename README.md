@@ -38,9 +38,10 @@ Download the latest release for your platform from the [Releases page](https://g
 - __Download__: `.dmg` installer from the releases page
 - __Installation__: Open the `.dmg` file and drag TimeCatcher to your Applications folder
 - __First Launch__: The app is unsigned (open source project), so you may need to:
-  1. Right-click the app and select "Open" instead of double-clicking
-  2. Or go to __System Settings__ → __Privacy & Security__ → scroll down to "Security" section and click "Open Anyway" next to TimeCatcher
-  3. Or, if you get a quarantine warning, run: `xattr -d com.apple.quarantine /Applications/TimeCatcher.app`
+  1. Double-click the "Fix Permissions (if needed)" script in the DMG to automatically resolve Gatekeeper issues
+  2. Right-click the app and select "Open" instead of double-clicking
+  3. Or go to __System Settings__ → __Privacy & Security__ → scroll down to "Security" section and click "Open Anyway" next to TimeCatcher
+  4. Or manually run: `xattr -d com.apple.quarantine /Applications/TimeCatcher.app`
 
 __Future Enhancement__: Homebrew cask installation is planned but not yet available.
 
