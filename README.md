@@ -12,14 +12,6 @@
 
 Context-switch time tracking, my way
 
-## Downloads
-
-Download the latest release for your platform from the [Releases page](https://github.com/rrrekin/TimeCatcher/releases). Available formats include:
-
-- __macOS__: `.dmg` installer
-- __Windows__: `.exe` installer
-- __Linux__: `.AppImage` (portable) and `.snap` packages
-
 ## About This Project
 
 This is me trying vibe coding. I’m a senior Java backend dev poking at tech I don’t know at all to see how far AI agents can take me. I mostly played Product Owner — wrote the asks and sanity‑checked the result.
@@ -36,6 +28,33 @@ No start/stop timers. You just log what you switched to and when; the app sums t
 - Accessible UI with ARIA support
 
 Details on calculation and UI behavior are documented in [CLAUDE.md](./CLAUDE.md) under Report and Duration Calculation.
+
+## Downloads
+
+Download the latest release for your platform from the [Releases page](https://github.com/rrrekin/TimeCatcher/releases).
+
+### Mac
+
+- __Download__: `.dmg` installer from the releases page
+- __Installation__: Open the `.dmg` file and drag TimeCatcher to your Applications folder
+- __First Launch__: The app is unsigned (open source project), so you may need to:
+  1. Right-click the app and select "Open" instead of double-clicking
+  2. Or go to __System Settings__ → __Privacy & Security__ → scroll down to "Security" section and click "Open Anyway" next to TimeCatcher
+  3. Or, if you get a quarantine warning, run: `xattr -d com.apple.quarantine /Applications/TimeCatcher.app`
+
+__Future Enhancement__: Homebrew cask installation is planned but not yet available.
+
+### Windows
+
+- __Download__: `.exe` installer or portable version
+- __Installation__: Run the installer or extract the portable version
+
+### Linux
+
+- __Download__: `.AppImage` (portable) or `.snap` packages
+- __Installation__:
+  - AppImage: Make executable and run directly
+  - Snap: Install via `sudo snap install timecatcher_*.snap --dangerous`
 
 ## Tech Stack
 
