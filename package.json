@@ -102,7 +102,7 @@
             "x": 270,
             "y": 280,
             "type": "file",
-            "path": "scripts/fix-macos-permissions.sh",
+            "path": "scripts/fix-macos-permissions.command",
             "name": "Fix Permissions (if needed)"
           }
         ]
