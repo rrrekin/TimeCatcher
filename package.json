@@ -80,10 +80,32 @@
       "dist/shared/**/*"
     ],
     "extraResources": [],
-    "afterPack": "./scripts/remove-quarantine.js",
     "mac": {
       "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "dmg": {
+        "background": null,
+        "contents": [
+          {
+            "x": 130,
+            "y": 180,
+            "type": "file"
+          },
+          {
+            "x": 410,
+            "y": 180,
+            "type": "link",
+            "path": "/Applications"
+          },
+          {
+            "x": 270,
+            "y": 280,
+            "type": "file",
+            "path": "scripts/fix-macos-permissions.command",
+            "name": "Fix Permissions (if needed)"
+          }
+        ]
+      }
     },
     "win": {
       "icon": "assets/icon.ico",
