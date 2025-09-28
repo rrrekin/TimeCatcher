@@ -286,3 +286,36 @@ Keep the CLAUDE.md context file up-to-date with the latest changes and as compac
 ## Versioning System
 
 TimeCatcher uses semi-automatic semantic versioning with PR-based automatic bumps. See docs/VERSIONING.md for complete workflow details, npm commands, and release processes.
+
+## Homebrew Cask Maintenance
+
+TimeCatcher supports installation via Homebrew cask through a custom tap.
+
+### Repository Structure
+
+- __Main Repository__: `rrrekin/TimeCatcher` (this repository)
+- __Homebrew Tap__: `rrrekin/homebrew-timecatcher` (separate repository)
+- __Cask Formula__: `Casks/timecatcher.rb`
+
+### Automated Updates
+
+The Homebrew cask is automatically updated when new releases are published:
+
+1. __Manual Release Workflow__ (`manual-release.yml`) includes `update-homebrew` job
+2. __Triggers only for non-draft, non-prerelease versions__
+3. __Calls homebrew tap's `update-cask.yml` workflow__ with version and download URL
+4. __Downloads DMG and calculates SHA256__ checksum for security
+5. __Updates cask formula__ and commits changes automatically
+
+### Requirements
+
+- __HOMEBREW_PAT__: GitHub Personal Access Token with `repo` scope for accessing the homebrew tap repository
+- __Architecture__: Currently supports ARM64 only (modern Macs)
+- __macOS Compatibility__: Requires macOS with Homebrew installed
+
+### Troubleshooting
+
+- __Update fails__: Check HOMEBREW_PAT secret is valid and has proper permissions
+- __Download errors__: Verify DMG URL follows expected pattern: `TimeCatcher-{version}-mac-arm64.dmg`
+- __Permission issues__: Homebrew installation automatically removes quarantine attributes via `postflight` block
+- __Version mismatch__: Ensure the cask formula version matches the GitHub release tag
