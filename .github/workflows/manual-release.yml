@@ -224,3 +224,27 @@ jobs:
             release_artifacts/**/*.zsync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    name: Update Homebrew Cask
+    needs: [check, release]
+    runs-on: ubuntu-latest
+    # Only run for non-draft, non-prerelease versions
+    if: ${{ !fromJson(github.event.inputs.draft) && !fromJson(github.event.inputs.prerelease) }}
+    steps:
+      - name: Trigger homebrew tap update
+        shell: bash
+        run: |
+          TAG="${{ needs.check.outputs.tag }}"
+          VERSION_CLEAN="${TAG#v}"  # Remove 'v' prefix
+          DOWNLOAD_URL="https://github.com/rrrekin/TimeCatcher/releases/download/${TAG}/TimeCatcher-${VERSION_CLEAN}-mac-arm64.dmg"
+
+          echo "Triggering Homebrew cask update for version: $TAG"
+          echo "Download URL: $DOWNLOAD_URL"
+
+          gh workflow run update-cask.yml \
+            -f version="$TAG" \
+            -f download_url="$DOWNLOAD_URL" \
+            -R rrrekin/homebrew-timecatcher
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_PAT }}
