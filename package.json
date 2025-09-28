@@ -82,30 +82,34 @@
     "extraResources": [],
     "mac": {
       "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity",
-      "dmg": {
-        "background": null,
-        "contents": [
-          {
-            "x": 130,
-            "y": 180,
-            "type": "file"
-          },
-          {
-            "x": 410,
-            "y": 180,
-            "type": "link",
-            "path": "/Applications"
-          },
-          {
-            "x": 270,
-            "y": 280,
-            "type": "file",
-            "path": "scripts/fix-macos-permissions.command",
-            "name": "Fix Permissions (if needed)"
-          }
-        ]
-      }
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "background": null,
+      "window": {
+        "width": 540,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 130,
+          "y": 180,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 180,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 270,
+          "y": 100,
+          "type": "file",
+          "path": "scripts/README - Fix Permissions.txt",
+          "name": "📖 How to Fix Permissions.txt"
+        }
+      ]
     },
     "win": {
       "icon": "assets/icon.ico",
