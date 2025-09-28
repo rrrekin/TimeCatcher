@@ -5,6 +5,7 @@ import { dbService } from './database'
 import { normalizeCategories, normalizeTaskRecords } from './backupUtils'
 import { validateCutoffDate, validateHttpPort } from './validation'
 import { httpServerManager } from './httpServer'
+import { versionCheckService } from './versionCheck'
 import { TASK_TYPE_END, TASK_TYPES } from '../shared/types'
 import type { TaskRecord, TaskRecordInsert, TaskRecordUpdate, DatabaseError, SettingsSnapshot } from '../shared/types'
 
@@ -236,9 +237,23 @@ ipcMain.handle('db:delete-old-task-records', async (_, cutoffDate: string) => {
   }
 })
 
-// Application info handler
+// Application info handlers
 ipcMain.handle('app:get-version', async () => {
   return app.getVersion()
+})
+
+// Update checking handler
+ipcMain.handle('app:check-for-updates', async () => {
+  try {
+    return await versionCheckService.checkForUpdates()
+  } catch (error) {
+    console.error('Failed to check for updates:', error)
+    return {
+      hasUpdate: false,
+      currentVersion: app.getVersion(),
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    }
+  }
 })
 
 // External URL handler

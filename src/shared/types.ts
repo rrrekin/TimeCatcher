@@ -89,10 +89,28 @@ export interface HttpServerStartResult {
   port?: number
 }
 
+// Update checking types
+export interface ReleaseInfo {
+  version: string
+  publishedAt: string
+  htmlUrl: string
+  downloadUrl?: string
+  body?: string
+}
+
+export interface UpdateCheckResult {
+  hasUpdate: boolean
+  currentVersion: string
+  latestVersion?: string
+  releaseInfo?: ReleaseInfo
+  error?: string
+}
+
 export interface ElectronAPI {
   // Application info
   getVersion: () => Promise<string>
   openExternalUrl: (url: string) => Promise<boolean>
+  checkForUpdates?: () => Promise<UpdateCheckResult>
   // Backup & Restore
   backupApp?: (settings: SettingsSnapshot) => Promise<BackupResult>
   restoreApp?: () => Promise<RestoreResult>
