@@ -80,7 +80,6 @@
       "dist/shared/**/*"
     ],
     "extraResources": [],
-    "afterPack": "./scripts/remove-quarantine.js",
     "mac": {
       "icon": "assets/icon.icns",
       "category": "public.app-category.productivity",
