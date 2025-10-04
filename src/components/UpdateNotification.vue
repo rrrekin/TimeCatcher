@@ -43,6 +43,7 @@ import { ref } from 'vue'
 import { useUpdateNotification } from '@/composables/useUpdateNotification'
 
 const showTooltip = ref(false)
+let tooltipTimeoutId: number | null = null
 
 const {
   shouldShowNotification,
@@ -84,15 +85,27 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  // Clear any pending timeout when component unmounts
+  if (tooltipTimeoutId !== null) {
+    clearTimeout(tooltipTimeoutId)
+    tooltipTimeoutId = null
+  }
 })
 
 watch(showTooltip, newValue => {
+  // Clear any existing timeout before setting a new one
+  if (tooltipTimeoutId !== null) {
+    clearTimeout(tooltipTimeoutId)
+    tooltipTimeoutId = null
+  }
+
   if (newValue) {
     // Close tooltip after 10 seconds of no interaction
-    setTimeout(() => {
+    tooltipTimeoutId = window.setTimeout(() => {
       if (showTooltip.value) {
         showTooltip.value = false
       }
+      tooltipTimeoutId = null
     }, 10000)
   }
 })

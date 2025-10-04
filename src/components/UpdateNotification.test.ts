@@ -418,4 +418,64 @@ describe('UpdateNotification', () => {
 
     removeEventListenerSpy.mockRestore()
   })
+
+  it('should clear pending timeout on unmount', async () => {
+    vi.useFakeTimers()
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+    shouldShowNotification.value = true
+    releaseInfo.value = {
+      version: '1.1.0',
+      publishedAt: '2023-01-01T00:00:00Z',
+      htmlUrl: 'https://github.com/test/repo/releases/tag/v1.1.0',
+      body: 'New features and bug fixes'
+    }
+
+    const wrapper = mount(UpdateNotification)
+
+    // Show tooltip to trigger timeout
+    await wrapper.find('.bell-icon').trigger('click')
+    await nextTick()
+
+    // Unmount should clear the timeout
+    wrapper.unmount()
+
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+
+    clearTimeoutSpy.mockRestore()
+    vi.useRealTimers()
+  })
+
+  it('should clear existing timeout when tooltip is reopened', async () => {
+    vi.useFakeTimers()
+    const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+    shouldShowNotification.value = true
+    releaseInfo.value = {
+      version: '1.1.0',
+      publishedAt: '2023-01-01T00:00:00Z',
+      htmlUrl: 'https://github.com/test/repo/releases/tag/v1.1.0',
+      body: 'New features and bug fixes'
+    }
+
+    const wrapper = mount(UpdateNotification)
+
+    // Show tooltip first time
+    await wrapper.find('.bell-icon').trigger('click')
+    await nextTick()
+
+    // Hide tooltip
+    await wrapper.find('.bell-icon').trigger('click')
+    await nextTick()
+
+    // Show tooltip again - this should clear the previous timeout
+    await wrapper.find('.bell-icon').trigger('click')
+    await nextTick()
+
+    // clearTimeout should have been called when reopening
+    expect(clearTimeoutSpy).toHaveBeenCalled()
+
+    clearTimeoutSpy.mockRestore()
+    vi.useRealTimers()
+  })
 })

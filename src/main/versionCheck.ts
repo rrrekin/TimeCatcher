@@ -1,20 +1,5 @@
 import { app } from 'electron'
-
-export interface ReleaseInfo {
-  version: string
-  publishedAt: string
-  htmlUrl: string
-  downloadUrl?: string
-  body?: string
-}
-
-export interface UpdateCheckResult {
-  hasUpdate: boolean
-  currentVersion: string
-  latestVersion?: string
-  releaseInfo?: ReleaseInfo
-  error?: string
-}
+import type { ReleaseInfo, UpdateCheckResult } from '../shared/types'
 
 class VersionCheckService {
   private readonly GITHUB_API_URL = 'https://api.github.com/repos/rrrekin/TimeCatcher/releases/latest'

@@ -429,14 +429,21 @@ describe('useUpdateNotification', () => {
         return null
       })
 
-      // Prevent initial check to isolate this logic
-      mockElectronAPI.checkForUpdates.mockImplementation(() => new Promise(() => {}))
+      // Let initial check resolve properly
+      mockElectronAPI.checkForUpdates.mockResolvedValue(createMockUpdateResult(false))
 
       wrapper = mount(TestComponent)
       await nextTick()
 
-      // Now restore the mock for the test
-      mockElectronAPI.checkForUpdates.mockResolvedValue(createMockUpdateResult(false))
+      // Wait for initial check to complete so isCheckingForUpdates resets to false
+      await wrapper.vm.$nextTick()
+
+      // After initial check completes, manually set lastCheckTime to 25 hours ago
+      // to simulate the elapsed time condition
+      wrapper.vm.lastCheckTime = new Date(oldTime)
+
+      // Clear the initial mount call to count only the follow-up call
+      mockElectronAPI.checkForUpdates.mockClear()
 
       // Non-forced check should work due to time elapsed
       await wrapper.vm.checkForUpdates(false)
