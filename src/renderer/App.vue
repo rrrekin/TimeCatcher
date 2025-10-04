@@ -67,7 +67,10 @@
         />
 
         <!-- Application version positioned near window border -->
-        <div class="app-version" v-if="appVersion">v{{ appVersion }}</div>
+        <div class="app-version-container" v-if="appVersion">
+          <div class="app-version">v{{ appVersion }}</div>
+          <UpdateNotification />
+        </div>
       </div>
     </div>
 
@@ -186,6 +189,7 @@ import TaskList from '@/components/TaskList.vue'
 import AddTaskForm from '@/components/AddTaskForm.vue'
 import DailyReport from '@/components/DailyReport.vue'
 import SetupModal from '@/components/SetupModal.vue'
+import UpdateNotification from '@/components/UpdateNotification.vue'
 
 // Component-specific types for task summaries
 interface Appearance {
@@ -1849,10 +1853,16 @@ body {
 }
 
 /* App Version Styles */
-.app-version {
+.app-version-container {
   position: fixed;
   bottom: 16px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+}
+
+.app-version {
   font-size: 10px;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   color: var(--text-muted);
@@ -1860,6 +1870,5 @@ body {
   font-weight: 400;
   pointer-events: none;
   user-select: none;
-  z-index: 1;
 }
 </style>

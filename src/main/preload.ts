@@ -6,7 +6,8 @@ import type {
   BackupResult,
   RestoreResult,
   HttpServerStartResult,
-  HttpServerStatus
+  HttpServerStatus,
+  UpdateCheckResult
 } from '../shared/types'
 
 // Keep track of wrapped listeners so we can remove the exact same function reference later
@@ -19,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Application info
   getVersion: (): Promise<string> => ipcRenderer.invoke('app:get-version'),
   openExternalUrl: (url: string): Promise<boolean> => ipcRenderer.invoke('app:open-external-url', url),
+  checkForUpdates: (): Promise<UpdateCheckResult> => ipcRenderer.invoke('app:check-for-updates'),
 
   // HTTP Server
   startHttpServer: (port: number): Promise<HttpServerStartResult> => ipcRenderer.invoke('http-server:start', port),

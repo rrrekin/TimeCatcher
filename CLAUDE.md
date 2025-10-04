@@ -309,7 +309,9 @@ The Homebrew cask is automatically updated when new releases are published:
 
 ### Requirements
 
-- __HOMEBREW_PAT__: GitHub Personal Access Token with `repo` scope for accessing the homebrew tap repository
+- __HOMEBREW_PAT__: GitHub Personal Access Token with `repo` and `workflow` scopes for accessing and updating the homebrew tap repository
+  - __Main repository secret__: `HOMEBREW_PAT` (for triggering updates)
+  - __Tap repository secret__: `PAT` (for committing changes)
 - __Architecture__: Currently supports ARM64 only (modern Macs)
 - __macOS Compatibility__: Requires macOS with Homebrew installed
 
