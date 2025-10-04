@@ -484,4 +484,40 @@ describe('UpdateNotification', () => {
     clearTimeoutSpy.mockRestore()
     vi.useRealTimers()
   })
+
+  it('should properly associate tooltip with button using aria-describedby', async () => {
+    shouldShowNotification.value = true
+    releaseInfo.value = {
+      version: '1.1.0',
+      publishedAt: '2023-01-01T00:00:00Z',
+      htmlUrl: 'https://github.com/test/repo/releases/tag/v1.1.0',
+      body: 'New features and bug fixes'
+    }
+
+    const wrapper = mount(UpdateNotification)
+    const bellIcon = wrapper.find('.bell-icon')
+
+    // Initially, aria-describedby should not be present (tooltip not shown)
+    expect(bellIcon.attributes('aria-describedby')).toBeUndefined()
+
+    // Show tooltip
+    await bellIcon.trigger('click')
+    await nextTick()
+
+    // Now aria-describedby should be present and match tooltip id
+    const ariaDescribedby = bellIcon.attributes('aria-describedby')
+    expect(ariaDescribedby).toBeDefined()
+    expect(ariaDescribedby).toMatch(/^update-notification-tooltip-/)
+
+    // Tooltip should have matching id
+    const tooltip = wrapper.find('.tooltip')
+    expect(tooltip.attributes('id')).toBe(ariaDescribedby)
+
+    // Hide tooltip
+    await bellIcon.trigger('click')
+    await nextTick()
+
+    // aria-describedby should be removed when tooltip is hidden
+    expect(bellIcon.attributes('aria-describedby')).toBeUndefined()
+  })
 })

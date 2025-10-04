@@ -10,6 +10,7 @@
       class="bell-icon"
       :class="{ 'bell-animate': isCheckingForUpdates }"
       aria-label="New version available"
+      :aria-describedby="showTooltip && releaseInfo ? tooltipId : undefined"
       @click="showTooltip = !showTooltip"
       @keydown.escape="showTooltip = false"
     >
@@ -18,7 +19,7 @@
 
     <!-- Hover tooltip -->
     <Transition name="tooltip">
-      <div v-if="showTooltip && releaseInfo" class="tooltip" role="tooltip" @click.stop>
+      <div v-if="showTooltip && releaseInfo" :id="tooltipId" class="tooltip" role="tooltip" @click.stop>
         <div class="tooltip-content">
           <div class="version-info">
             <div class="update-title">Update Available</div>
@@ -36,8 +37,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useUpdateNotification } from '@/composables/useUpdateNotification'
+
+// Generate unique tooltip ID for this component instance using timestamp and random number
+const tooltipId = `update-notification-tooltip-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
 
 const showTooltip = ref(false)
 let tooltipTimeoutId: number | null = null
@@ -72,9 +76,6 @@ const handleClickOutside = (event: Event) => {
     }
   }
 }
-
-// Add global click listener when tooltip is shown
-import { onMounted, onUnmounted, watch } from 'vue'
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
