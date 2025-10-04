@@ -6,18 +6,15 @@
     @mouseleave="showTooltip = false"
   >
     <!-- Red bell icon -->
-    <div
+    <button
       class="bell-icon"
       :class="{ 'bell-animate': isCheckingForUpdates }"
       aria-label="New version available"
-      role="button"
-      tabindex="0"
       @click="showTooltip = !showTooltip"
-      @keydown.enter="showTooltip = !showTooltip"
       @keydown.escape="showTooltip = false"
     >
       🔔
-    </div>
+    </button>
 
     <!-- Hover tooltip -->
     <Transition name="tooltip">
@@ -119,6 +116,13 @@ watch(showTooltip, newValue => {
 }
 
 .bell-icon {
+  /* Reset button default styles */
+  border: none;
+  background: none;
+  margin: 0;
+  font-family: inherit;
+
+  /* Original styles */
   font-size: 14px;
   cursor: pointer;
   padding: 2px;

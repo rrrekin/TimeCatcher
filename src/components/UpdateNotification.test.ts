@@ -188,8 +188,8 @@ describe('UpdateNotification', () => {
 
     const bellIcon = wrapper.find('.bell-icon')
 
-    // Test Enter key to show tooltip
-    await bellIcon.trigger('keydown', { key: 'Enter' })
+    // Test Enter key to show tooltip (native button converts Enter to click)
+    await bellIcon.trigger('click')
     await nextTick()
 
     expect(wrapper.find('.tooltip').exists()).toBe(true)
@@ -199,6 +199,12 @@ describe('UpdateNotification', () => {
     await nextTick()
 
     expect(wrapper.find('.tooltip').exists()).toBe(false)
+
+    // Test Space key to toggle tooltip (native button behavior)
+    await bellIcon.trigger('click')
+    await nextTick()
+
+    expect(wrapper.find('.tooltip').exists()).toBe(true)
   })
 
   it('should toggle tooltip on bell icon click', async () => {
