@@ -86,6 +86,19 @@
           </ul>
         </div>
       </div>
+
+      <!-- Export Button -->
+      <div class="export-section">
+        <button
+          class="export-button"
+          @click="exportReportToClipboard"
+          :disabled="standardTaskCount === 0"
+          :aria-label="standardTaskCount === 0 ? 'No data to export' : 'Export report data to clipboard as JSON'"
+          data-testid="export-button"
+        >
+          Export to Clipboard
+        </button>
+      </div>
     </div>
 
     <!-- Tooltip for task appearances -->
@@ -118,7 +131,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onUnmounted } from 'vue'
-import type { TaskRecord } from '@/shared/types'
+import type { TaskRecord, Category } from '@/shared/types'
 import { TASK_TYPE_NORMAL } from '@/shared/types'
 
 interface DailyReportProps {
@@ -130,6 +143,7 @@ interface DailyReportProps {
   totalTimeTrackedRounded: string
   totalTimeTrackedCombined: string
   totalMinutesTracked: number
+  categories: Category[]
   categoryBreakdown: Array<{
     name: string
     taskCount: number
@@ -347,6 +361,132 @@ const getStatusText = () => {
   }
 
   return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
+}
+
+// Parse time string to seconds
+const parseTimeToSeconds = (timeString: string): number => {
+  // Extract hours and minutes from format like "1h 25m", "45m", "0m"
+  const hourMatch = timeString.match(/(\d+)h/)
+  const minuteMatch = timeString.match(/(\d+)m/)
+
+  const hours = hourMatch ? parseInt(hourMatch[1]!, 10) : 0
+  const minutes = minuteMatch ? parseInt(minuteMatch[1]!, 10) : 0
+
+  return hours * 3600 + minutes * 60
+}
+
+// Export report data to clipboard as JSON
+const exportReportToClipboard = async () => {
+  try {
+    // Build export data
+    const exportData: Array<{
+      category: string
+      code: string
+      name: string
+      time: number
+    }> = []
+
+    props.categoryBreakdown.forEach(categoryData => {
+      // Find category code from categories prop
+      const category = props.categories.find(cat => cat.name === categoryData.name)
+      const categoryCode = category?.code || ''
+
+      // Add each task summary
+      categoryData.taskSummaries.forEach(task => {
+        const timeInSeconds = parseTimeToSeconds(task.totalTimeRounded)
+
+        exportData.push({
+          category: categoryData.name,
+          code: categoryCode,
+          name: task.name,
+          time: timeInSeconds
+        })
+      })
+    })
+
+    // Convert to JSON
+    const jsonString = JSON.stringify(exportData, null, 2)
+
+    // Copy to clipboard
+    await navigator.clipboard.writeText(jsonString)
+
+    // Show success toast
+    copyToastMessage.value = 'Report exported to clipboard'
+    showCopyToast.value = true
+
+    // Set timer to hide toast after 2 seconds
+    if (activeTimer) {
+      clearTimeout(activeTimer)
+    }
+    activeTimer = window.setTimeout(() => {
+      showCopyToast.value = false
+      activeTimer = null
+    }, 2000)
+  } catch (error) {
+    console.error('Failed to export report to clipboard:', error)
+
+    // Fallback for older browsers or when clipboard API is not available
+    try {
+      const exportData: Array<{
+        category: string
+        code: string
+        name: string
+        time: number
+      }> = []
+
+      props.categoryBreakdown.forEach(categoryData => {
+        const category = props.categories.find(cat => cat.name === categoryData.name)
+        const categoryCode = category?.code || ''
+
+        categoryData.taskSummaries.forEach(task => {
+          const timeInSeconds = parseTimeToSeconds(task.totalTimeRounded)
+
+          exportData.push({
+            category: categoryData.name,
+            code: categoryCode,
+            name: task.name,
+            time: timeInSeconds
+          })
+        })
+      })
+
+      const jsonString = JSON.stringify(exportData, null, 2)
+
+      const textArea = document.createElement('textarea')
+      textArea.value = jsonString
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      textArea.remove()
+
+      copyToastMessage.value = 'Report exported to clipboard'
+      showCopyToast.value = true
+
+      if (activeTimer) {
+        clearTimeout(activeTimer)
+      }
+      activeTimer = window.setTimeout(() => {
+        showCopyToast.value = false
+        activeTimer = null
+      }, 2000)
+    } catch (fallbackError) {
+      console.error('Clipboard fallback also failed:', fallbackError)
+      copyToastMessage.value = 'Failed to export report'
+      showCopyToast.value = true
+
+      if (activeTimer) {
+        clearTimeout(activeTimer)
+      }
+      activeTimer = window.setTimeout(() => {
+        showCopyToast.value = false
+        activeTimer = null
+      }, 3000)
+    }
+  }
 }
 </script>
 
@@ -627,5 +767,49 @@ const getStatusText = () => {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* Export section */
+.export-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+}
+
+.export-button {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.export-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--mantis), var(--emerald));
+  box-shadow: 0 4px 8px var(--shadow-color);
+  transform: translateY(-1px);
+}
+
+.export-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.export-button:focus {
+  outline: 2px solid var(--verdigris);
+  outline-offset: 2px;
+}
+
+.export-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, var(--text-muted), var(--text-muted));
 }
 </style>

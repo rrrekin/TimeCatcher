@@ -64,6 +64,7 @@
           :total-time-tracked-combined="totalTimeTracked.combined"
           :total-minutes-tracked="getTotalMinutesTracked()"
           :category-breakdown="getEnhancedCategoryBreakdown"
+          :categories="categories"
         />
 
         <!-- Application version positioned near window border -->
