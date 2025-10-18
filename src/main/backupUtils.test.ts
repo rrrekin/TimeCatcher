@@ -4,10 +4,10 @@ import { normalizeCategories, normalizeTaskRecords } from './backupUtils'
 describe('backupUtils - normalizeCategories', () => {
   it('dedupes categories by trimmed name and keeps a single default', () => {
     const input = [
-      { name: 'Dev', is_default: true },
+      { name: 'Dev', code: 'DEV', is_default: true },
       { name: 'Dev ' },
-      { name: 'Personal', is_default: true },
-      { name: 'Meetings' },
+      { name: 'Personal', code: 'PER', is_default: true },
+      { name: 'Meetings', code: '' },
       { name: '  ' },
       { name: null }
     ]
@@ -17,19 +17,41 @@ describe('backupUtils - normalizeCategories', () => {
     expect(out.map(c => c.name)).toEqual(['Dev', 'Personal', 'Meetings'])
     // First default wins: Dev should be default, others false
     expect(out).toEqual([
-      { name: 'Dev', is_default: true },
-      { name: 'Personal', is_default: false },
-      { name: 'Meetings', is_default: false }
+      { name: 'Dev', code: 'DEV', is_default: true },
+      { name: 'Personal', code: 'PER', is_default: false },
+      { name: 'Meetings', code: '', is_default: false }
     ])
   })
 
   it('assigns first as default when none provided', () => {
-    const input = [{ name: 'A' }, { name: 'B' }]
+    const input = [
+      { name: 'A', code: 'A1' },
+      { name: 'B', code: '' }
+    ]
     const out = normalizeCategories(input as any)
     expect(out).toEqual([
-      { name: 'A', is_default: true },
-      { name: 'B', is_default: false }
+      { name: 'A', code: 'A1', is_default: true },
+      { name: 'B', code: '', is_default: false }
     ])
+  })
+
+  it('handles missing code field gracefully', () => {
+    const input = [{ name: 'Test' }]
+    const out = normalizeCategories(input as any)
+    expect(out).toEqual([{ name: 'Test', code: '', is_default: true }])
+  })
+
+  it('truncates code to max 10 characters', () => {
+    const input = [{ name: 'Test', code: '12345678901234567890' }]
+    const out = normalizeCategories(input as any)
+    expect(out[0].code).toBe('1234567890')
+    expect(out[0].code.length).toBe(10)
+  })
+
+  it('trims whitespace from code', () => {
+    const input = [{ name: 'Test', code: '  CODE  ' }]
+    const out = normalizeCategories(input as any)
+    expect(out[0].code).toBe('CODE')
   })
 })
 

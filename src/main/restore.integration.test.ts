@@ -159,9 +159,9 @@ describe('Restore integration (normalized insertions)', () => {
     expect(sqlCalls['DELETE FROM task_records']).toBeTruthy()
     expect(sqlCalls['DELETE FROM categories']).toBeTruthy()
 
-    const catInserts = sqlCalls['INSERT INTO categories (name, is_default) VALUES (?, ?)'] || []
+    const catInserts = sqlCalls['INSERT INTO categories (name, code, is_default) VALUES (?, ?, ?)'] || []
     expect(catInserts.length).toBe(3)
-    const defaultCount = catInserts.reduce((acc, args) => acc + (args[1] ? 1 : 0), 0)
+    const defaultCount = catInserts.reduce((acc, args) => acc + (args[2] ? 1 : 0), 0)
     expect(defaultCount).toBe(1)
 
     const recInsert =

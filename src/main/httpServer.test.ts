@@ -183,6 +183,7 @@ describe('HttpServerManager', () => {
       vi.mocked(dbService.getDefaultCategory).mockResolvedValue({
         id: 1,
         name: 'Default',
+        code: '',
         is_default: true
       })
       vi.mocked(dbService.addTaskRecord).mockResolvedValue({

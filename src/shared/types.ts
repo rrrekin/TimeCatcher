@@ -30,6 +30,7 @@ export interface DatabaseError extends Error {
 export interface Category {
   id?: number
   name: string
+  code: string
   is_default?: boolean
   created_at?: string
 }
@@ -122,9 +123,9 @@ export interface ElectronAPI {
   removeHttpServerTaskCreatedListener?: (callback: (data: any) => void) => void
   // Database operations
   getCategories: () => Promise<Category[]>
-  addCategory: (name: string) => Promise<Category>
+  addCategory: (name: string, code?: string) => Promise<Category>
   deleteCategory: (id: number) => Promise<void>
-  updateCategory: (id: number, name: string) => Promise<void>
+  updateCategory: (id: number, name: string, code?: string) => Promise<void>
   categoryExists: (name: string) => Promise<boolean>
   setDefaultCategory: (id: number) => Promise<void>
   getDefaultCategory: () => Promise<Category | null>

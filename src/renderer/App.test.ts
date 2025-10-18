@@ -37,8 +37,8 @@ function createElectronAPIMock(overrides?: Partial<typeof global.window.electron
 
 // Mock all the composables
 const mockCategories = [
-  { id: 1, name: 'Work', is_default: true },
-  { id: 2, name: 'Personal', is_default: false }
+  { id: 1, name: 'Work', code: 'WRK', is_default: true },
+  { id: 2, name: 'Personal', code: '', is_default: false }
 ]
 
 const mockTaskRecords = [
@@ -664,7 +664,7 @@ describe('App Component', () => {
       await vm.addCategoryWrapper()
 
       expect(mockCategoryExists).toHaveBeenCalledWith('New Category')
-      expect(mockAddCategory).toHaveBeenCalledWith('New Category')
+      expect(mockAddCategory).toHaveBeenCalledWith('New Category', '')
       expect(vm.newCategoryName).toBe('')
       expect(vm.isAddingCategory).toBe(false)
     })
@@ -686,7 +686,7 @@ describe('App Component', () => {
       mockDeleteCategory.mockResolvedValue(undefined)
 
       const vm = wrapper.vm as any
-      const category = { id: 2, name: 'Personal', is_default: false }
+      const category = { id: 2, name: 'Personal', code: '', is_default: false }
 
       await vm.deleteCategoryWrapper(category)
 
@@ -698,7 +698,7 @@ describe('App Component', () => {
       global.confirm = vi.fn(() => false)
 
       const vm = wrapper.vm as any
-      const category = { id: 2, name: 'Personal', is_default: false }
+      const category = { id: 2, name: 'Personal', code: '', is_default: false }
 
       await vm.deleteCategoryWrapper(category)
 
@@ -707,7 +707,7 @@ describe('App Component', () => {
 
     it('should start editing category', () => {
       const vm = wrapper.vm as any
-      const category = { id: 1, name: 'Work', is_default: true }
+      const category = { id: 1, name: 'Work', code: 'WRK', is_default: true }
 
       vm.startEditCategory(category)
 
@@ -722,20 +722,22 @@ describe('App Component', () => {
       const vm = wrapper.vm as any
       vm.editingCategoryId = 1
       vm.editingCategoryName = 'Updated Work'
+      vm.editingCategoryCode = ''
 
-      const category = { id: 1, name: 'Work', is_default: true }
+      const category = { id: 1, name: 'Work', code: '', is_default: true }
       await vm.saveEditCategory(category)
 
-      expect(mockUpdateCategory).toHaveBeenCalledWith(1, 'Updated Work')
+      expect(mockUpdateCategory).toHaveBeenCalledWith(1, 'Updated Work', '')
       expect(vm.editingCategoryId).toBe(null)
       expect(vm.editingCategoryName).toBe('')
+      expect(vm.editingCategoryCode).toBe('')
     })
 
     it('should set default category', async () => {
       mockSetDefaultCategory.mockResolvedValue(undefined)
 
       const vm = wrapper.vm as any
-      const category = { id: 2, name: 'Personal', is_default: false }
+      const category = { id: 2, name: 'Personal', code: '', is_default: false }
 
       await vm.setDefaultCategoryWrapper(category)
 
@@ -1674,7 +1676,7 @@ describe('App Component', () => {
       vm.editingCategoryId = 1
       vm.editingCategoryName = 'Updated Category'
 
-      const category = { id: 1, name: 'Work', is_default: true }
+      const category = { id: 1, name: 'Work', code: 'WRK', is_default: true }
       await vm.saveEditCategory(category)
 
       // Should show error toast
@@ -1687,7 +1689,7 @@ describe('App Component', () => {
       mockDeleteCategory.mockRejectedValue(new Error('Failed to delete category'))
 
       const vm = wrapper.vm as any
-      const category = { id: 2, name: 'Personal', is_default: false }
+      const category = { id: 2, name: 'Personal', code: '', is_default: false }
 
       await vm.deleteCategoryWrapper(category)
 
@@ -2074,7 +2076,7 @@ describe('App Component', () => {
       mockDeleteCategory.mockRejectedValue(defaultCategoryError)
 
       const vm = wrapper.vm as any
-      const defaultCategory = { id: 1, name: 'Work', is_default: true }
+      const defaultCategory = { id: 1, name: 'Work', code: 'WRK', is_default: true }
 
       await vm.deleteCategoryWrapper(defaultCategory)
 
@@ -2085,11 +2087,12 @@ describe('App Component', () => {
 
     it("should handle category edit when name hasn't changed", async () => {
       const vm = wrapper.vm as any
-      const category = { id: 1, name: 'Work', is_default: true }
+      const category = { id: 1, name: 'Work', code: 'WRK', is_default: true }
 
-      // Set editing to match current category name (no change)
+      // Set editing to match current category name and code (no change)
       vm.editingCategoryId = 1
       vm.editingCategoryName = 'Work'
+      vm.editingCategoryCode = 'WRK'
 
       await vm.saveEditCategory(category)
 
@@ -2097,13 +2100,14 @@ describe('App Component', () => {
       expect(mockUpdateCategory).not.toHaveBeenCalled()
       expect(vm.editingCategoryId).toBe(null)
       expect(vm.editingCategoryName).toBe('')
+      expect(vm.editingCategoryCode).toBe('')
     })
 
     it('should handle category existence check during editing', async () => {
       mockCategoryExists.mockResolvedValue(true) // Category already exists
 
       const vm = wrapper.vm as any
-      const category = { id: 1, name: 'Work', is_default: true }
+      const category = { id: 1, name: 'Work', code: 'WRK', is_default: true }
 
       vm.editingCategoryId = 1
       vm.editingCategoryName = 'ExistingCategory'

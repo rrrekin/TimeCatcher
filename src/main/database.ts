@@ -29,6 +29,12 @@ class DatabaseService {
         UNIQUE
         NOT
         NULL,
+        code
+        TEXT
+        NOT
+        NULL
+        DEFAULT
+        '',
         is_default
         BOOLEAN
         DEFAULT
@@ -39,6 +45,13 @@ class DatabaseService {
         CURRENT_TIMESTAMP
       )
     `)
+
+    // Add code column if it doesn't exist (migration for existing databases)
+    const tableInfo = this.db.prepare('PRAGMA table_info(categories)').all() as { name: string }[]
+    const hasCodeColumn = tableInfo.some(col => col.name === 'code')
+    if (!hasCodeColumn) {
+      this.db.exec(`ALTER TABLE categories ADD COLUMN code TEXT NOT NULL DEFAULT ''`)
+    }
 
     // Create task_records table
     this.db.exec(`
@@ -102,7 +115,7 @@ class DatabaseService {
       if (process.env.NODE_ENV === 'development') {
         console.log('No categories found, creating default categories...')
       }
-      const insert = this.db.prepare('INSERT OR IGNORE INTO categories (name, is_default) VALUES (?, ?)')
+      const insert = this.db.prepare('INSERT OR IGNORE INTO categories (name, code, is_default) VALUES (?, ?, ?)')
       defaultCategories.forEach((category, index) => {
         try {
           // Set Development (first category) as default - use 1/0 for SQLite boolean
@@ -110,7 +123,7 @@ class DatabaseService {
           if (process.env.NODE_ENV === 'development') {
             console.log('Attempting to create category:', { category, is_default: Boolean(isDefault) })
           }
-          const result = insert.run(category, isDefault)
+          const result = insert.run(category, '', isDefault)
 
           if (result.changes === 0) {
             console.warn('Category already exists during initialization:', { category, is_default: Boolean(isDefault) })
@@ -158,9 +171,9 @@ class DatabaseService {
     return this.db.prepare('SELECT * FROM categories ORDER BY name').all() as Category[]
   }
 
-  addCategory(name: string): Category {
-    const insert = this.db.prepare('INSERT INTO categories (name) VALUES (?)')
-    const result = insert.run(name)
+  addCategory(name: string, code: string = ''): Category {
+    const insert = this.db.prepare('INSERT INTO categories (name, code) VALUES (?, ?)')
+    const result = insert.run(name, code)
     return this.db.prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid) as Category
   }
 
@@ -181,8 +194,12 @@ class DatabaseService {
     return result.count > 0
   }
 
-  updateCategory(id: number, name: string): void {
-    this.db.prepare('UPDATE categories SET name = ? WHERE id = ?').run(name, id)
+  updateCategory(id: number, name: string, code?: string): void {
+    if (code !== undefined) {
+      this.db.prepare('UPDATE categories SET name = ?, code = ? WHERE id = ?').run(name, code, id)
+    } else {
+      this.db.prepare('UPDATE categories SET name = ? WHERE id = ?').run(name, id)
+    }
   }
 
   setDefaultCategory(id: number): void {

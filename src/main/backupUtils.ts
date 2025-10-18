@@ -2,11 +2,13 @@ import { TASK_TYPES, TASK_TYPE_END } from '../shared/types'
 
 export interface RawCategory {
   name?: unknown
+  code?: unknown
   is_default?: unknown
 }
 
 export interface NormalizedCategory {
   name: string
+  code: string
   is_default: boolean
 }
 
@@ -35,8 +37,11 @@ export function normalizeCategories(categories: any[]): NormalizedCategory[] {
     const name = String((c?.name as any) ?? '').trim()
     if (!name || seen.has(name)) continue
     seen.add(name)
+    const code = String((c?.code as any) ?? '')
+      .trim()
+      .substring(0, 10) // Max 10 characters
     const isDefault = Boolean(c?.is_default)
-    deduped.push({ name, is_default: isDefault })
+    deduped.push({ name, code, is_default: isDefault })
   }
 
   // Ensure a single default: prefer first marked default, otherwise first item if available
@@ -50,7 +55,7 @@ export function normalizeCategories(categories: any[]): NormalizedCategory[] {
   if (!defaultName && deduped.length > 0) {
     defaultName = deduped[0].name
   }
-  return deduped.map(c => ({ name: c.name, is_default: defaultName === c.name }))
+  return deduped.map(c => ({ name: c.name, code: c.code, is_default: defaultName === c.name }))
 }
 
 export function normalizeTaskRecords(records: any[]): NormalizedTaskRecord[] {
