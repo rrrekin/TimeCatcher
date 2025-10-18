@@ -97,9 +97,9 @@ ipcMain.handle('db:get-categories', async () => {
   }
 })
 
-ipcMain.handle('db:add-category', async (_, name: string) => {
+ipcMain.handle('db:add-category', async (_, name: string, code?: string) => {
   try {
-    return dbService.addCategory(name)
+    return dbService.addCategory(name, code)
   } catch (error) {
     console.error('Failed to add category:', error)
     throw new Error(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -124,9 +124,9 @@ ipcMain.handle('db:category-exists', async (_, name: string) => {
   }
 })
 
-ipcMain.handle('db:update-category', async (_, id: number, name: string) => {
+ipcMain.handle('db:update-category', async (_, id: number, name: string, code?: string) => {
   try {
-    return dbService.updateCategory(id, name)
+    return dbService.updateCategory(id, name, code)
   } catch (error) {
     console.error('Failed to update category:', error)
     throw new Error(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -415,10 +415,10 @@ ipcMain.handle('app:restore', async () => {
       dbService.db.prepare('DELETE FROM categories').run()
 
       // Restore categories using normalization helper
-      const insertCat = dbService.db.prepare('INSERT INTO categories (name, is_default) VALUES (?, ?)')
+      const insertCat = dbService.db.prepare('INSERT INTO categories (name, code, is_default) VALUES (?, ?, ?)')
       const normCats = normalizeCategories(backup.database.categories)
       for (const c of normCats) {
-        insertCat.run(c.name, c.is_default ? 1 : 0)
+        insertCat.run(c.name, c.code, c.is_default ? 1 : 0)
       }
 
       // Restore task records

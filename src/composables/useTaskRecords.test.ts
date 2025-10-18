@@ -259,4 +259,192 @@ describe('useTaskRecords', () => {
     expect(parseTimeInput('  9:30  ')).toBe('09:30')
     expect(parseTimeInput('\t14:15\n')).toBe('14:15')
   })
+
+  // Eviction functionality tests
+  describe('triggerEvictionIfEnabled integration', () => {
+    let originalLocalStorage: Storage
+    let localStorageMock: { [key: string]: string }
+
+    beforeEach(() => {
+      // Mock localStorage
+      localStorageMock = {}
+      originalLocalStorage = global.localStorage
+      global.localStorage = {
+        getItem: (key: string) => localStorageMock[key] || null,
+        setItem: (key: string, value: string) => {
+          localStorageMock[key] = value
+        },
+        removeItem: (key: string) => {
+          delete localStorageMock[key]
+        },
+        clear: () => {
+          localStorageMock = {}
+        },
+        length: 0,
+        key: () => null
+      } as Storage
+
+      // Add deleteOldTaskRecords to electronAPI
+      electronAPI.deleteOldTaskRecords = vi.fn().mockResolvedValue(5)
+    })
+
+    afterEach(() => {
+      global.localStorage = originalLocalStorage
+    })
+
+    it('should trigger eviction when enabled with valid settings after end task', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2025-01-15T10:00:00'))
+
+      // Set eviction settings
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      // Calculate expected cutoff date (180 days ago from 2025-01-15)
+      const cutoffDate = new Date('2025-01-15T10:00:00')
+      cutoffDate.setDate(cutoffDate.getDate() - 180)
+      const expectedCutoff = cutoffDate.toISOString().split('T')[0]
+
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(expectedCutoff)
+
+      vi.useRealTimers()
+    })
+
+    it('should skip eviction when disabled', async () => {
+      localStorageMock['evictionEnabled'] = 'false'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      expect(electronAPI.deleteOldTaskRecords).not.toHaveBeenCalled()
+    })
+
+    it('should skip eviction when evictionEnabled is not set', async () => {
+      // No evictionEnabled in localStorage
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      expect(electronAPI.deleteOldTaskRecords).not.toHaveBeenCalled()
+    })
+
+    it('should skip eviction with invalid days setting (NaN)', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = 'not-a-number'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      expect(electronAPI.deleteOldTaskRecords).not.toHaveBeenCalled()
+    })
+
+    it('should skip eviction with invalid days setting (less than 30)', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '25'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      expect(electronAPI.deleteOldTaskRecords).not.toHaveBeenCalled()
+    })
+
+    it('should use default 180 days when evictionDaysToKeep is not set', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2025-01-15T10:00:00'))
+
+      localStorageMock['evictionEnabled'] = 'true'
+      // No evictionDaysToKeep set - should default to 180
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask(TASK_TYPE_END, 'End of day')
+
+      // Calculate expected cutoff date (180 days ago)
+      const cutoffDate = new Date('2025-01-15T10:00:00')
+      cutoffDate.setDate(cutoffDate.getDate() - 180)
+      const expectedCutoff = cutoffDate.toISOString().split('T')[0]
+
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(expectedCutoff)
+
+      vi.useRealTimers()
+    })
+
+    it('should handle missing deleteOldTaskRecords API gracefully', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      // Remove deleteOldTaskRecords from API
+      delete electronAPI.deleteOldTaskRecords
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      // Should not throw even though API is missing
+      await expect(addSpecialTask(TASK_TYPE_END, 'End of day')).resolves.not.toThrow()
+    })
+
+    it('should handle deleteOldTaskRecords API undefined gracefully', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      // Set deleteOldTaskRecords to undefined
+      electronAPI.deleteOldTaskRecords = undefined
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      // Should not throw even though API is undefined
+      await expect(addSpecialTask(TASK_TYPE_END, 'End of day')).resolves.not.toThrow()
+    })
+
+    it('should handle eviction API errors without blocking end task creation', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      // Make deleteOldTaskRecords throw an error
+      electronAPI.deleteOldTaskRecords.mockRejectedValue(new Error('Database error'))
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      // Should not throw - eviction failure shouldn't block End task creation
+      await expect(addSpecialTask(TASK_TYPE_END, 'End of day')).resolves.not.toThrow()
+    })
+
+    it('should not trigger eviction for pause tasks', async () => {
+      localStorageMock['evictionEnabled'] = 'true'
+      localStorageMock['evictionDaysToKeep'] = '180'
+
+      const { addSpecialTask } = useTaskRecords(selectedDate)
+      await addSpecialTask('pause', 'Break time')
+
+      expect(electronAPI.deleteOldTaskRecords).not.toHaveBeenCalled()
+    })
+
+    it('should calculate correct cutoff date for various retention periods', async () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2025-06-15T14:30:00'))
+
+      localStorageMock['evictionEnabled'] = 'true'
+
+      // Test 30 days
+      localStorageMock['evictionDaysToKeep'] = '30'
+      const { addSpecialTask: addSpecialTask1 } = useTaskRecords(selectedDate)
+      await addSpecialTask1(TASK_TYPE_END, 'End')
+
+      const cutoff30 = new Date('2025-06-15T14:30:00')
+      cutoff30.setDate(cutoff30.getDate() - 30)
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(cutoff30.toISOString().split('T')[0])
+
+      // Test 365 days
+      electronAPI.deleteOldTaskRecords.mockClear()
+      localStorageMock['evictionDaysToKeep'] = '365'
+      const { addSpecialTask: addSpecialTask2 } = useTaskRecords(selectedDate)
+      await addSpecialTask2(TASK_TYPE_END, 'End')
+
+      const cutoff365 = new Date('2025-06-15T14:30:00')
+      cutoff365.setDate(cutoff365.getDate() - 365)
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(cutoff365.toISOString().split('T')[0])
+
+      vi.useRealTimers()
+    })
+  })
 })

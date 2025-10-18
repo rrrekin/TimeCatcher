@@ -102,11 +102,13 @@ SQLite with clean schema. Key features:
 - Task types: 'normal', 'pause', 'end' (immutable after creation)
 - One 'end' task per day constraint
 - Default category protection
+- Category code field: optional (empty string default), max 10 characters, non-unique, used for report exports
 
 ```sql
 CREATE TABLE categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT UNIQUE NOT NULL,
+  code TEXT NOT NULL DEFAULT '',
   is_default BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -129,6 +131,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_end_per_day ON task_records(date) WHERE ta
 ```
 
 ### Type System & Runtime Constants
+
+__Category Interface__:
+
+- `Category` interface: `{ id?: number, name: string, code: string, is_default?: boolean, created_at?: string }`
+- `code` field is always a string (non-null), defaults to empty string `''`
+- Max 10 characters validation enforced at composable level
+- Trimmed before database operations
 
 __Task Type Management__:
 
@@ -269,11 +278,9 @@ __Tests__: `src/**/*.test.ts` files
 
 ## Key Recommendations
 
-Always consider use of sequential thinking and memory-timecatcher MCPs, especially when working with complex code.
+Always consider use of sequential thinking MCP, especially when working with complex code.
 Use other MCPs if this can be useful for a specific task or step.
 For GUI verification, use the Puppeteer MCP server.
-
-Keep the CLAUDE.md context file up-to-date with the latest changes and as compact as possible.
 
 ## Agent Coding Checklist
 
@@ -282,6 +289,322 @@ Keep the CLAUDE.md context file up-to-date with the latest changes and as compac
 - IPC/runtime guards: Check `window.electronAPI` and method presence; show user-friendly errors if missing.
 - DOM timing: After opening dropdowns/toggles, `await nextTick()` before focusing/positioning.
 - General: Prefer explicit refs/props over implicit DOM traversal; centralize shared regex/time helpers to avoid drift.
+
+# Memory MCP Server Usage
+
+## Core Principle: Memory-First Approach
+
+__Before asking the user for any project context, ALWAYS check memory first.__
+
+Use the memory MCP server to maintain persistent context about this project. Your goal is to minimize repetitive questions and work autonomously by building and leveraging a comprehensive memory of the project.
+
+## Required Behaviors
+
+### On First Session in This Project
+
+When you detect this is your first time working on this project:
+
+1. __Initialize project memory__ by storing:
+
+- Project overview (language, framework, build system, architecture)
+- Build and dependency information
+- Code conventions and standards
+- Key architectural decisions
+
+2. __Ask the user once__ for high-level project information, then store it persistently
+
+3. __Explore the codebase__ to discover and store:
+
+- Testing patterns and frameworks
+- Module/package structure
+- Configuration locations
+- Common patterns and conventions
+
+### On Every Session Start
+
+__Automatically query these memories:__
+
+```
+retrieve_memory: "project-overview"
+retrieve_memory: "recent-changes"
+retrieve_memory: "active-tasks"
+```
+
+__If working on specific areas, also query:__
+
+- Relevant `arch:`, `pattern:`, `test:`, `mod:`, `dep:` memories
+- Any `issue:` memories related to the current work
+
+__Never ask the user for information that might be in memory.__
+
+### During Development
+
+__Continuously maintain memory by:__
+
+1. __Storing immediately__ when you discover:
+
+- New architectural decisions
+- Code patterns or conventions
+- Testing approaches
+- Dependency information
+- Known issues or workarounds
+- Module responsibilities
+
+2. __Updating existing memories__ when you find:
+
+- Changed conventions
+- Updated dependencies
+- Evolved patterns
+- Resolved issues
+
+3. __Checking memory before__ you:
+
+- Ask the user for context
+- Make architectural decisions
+- Write tests
+- Implement features
+- Debug issues
+
+### Session End Behavior
+
+Before ending a work session, __automatically store__:
+
+- Summary of work completed
+- Any TODOs or next steps
+- New discoveries or changes made
+- Updated status of active tasks
+
+## Memory Categorization
+
+__Use these prefixes consistently__ for all memory keys:
+
+| Prefix     | Purpose                 | Examples                                         |
+|------------|-------------------------|--------------------------------------------------|
+| `arch:`    | Architectural decisions | `arch:layering`, `arch:error-handling`           |
+| `dep:`     | Dependencies            | `dep:main-framework`, `dep:test-library`         |
+| `test:`    | Testing patterns        | `test:unit-pattern`, `test:integration-setup`    |
+| `build:`   | Build configuration     | `build:tasks`, `build:scripts`                   |
+| `pattern:` | Code patterns           | `pattern:async`, `pattern:validation`            |
+| `config:`  | Configuration           | `config:environment`, `config:database`          |
+| `issue:`   | Known problems          | `issue:auth-bug`, `issue:performance-workaround` |
+| `mod:`     | Module information      | `mod:api`, `mod:data-layer`                      |
+
+__Special keys__ (no prefix):
+
+- `project-overview` - High-level project information
+- `recent-changes` - Recent work summary
+- `active-tasks` - Current TODOs and priorities
+
+## Proactive Memory Queries
+
+### Before Asking User Questions
+
+__Pattern to follow:__
+
+1. Identify what information you need
+2. Construct relevant memory queries
+3. Retrieve using appropriate keywords
+4. Only ask user if information is not in memory
+
+__Example:__
+
+```
+User: "Add validation to the user endpoint"
+
+Your process:
+1. retrieve_memory: "mod:api" or "pattern:validation"
+2. retrieve_memory: "arch:error-handling"
+3. If found → Use that approach
+4. If not found → Ask user, then store the decision
+```
+
+### Before Making Decisions
+
+__Always check for existing patterns:__
+
+```
+retrieve_memory: "arch:[relevant-area]"
+retrieve_memory: "pattern:[relevant-pattern]"
+```
+
+__If no pattern exists:__
+
+1. Discuss approach with user
+2. Implement the solution
+3. __Immediately store__ the decision with rationale
+
+### Before Writing Tests
+
+__Always retrieve testing patterns:__
+
+```
+retrieve_memory: "test:[layer-or-type]"
+retrieve_memory: "test:setup"
+```
+
+__Follow stored conventions.__ If none exist, establish them and store.
+
+### During Debugging
+
+__Check for known issues first:__
+
+```
+retrieve_memory: "issue:[component-name]"
+retrieve_memory: "issue:[symptom-keyword]"
+```
+
+__When you solve a bug:__
+
+```
+store_memory: "issue:[descriptive-name]"
+Include: problem, root cause, solution, prevention measures
+```
+
+## What to Store
+
+__Store:__
+
+- Architectural decisions and their rationale
+- Code conventions and patterns
+- Testing strategies and setup
+- Build configurations and tasks
+- Module responsibilities and interfaces
+- Known issues and their workarounds
+- Configuration approaches
+- Important dependency information
+
+__Don't Store:__
+
+- Large code blocks (store patterns and references instead)
+- Temporary values or session state
+- Trivial or obvious information
+- Duplicate information
+
+## Memory Update Strategy
+
+__When information changes:__
+
+- __Update__ existing memory rather than creating new entries
+- Note what changed and why
+- Preserve historical context if relevant to future decisions
+
+__When information becomes outdated:__
+
+- Update or delete obsolete memories
+- Store migration notes if relevant
+
+## Workflow Integration
+
+### Test-Driven Development
+
+1. __Red Phase:__ Check `test:` memories for patterns before writing test
+2. __Green Phase:__ Use `arch:` and `pattern:` memories for implementation
+3. __Refactor Phase:__ Store any new patterns discovered
+
+### Feature Implementation
+
+1. __Before starting:__ Query relevant `arch:`, `mod:`, `pattern:` memories
+2. __During work:__ Follow stored conventions
+3. __After completion:__ Store any new patterns or decisions
+
+### Code Review
+
+__Before suggesting changes:__
+
+- Check `pattern:` and `arch:` memories for project standards
+- Ensure suggestions align with stored conventions
+
+## Efficiency Guidelines
+
+__Batch queries at session start:__
+
+```
+retrieve_memory: "project-overview"
+retrieve_memory: "recent-changes"
+retrieve_memory: "arch:*" (if working on architecture)
+```
+
+__Store after logical completion:__
+
+- After solving a problem
+- After making a decision
+- After discovering a pattern
+- At end of work session
+
+__Use consistent terminology:__
+
+- Make keys searchable and predictable
+- Follow the prefix conventions strictly
+- Use descriptive names
+
+## Required Workflow Pattern
+
+__Standard interaction pattern:__
+
+```
+1. User makes a request
+2. You determine what context is needed
+3. Query relevant memories
+4. Use retrieved context in your response
+5. Store any new discoveries
+6. Respond to user
+```
+
+__Anti-pattern (don't do this):__
+
+```
+1. User makes a request
+2. You immediately ask: "What framework are you using?"
+3. User provides context you should have in memory
+```
+
+## Decision-Making Framework
+
+__When you need to make a choice:__
+
+1. __Check memory first:__ Is there an existing pattern or decision?
+2. __If yes:__ Follow it consistently
+3. __If no:__
+
+- Check if it's a significant decision → Ask user
+- If minor → Make reasonable choice, document it
+- Store the decision immediately
+
+__Always document "why" not just "what"__ in architectural memories.
+
+## Debugging Protocol
+
+__Step 1: Check for known issues__
+
+```
+retrieve_memory: "issue:[component]"
+```
+
+__Step 2: Document investigation__
+
+- As you debug, note findings
+- When solved, immediately store complete context
+
+__Step 3: Link related context__
+
+- Reference relevant `arch:` or `mod:` memories
+- Note any pattern violations that caused the issue
+
+## Autonomous Operation
+
+__Your goal:__ Work as autonomously as possible by:
+
+- Building comprehensive project memory over time
+- Always checking memory before asking questions
+- Storing all significant decisions and patterns
+- Maintaining consistency with stored conventions
+- Reducing user's need to repeat information
+
+__Success metric:__ User rarely needs to explain the same project context twice.
+
+---
+
+__Remember:__ Memory is your persistent context. Use it proactively to work faster and more consistently.
 
 ## Versioning System
 

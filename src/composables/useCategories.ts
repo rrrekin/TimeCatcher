@@ -22,7 +22,7 @@ export function useCategories() {
     }
   }
 
-  const addCategory = async (name: string): Promise<Category> => {
+  const addCategory = async (name: string, code?: string): Promise<Category> => {
     if (!window.electronAPI) {
       throw new Error('Electron API not available')
     }
@@ -32,8 +32,13 @@ export function useCategories() {
       throw new Error('Category name cannot be empty')
     }
 
+    const trimmedCode = (code || '').trim()
+    if (trimmedCode.length > 10) {
+      throw new Error('Category code cannot exceed 10 characters')
+    }
+
     try {
-      const newCategory = await window.electronAPI.addCategory(trimmedName)
+      const newCategory = await window.electronAPI.addCategory(trimmedName, trimmedCode)
       categories.value.push(newCategory)
       return newCategory
     } catch (error) {
@@ -42,7 +47,7 @@ export function useCategories() {
     }
   }
 
-  const updateCategory = async (id: number, name: string): Promise<void> => {
+  const updateCategory = async (id: number, name: string, code?: string): Promise<void> => {
     if (!window.electronAPI) {
       throw new Error('Electron API not available')
     }
@@ -52,11 +57,19 @@ export function useCategories() {
       throw new Error('Category name cannot be empty')
     }
 
+    const trimmedCode = code !== undefined ? code.trim() : undefined
+    if (trimmedCode !== undefined && trimmedCode.length > 10) {
+      throw new Error('Category code cannot exceed 10 characters')
+    }
+
     try {
-      await window.electronAPI.updateCategory(id, trimmedName)
+      await window.electronAPI.updateCategory(id, trimmedName, trimmedCode)
       const categoryIndex = categories.value.findIndex(cat => cat.id === id)
       if (categoryIndex !== -1) {
         categories.value[categoryIndex]!.name = trimmedName
+        if (trimmedCode !== undefined) {
+          categories.value[categoryIndex]!.code = trimmedCode
+        }
       }
     } catch (error) {
       console.error('Failed to update category:', error)

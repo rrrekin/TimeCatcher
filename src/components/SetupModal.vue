@@ -107,19 +107,32 @@
                 title="Double-click to edit"
                 :class="{ 'category-updating': isUpdatingCategory && editingCategoryId === category.id }"
               >
-                <input
-                  v-if="editingCategoryId === category.id"
-                  :value="editingCategoryName"
-                  @input="$emit('updateEditingCategoryName', ($event.target as HTMLInputElement).value)"
-                  @keyup.enter="$emit('saveEditCategory', category)"
-                  @keyup.escape="handleEscapeCancel"
-                  @blur="handleBlurSave(category)"
-                  class="category-input"
-                  autofocus
-                />
-                <span v-else class="category-name">
-                  {{ category.name }}
-                </span>
+                <div v-if="editingCategoryId === category.id" class="category-edit-form">
+                  <input
+                    :value="editingCategoryName"
+                    @input="$emit('updateEditingCategoryName', ($event.target as HTMLInputElement).value)"
+                    @keyup.enter="$emit('saveEditCategory', category)"
+                    @keyup.escape="handleEscapeCancel"
+                    @blur="handleBlurSave(category)"
+                    class="category-input category-name-input"
+                    placeholder="Category name"
+                    autofocus
+                  />
+                  <input
+                    :value="editingCategoryCode"
+                    @input="$emit('updateEditingCategoryCode', ($event.target as HTMLInputElement).value)"
+                    @keyup.enter="$emit('saveEditCategory', category)"
+                    @keyup.escape="handleEscapeCancel"
+                    @blur="handleBlurSave(category)"
+                    class="category-input category-code-input"
+                    placeholder="Code (max 10)"
+                    maxlength="10"
+                  />
+                </div>
+                <div v-else class="category-display">
+                  <span class="category-name">{{ category.name }}</span>
+                  <span v-if="category.code" class="category-code">{{ category.code }}</span>
+                </div>
                 <div class="category-actions">
                   <button
                     class="default-category-btn"
@@ -144,15 +157,26 @@
               </div>
 
               <div v-if="isAddingCategory" class="add-category-form">
-                <input
-                  :value="newCategoryName"
-                  @input="$emit('updateNewCategoryName', ($event.target as HTMLInputElement).value)"
-                  @keyup.enter="$emit('addCategory')"
-                  @keyup.escape="$emit('cancelAddingCategory')"
-                  placeholder="Category name"
-                  class="category-input"
-                  autofocus
-                />
+                <div class="add-category-inputs">
+                  <input
+                    :value="newCategoryName"
+                    @input="$emit('updateNewCategoryName', ($event.target as HTMLInputElement).value)"
+                    @keyup.enter="$emit('addCategory')"
+                    @keyup.escape="$emit('cancelAddingCategory')"
+                    placeholder="Category name"
+                    class="category-input category-name-input"
+                    autofocus
+                  />
+                  <input
+                    :value="newCategoryCode"
+                    @input="$emit('updateNewCategoryCode', ($event.target as HTMLInputElement).value)"
+                    @keyup.enter="$emit('addCategory')"
+                    @keyup.escape="$emit('cancelAddingCategory')"
+                    placeholder="Code (max 10)"
+                    class="category-input category-code-input"
+                    maxlength="10"
+                  />
+                </div>
                 <div class="add-category-actions">
                   <button class="add-confirm-btn" @click="$emit('addCategory')">Add</button>
                   <button class="add-cancel-btn" @click="$emit('cancelAddingCategory')">Cancel</button>
@@ -334,7 +358,15 @@ const props = defineProps({
     type: String,
     required: true
   },
+  editingCategoryCode: {
+    type: String,
+    required: true
+  },
   newCategoryName: {
+    type: String,
+    required: true
+  },
+  newCategoryCode: {
     type: String,
     required: true
   },
@@ -384,11 +416,13 @@ const emit = defineEmits<{
   updateTempTargetWorkHours: [hours: number]
   startEditCategory: [category: Category]
   updateEditingCategoryName: [name: string]
+  updateEditingCategoryCode: [code: string]
   saveEditCategory: [category: Category]
   cancelEditCategory: []
   setDefaultCategory: [category: Category]
   deleteCategory: [category: Category]
   updateNewCategoryName: [name: string]
+  updateNewCategoryCode: [code: string]
   addCategory: []
   cancelAddingCategory: []
   startAddingCategory: []
@@ -736,20 +770,49 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.category-name {
+.category-display {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-name {
   color: var(--text-primary);
   font-weight: 500;
 }
 
-.category-input {
+.category-code {
+  color: var(--text-secondary);
+  font-size: 12px;
+  background: var(--bg-secondary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+.category-edit-form {
   flex: 1;
+  display: flex;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.category-input {
   background: var(--bg-secondary);
   border: 1px solid var(--primary);
   border-radius: 4px;
   padding: 6px 8px;
   color: var(--text-primary);
-  margin-right: 12px;
+}
+
+.category-name-input {
+  flex: 2;
+}
+
+.category-code-input {
+  flex: 1;
+  min-width: 80px;
 }
 
 .category-input:focus {
@@ -811,6 +874,11 @@ onUnmounted(() => {
   background: var(--bg-primary);
   border: 1px solid var(--primary);
   border-radius: 6px;
+}
+
+.add-category-inputs {
+  display: flex;
+  gap: 8px;
 }
 
 .add-category-actions {

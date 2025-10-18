@@ -96,7 +96,9 @@
       :is-setting-default="isSettingDefault"
       :editing-category-id="editingCategoryId"
       :editing-category-name="editingCategoryName"
+      :editing-category-code="editingCategoryCode"
       :new-category-name="newCategoryName"
+      :new-category-code="newCategoryCode"
       @close="closeSetupModal"
       @save="saveSettings"
       @update-temp-theme="theme => (tempTheme = theme)"
@@ -109,11 +111,13 @@
       @update-temp-http-server-port="port => (tempHttpServerPort = port)"
       @start-edit-category="startEditCategory"
       @update-editing-category-name="name => (editingCategoryName = name)"
+      @update-editing-category-code="code => (editingCategoryCode = code)"
       @save-edit-category="saveEditCategory"
       @cancel-edit-category="cancelEditCategory"
       @set-default-category="setDefaultCategoryWrapper"
       @delete-category="deleteCategoryWrapper"
       @update-new-category-name="name => (newCategoryName = name)"
+      @update-new-category-code="code => (newCategoryCode = code)"
       @add-category="addCategoryWrapper"
       @cancel-adding-category="cancelAddingCategory"
       @start-adding-category="startAddingCategory"
@@ -296,9 +300,11 @@ let mediaQueryHandler: ((event: MediaQueryListEvent) => void) | null = null
 
 // Category management UI state
 const newCategoryName = ref('')
+const newCategoryCode = ref('')
 const isAddingCategory = ref(false)
 const editingCategoryId = ref<number | null>(null)
 const editingCategoryName = ref('')
+const editingCategoryCode = ref('')
 
 // Toast notifications
 const toastMessage = ref('')
@@ -594,6 +600,8 @@ const addCategoryWrapper = async () => {
   const name = newCategoryName.value.trim()
   if (!name) return
 
+  const code = newCategoryCode.value.trim()
+
   try {
     const exists = await categoryExists(name)
     if (exists) {
@@ -601,8 +609,9 @@ const addCategoryWrapper = async () => {
       return
     }
 
-    await addCategory(name)
+    await addCategory(name, code)
     newCategoryName.value = ''
+    newCategoryCode.value = ''
     isAddingCategory.value = false
     showToastMessage(`Category "${name}" added successfully!`, 'success')
   } catch (error) {
@@ -636,6 +645,7 @@ const deleteCategoryWrapper = async (category: Category) => {
 const startAddingCategory = () => {
   isAddingCategory.value = true
   newCategoryName.value = ''
+  newCategoryCode.value = ''
   // Scroll to bottom to show the add form
   nextTick(() => {
     if (categoriesListRef.value) {
@@ -647,6 +657,7 @@ const startAddingCategory = () => {
 const cancelAddingCategory = () => {
   isAddingCategory.value = false
   newCategoryName.value = ''
+  newCategoryCode.value = ''
 }
 
 // Category editing functions
@@ -654,6 +665,7 @@ const startEditCategory = (category: Category) => {
   if (category.id == null) return
   editingCategoryId.value = category.id
   editingCategoryName.value = category.name
+  editingCategoryCode.value = category.code
 }
 
 const saveEditCategory = async (category: Category) => {
@@ -663,27 +675,31 @@ const saveEditCategory = async (category: Category) => {
   }
 
   const newName = editingCategoryName.value.trim()
+  const newCode = editingCategoryCode.value.trim()
 
-  // If name hasn't changed, just cancel editing
-  if (newName === category.name) {
+  // If nothing changed, just cancel editing
+  if (newName === category.name && newCode === category.code) {
     cancelEditCategory()
     return
   }
 
   try {
     isUpdatingCategory.value = true
-    // Check if new name already exists
-    const exists = await categoryExists(newName)
-    if (exists) {
-      showToastMessage(`Category "${newName}" already exists!`, 'error')
-      return
+    // Check if new name already exists (only if name changed)
+    if (newName !== category.name) {
+      const exists = await categoryExists(newName)
+      if (exists) {
+        showToastMessage(`Category "${newName}" already exists!`, 'error')
+        return
+      }
     }
 
     // Update category using composable
-    await updateCategory(category.id, newName)
+    await updateCategory(category.id, newName, newCode)
     editingCategoryId.value = null
     editingCategoryName.value = ''
-    showToastMessage(`Category renamed to "${newName}" successfully!`, 'success')
+    editingCategoryCode.value = ''
+    showToastMessage(`Category updated successfully!`, 'success')
   } catch (error) {
     console.error('Failed to update category:', error)
     showToastMessage('Failed to update category. Please try again.', 'error')
@@ -695,6 +711,7 @@ const saveEditCategory = async (category: Category) => {
 const cancelEditCategory = () => {
   editingCategoryId.value = null
   editingCategoryName.value = ''
+  editingCategoryCode.value = ''
 }
 
 // Default category functions
