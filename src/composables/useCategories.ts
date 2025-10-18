@@ -1,6 +1,23 @@
 import { ref, type Ref } from 'vue'
 import type { Category } from '@/shared/types'
 
+/**
+ * Provides reactive category state and CRUD operations synchronized with the Electron IPC API.
+ *
+ * Exposes local caching and helpers for loading, adding, updating, deleting, marking default,
+ * and querying categories while keeping local state consistent with the backend.
+ *
+ * @returns An object containing:
+ * - `categories`: a reactive `Ref<Category[]>` holding the current category list
+ * - `isLoadingCategories`: a reactive `Ref<boolean>` that indicates if categories are being loaded
+ * - `loadCategories`: loads categories from the Electron API and updates `categories`
+ * - `addCategory`: creates a new category via the Electron API and appends it to `categories`
+ * - `updateCategory`: updates an existing category via the Electron API and syncs the local entry
+ * - `deleteCategory`: removes a category via the Electron API and from `categories`
+ * - `setDefaultCategory`: marks a category as default via the Electron API and updates local flags
+ * - `getDefaultCategory`: retrieves the default category (or `null` if unavailable)
+ * - `categoryExists`: checks whether a category with the given name exists
+ */
 export function useCategories() {
   const categories: Ref<Category[]> = ref([])
   const isLoadingCategories = ref(false)

@@ -30,6 +30,16 @@ export interface NormalizedTaskRecord {
   created_at?: string
 }
 
+/**
+ * Normalize an array of raw category objects into deduplicated NormalizedCategory entries.
+ *
+ * Trims string fields, omits entries with empty names, removes duplicate names keeping the first occurrence,
+ * coerces `code` to a trimmed string limited to 10 characters, and ensures exactly one category has `is_default`
+ * set to `true` (the first item marked default, or the first item if none are marked).
+ *
+ * @param categories - Array of raw category objects; expected shape includes `name`, optional `code`, and optional `is_default`
+ * @returns An array of NormalizedCategory objects with properties `name`, `code`, and `is_default`
+ */
 export function normalizeCategories(categories: any[]): NormalizedCategory[] {
   const seen = new Set<string>()
   const deduped: NormalizedCategory[] = []
@@ -58,6 +68,14 @@ export function normalizeCategories(categories: any[]): NormalizedCategory[] {
   return deduped.map(c => ({ name: c.name, code: c.code, is_default: defaultName === c.name }))
 }
 
+/**
+ * Normalize and filter raw task records into validated NormalizedTaskRecord entries.
+ *
+ * Processes each input record by trimming string fields, coercing/normalizing `task_type` (defaulting to `'normal'` when missing or not allowed), converting `created_at` to a string or leaving it undefined, and excluding records missing `category_name`, `task_name`, `start_time`, or `date`. For records with `task_type` equal to the configured end-task type, only the first end task per `date` is kept.
+ *
+ * @param records - Array of raw task records to normalize
+ * @returns An array of NormalizedTaskRecord objects with fields: `category_name`, `task_name`, `start_time`, `date`, `task_type`, and optional `created_at`
+ */
 export function normalizeTaskRecords(records: any[]): NormalizedTaskRecord[] {
   const allowedTypes = new Set<string>((TASK_TYPES as unknown as string[]) || [])
   const endDates = new Set<string>()
