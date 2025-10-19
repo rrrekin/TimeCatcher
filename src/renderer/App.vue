@@ -209,7 +209,6 @@ interface TaskSummary {
   name: string
   count: number
   totalMinutes: number
-  totalMinutesRounded: number
   appearances: Appearance[]
   firstOccurrence: number
   totalTime?: string
@@ -1385,7 +1384,6 @@ const getEnhancedCategoryBreakdown = computed(() => {
         name: record.task_name,
         count: 0,
         totalMinutes: 0,
-        totalMinutesRounded: 0,
         appearances: [] as Appearance[],
         firstOccurrence: new Date(record.date + 'T' + record.start_time).getTime()
       } as TaskSummary)
@@ -1416,10 +1414,8 @@ const getEnhancedCategoryBreakdown = computed(() => {
       }
 
       const flooredDuration = Math.floor(durationMinutes)
-      const roundedDuration = roundToFiveMinutes(durationMinutes)
 
       task.totalMinutes += flooredDuration
-      task.totalMinutesRounded += roundedDuration
 
       // Add appearance data for hover tooltips
       task.appearances.push({
@@ -1459,12 +1455,15 @@ const getEnhancedCategoryBreakdown = computed(() => {
       taskSummaries: categoryData
         ? Array.from(categoryData.tasks.values())
             .sort((a: TaskSummary, b: TaskSummary) => a.firstOccurrence - b.firstOccurrence)
-            .map((task: TaskSummary) => ({
-              ...task,
-              totalTime: formatDurationMinutes(task.totalMinutes),
-              totalTimeRounded: formatDurationMinutes(task.totalMinutesRounded),
-              totalTimeCombined: formatDualTime(task.totalMinutes, task.totalMinutesRounded)
-            }))
+            .map((task: TaskSummary) => {
+              const roundedMinutes = roundToFiveMinutes(task.totalMinutes)
+              return {
+                ...task,
+                totalTime: formatDurationMinutes(task.totalMinutes),
+                totalTimeRounded: formatDurationMinutes(roundedMinutes),
+                totalTimeCombined: formatDualTime(task.totalMinutes, roundedMinutes)
+              }
+            })
         : []
     }
   })
