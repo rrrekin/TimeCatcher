@@ -547,8 +547,8 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 /* Component-specific CSS custom properties */
 .task-table {
   --primary-alpha: rgba(87, 189, 175, 0.2);
-  --warning-alpha: rgba(253, 203, 110, 0.1);
-  --success-alpha: rgba(89, 201, 100, 0.1);
+  --warning-alpha: rgba(253, 203, 110, 0.05);
+  --success-alpha: rgba(89, 201, 100, 0.05);
   --emerald-shadow: rgba(86, 179, 114, 0.3);
   --emerald-shadow-hover: rgba(86, 179, 114, 0.4);
   --transition-fast: 0.2s ease;
@@ -573,16 +573,19 @@ table {
 th {
   background: var(--primary);
   color: white;
-  padding: 8px 6px;
+  padding: var(--spacing-sm) var(--spacing-xs);
   text-align: center;
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--font-sm);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 td {
-  padding: 6px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -595,8 +598,9 @@ tr:last-child td {
 .loading-cell,
 .empty-cell {
   text-align: center;
-  padding: 32px;
+  padding: var(--spacing-xl);
   color: var(--text-muted);
+  font-size: var(--font-md);
 }
 
 .loading-indicator {
@@ -662,10 +666,10 @@ tr:last-child td {
   width: 100%;
   border: 1px solid transparent;
   background: transparent;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-md);
   transition: all var(--transition-fast);
 }
 
@@ -679,7 +683,8 @@ tr:last-child td {
 .time-input {
   width: 70px;
   max-width: 70px;
-  font-size: 12px;
+  font-size: var(--font-sm);
+  text-align: center;
 }
 
 /* Style placeholder text to appear lighter when empty */
@@ -743,13 +748,14 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
+  padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--font-md);
   transition: all var(--transition-fast);
+  width: 100%;
 }
 
 .dropdown-trigger:hover {
@@ -774,17 +780,18 @@ tr:last-child td {
   right: 0;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 12px var(--shadow-color);
   z-index: 1000;
   max-height: 200px;
   overflow-y: auto;
+  margin-top: 2px;
 }
 
 .dropdown-item {
-  padding: 6px 8px;
+  padding: var(--spacing-sm);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-md);
   transition: background-color 0.2s ease;
 }
 
@@ -807,11 +814,14 @@ tr:last-child td {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 6px;
-  margin: 0 1px;
-  border-radius: 4px;
+  padding: var(--spacing-xs);
+  margin: 0 2px;
+  border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
-  font-size: 14px;
+  font-size: var(--font-base);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
@@ -862,8 +872,9 @@ tr:last-child td {
 /* Duration cell specific styles */
 .duration-cell {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
+  font-weight: 500;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;

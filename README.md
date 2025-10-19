@@ -5,6 +5,8 @@
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/rrrekin/TimeCatcher?utm_source=oss&utm_medium=github&utm_campaign=rrrekin%2FTimeCatcher&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 ![License](https://img.shields.io/github/license/rrrekin/TimeCatcher)
 ![GitHub issues](https://img.shields.io/github/issues/rrrekin/TimeCatcher)
+![GitHub Downloads](https://img.shields.io/github/downloads/rrrekin/TimeCatcher/total?label=downloads)
+![GitHub Release](https://img.shields.io/github/v/release/rrrekin/TimeCatcher)
 ![GitHub last commit](https://img.shields.io/github/last-commit/rrrekin/TimeCatcher)
 ![GitHub repo size](https://img.shields.io/github/repo-size/rrrekin/TimeCatcher)
 ![GitHub top language](https://img.shields.io/github/languages/top/rrrekin/TimeCatcher)

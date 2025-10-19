@@ -1529,6 +1529,24 @@ const formatTime12Hour = (timeString: string): string => {
   --focus-shadow: rgba(87, 189, 175, 0.2);
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+
+  /* Design system tokens for consistency */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 13px;
+  --font-base: 14px;
+  --font-lg: 16px;
+  --font-xl: 18px;
 }
 
 body {
@@ -1552,7 +1570,7 @@ body {
 
 .layout {
   display: flex;
-  height: calc(100vh - 44px);
+  height: calc(100vh - 56px);
 }
 
 .task-table-pane {
@@ -1572,12 +1590,12 @@ body {
   scrollbar-gutter: stable;
   /* Firefox */
   scrollbar-width: thin;
-  scrollbar-color: var(--border-color) transparent;
+  scrollbar-color: var(--primary) transparent;
 }
 
 /* Auto-hide scrollbar styles for task list container */
 .task-list-container::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .task-list-container::-webkit-scrollbar-track {
@@ -1586,32 +1604,50 @@ body {
 
 .task-list-container::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .task-list-container:hover::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--primary);
+  opacity: 0.3;
 }
 
 .reports-pane {
   width: 40%;
-  padding: 1rem;
+  padding: var(--spacing-lg);
   overflow-y: auto;
   background: var(--bg-secondary);
+  /* Smooth scrolling */
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.reports-pane::-webkit-scrollbar {
+  width: 8px;
+}
+
+.reports-pane::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reports-pane::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  opacity: 0.3;
+  border-radius: var(--radius-sm);
 }
 
 /* Toast Notification Styles */
 .toast-overlay {
   position: fixed;
-  top: 20px;
-  right: 20px;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
   z-index: 2000;
   pointer-events: none;
 }
 
 .toast {
   background: var(--bg-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 4px 12px var(--shadow-color);
   border: 1px solid var(--border-color);
   min-width: 300px;
@@ -1619,7 +1655,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
+  padding: var(--spacing-md);
   pointer-events: all;
   animation: toast-slide-in 0.3s ease-out;
   transform: translateX(0);
@@ -1639,7 +1675,7 @@ body {
 .toast-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--spacing-md);
   flex: 1;
 }
 
@@ -1650,14 +1686,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   font-weight: bold;
   flex-shrink: 0;
 }
 
 .toast-message {
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: var(--font-md);
   line-height: 1.4;
 }
 
@@ -1665,7 +1701,7 @@ body {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 1.2rem;
+  font-size: var(--font-xl);
   cursor: pointer;
   padding: 0;
   width: 24px;
@@ -1673,7 +1709,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all var(--transition-fast);
   flex-shrink: 0;
 }
@@ -1722,11 +1758,12 @@ body {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(2px);
 }
 
 .modal {
   background: var(--bg-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 8px 32px var(--shadow-color);
   width: 400px;
   max-width: 90vw;

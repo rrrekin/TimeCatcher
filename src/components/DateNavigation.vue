@@ -92,88 +92,91 @@ const dateInputId = useId()
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
+  padding: var(--spacing-md) var(--spacing-xl);
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   box-shadow: 0 2px 8px var(--shadow-color);
   position: sticky;
   top: 0;
   z-index: 100;
+  min-height: 56px;
 }
 
 .nav-controls {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .nav-btn {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  width: 40px;
-  height: 40px;
+  border-radius: var(--radius-lg);
+  width: 36px;
+  height: 36px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   color: var(--text-primary);
 }
 
 .nav-btn:hover {
   background: var(--primary);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .nav-arrow {
-  font-size: 18px;
+  font-size: var(--font-xl);
   font-weight: bold;
+  line-height: 1;
 }
 
 .today-btn {
   background: var(--primary);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   cursor: pointer;
   font-weight: 600;
-  transition: all 0.2s ease;
+  font-size: var(--font-base);
+  transition: all var(--transition-fast);
 }
 
 .today-btn:hover {
   background: var(--emerald);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .date-display {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   position: relative;
 }
 
 .date-label {
   font-weight: 600;
   color: var(--text-primary);
-  font-size: 16px;
+  font-size: var(--font-base);
   white-space: nowrap;
 }
 
 .date-picker {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-base);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .date-picker:hover {
@@ -190,46 +193,48 @@ const dateInputId = useId()
   background: var(--aero);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   font-weight: 600;
-  transition: all 0.2s ease;
+  font-size: var(--font-base);
+  transition: all var(--transition-fast);
 }
 
 .reporting-app-btn:hover {
   background: #1ba3d1;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .reporting-app-icon {
-  font-size: 16px;
+  font-size: var(--font-lg);
 }
 
 .setup-btn {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-sm) var(--spacing-lg);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
   color: var(--text-primary);
   font-weight: 600;
-  transition: all 0.2s ease;
+  font-size: var(--font-base);
+  transition: all var(--transition-fast);
   position: relative;
 }
 
 .setup-btn:hover {
   background: var(--primary);
   color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .setup-icon {
