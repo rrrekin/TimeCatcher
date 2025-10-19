@@ -197,13 +197,13 @@ describe('useTaskRecords', () => {
         date: '2025-08-24',
         task_type: 'normal'
       })
-    ).rejects.toThrow('API not available')
+    ).rejects.toThrow('API method addTaskRecord not available')
   })
 
   it('should throw when electronAPI is unavailable in addSpecialTask', async () => {
     delete (window as any).electronAPI
     const { addSpecialTask } = useTaskRecords(selectedDate)
-    await expect(addSpecialTask('pause', 'Break')).rejects.toThrow('API not available')
+    await expect(addSpecialTask('pause', 'Break')).rejects.toThrow('API method addTaskRecord not available')
   })
 
   it('should throw when electronAPI is unavailable in updateTaskRecord', async () => {

@@ -172,16 +172,31 @@ const taskTableRef = ref<HTMLElement>()
 const scrollToTask = async (taskId: number): Promise<void> => {
   await nextTick()
 
-  // Find the table row for the task
-  const taskRow = taskTableRef.value?.querySelector(`tr[data-task-id="${taskId}"]`) as HTMLElement | null
+  const selector = `tr[data-task-id="${taskId}"]`
+
+  // Check user's motion preference
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // Wait for the row to render (retry with timeout)
+  let taskRow: HTMLElement | null = null
+  const maxRetries = 40 // 40 * 25ms = 1 second max wait
+  for (let i = 0; i < maxRetries; i++) {
+    taskRow = taskTableRef.value?.querySelector(selector) as HTMLElement | null
+    if (taskRow) break
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+
   if (!taskRow) {
-    console.warn(`[TaskList] Could not find task row with ID ${taskId}`)
+    console.warn(`[TaskList] Could not find task row with ID ${taskId} after ${maxRetries * 25}ms`)
     return
   }
 
-  // Scroll the row into view with smooth behavior
+  // Scroll the row into view, respecting motion preferences
   taskRow.scrollIntoView({
-    behavior: 'smooth',
+    behavior: prefersReducedMotion ? 'auto' : 'smooth',
     block: 'nearest', // Scrolls only if needed, keeps task visible
     inline: 'nearest'
   })

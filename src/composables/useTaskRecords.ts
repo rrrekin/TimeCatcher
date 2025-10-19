@@ -96,18 +96,24 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
    * @returns The ID of the newly created task
    */
   const addTaskRecord = async (record: TaskRecordInsert, context: UpdateContext = 'initial-load'): Promise<number> => {
-    if (!window.electronAPI) {
-      throw new Error('API not available. Please restart the application.')
+    if (!window.electronAPI || !window.electronAPI.addTaskRecord) {
+      throw new Error('API method addTaskRecord not available. Please restart the application.')
     }
 
     try {
       const newTask = await window.electronAPI.addTaskRecord(record)
+
+      // Validate that backend returned an ID
+      if (newTask.id == null) {
+        throw new Error('Created task did not return an ID')
+      }
+
       // Set context before loading data
       if (updateContextSetter) {
         updateContextSetter(context)
       }
       await loadTaskRecords()
-      return newTask.id!
+      return newTask.id
     } catch (error) {
       console.error('Failed to add task record:', error)
       throw error
@@ -123,8 +129,8 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
     taskName: string,
     context: UpdateContext = 'initial-load'
   ): Promise<number> => {
-    if (!window.electronAPI) {
-      throw new Error('API not available. Please restart the application.')
+    if (!window.electronAPI || !window.electronAPI.addTaskRecord) {
+      throw new Error('API method addTaskRecord not available. Please restart the application.')
     }
 
     // Early guard: prevent creating a second 'end' task
@@ -146,6 +152,11 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
 
       const newTask = await window.electronAPI.addTaskRecord(taskRecord)
 
+      // Validate that backend returned an ID
+      if (newTask.id == null) {
+        throw new Error('Created task did not return an ID')
+      }
+
       // Trigger eviction after End task creation
       if (taskType === TASK_TYPE_END) {
         await triggerEvictionIfEnabled()
@@ -156,7 +167,7 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
         updateContextSetter(context)
       }
       await loadTaskRecords()
-      return newTask.id!
+      return newTask.id
     } catch (error) {
       console.error(`Failed to add ${taskType} task:`, error)
 

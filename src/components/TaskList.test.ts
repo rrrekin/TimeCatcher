@@ -907,14 +907,24 @@ describe('TaskList Component', () => {
 
   describe('scrollToTask Method', () => {
     it('should warn when task row is not found', async () => {
+      vi.useFakeTimers()
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
-      const scrollToTask = wrapper.vm.scrollToTask
-      await scrollToTask(42) // Non-existent task ID
+      try {
+        const scrollPromise = wrapper.vm.scrollToTask(42) // Non-existent task ID
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('[TaskList] Could not find task row with ID 42')
+        // Advance timers beyond max retries
+        await vi.advanceTimersByTimeAsync(1100)
 
-      consoleWarnSpy.mockRestore()
+        await scrollPromise
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[TaskList] Could not find task row with ID 42 after 1000ms')
+        )
+      } finally {
+        consoleWarnSpy.mockRestore()
+        vi.useRealTimers()
+      }
     })
 
     it('should scroll to task when found', async () => {
@@ -922,26 +932,117 @@ describe('TaskList Component', () => {
 
       // Override querySelector to return a mock element
       const originalQuerySelector = HTMLElement.prototype.querySelector
-      HTMLElement.prototype.querySelector = vi.fn((selector: string) => {
-        if (selector === 'tr[data-task-id="1"]') {
-          return {
-            scrollIntoView: mockScrollIntoView
-          } as any
-        }
-        return originalQuerySelector.call(this, selector)
-      })
+      try {
+        HTMLElement.prototype.querySelector = vi.fn(function (this: HTMLElement, selector: string) {
+          if (selector === 'tr[data-task-id="1"]') {
+            return {
+              scrollIntoView: mockScrollIntoView
+            } as any
+          }
+          return originalQuerySelector.call(this, selector)
+        })
 
-      const scrollToTask = wrapper.vm.scrollToTask
-      await scrollToTask(1)
+        const scrollToTask = wrapper.vm.scrollToTask
+        await scrollToTask(1)
 
-      expect(mockScrollIntoView).toHaveBeenCalledWith({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'nearest'
-      })
+        expect(mockScrollIntoView).toHaveBeenCalledWith({
+          behavior: 'smooth', // Smooth when matchMedia not supported or prefers-reduced-motion is false
+          block: 'nearest',
+          inline: 'nearest'
+        })
+      } finally {
+        // Restore original querySelector
+        HTMLElement.prototype.querySelector = originalQuerySelector
+      }
+    })
 
-      // Restore original querySelector
-      HTMLElement.prototype.querySelector = originalQuerySelector
+    it('should respect prefers-reduced-motion preference', async () => {
+      const mockScrollIntoView = vi.fn()
+      const mockMatchMedia = vi.fn().mockReturnValue({ matches: true })
+      const originalMatchMedia = window.matchMedia
+
+      try {
+        window.matchMedia = mockMatchMedia as any
+
+        const originalQuerySelector = HTMLElement.prototype.querySelector
+        HTMLElement.prototype.querySelector = vi.fn(function (this: HTMLElement, selector: string) {
+          if (selector === 'tr[data-task-id="1"]') {
+            return { scrollIntoView: mockScrollIntoView } as any
+          }
+          return originalQuerySelector.call(this, selector)
+        })
+
+        const scrollToTask = wrapper.vm.scrollToTask
+        await scrollToTask(1)
+
+        expect(mockMatchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+        expect(mockScrollIntoView).toHaveBeenCalledWith({
+          behavior: 'auto', // Auto when reduced motion is preferred
+          block: 'nearest',
+          inline: 'nearest'
+        })
+
+        HTMLElement.prototype.querySelector = originalQuerySelector
+      } finally {
+        window.matchMedia = originalMatchMedia
+      }
+    })
+
+    it('should retry finding element with polling', async () => {
+      vi.useFakeTimers()
+      const mockScrollIntoView = vi.fn()
+      let callCount = 0
+
+      const originalQuerySelector = HTMLElement.prototype.querySelector
+      try {
+        HTMLElement.prototype.querySelector = vi.fn(function (this: HTMLElement, selector: string) {
+          callCount++
+          // Return element on 3rd attempt
+          if (selector === 'tr[data-task-id="1"]' && callCount >= 3) {
+            return { scrollIntoView: mockScrollIntoView } as any
+          }
+          return null
+        })
+
+        const scrollPromise = wrapper.vm.scrollToTask(1)
+
+        // Advance timers to trigger retries
+        await vi.advanceTimersByTimeAsync(75) // 3 retries * 25ms
+
+        await scrollPromise
+
+        expect(callCount).toBeGreaterThanOrEqual(3)
+        expect(mockScrollIntoView).toHaveBeenCalled()
+      } finally {
+        HTMLElement.prototype.querySelector = originalQuerySelector
+        vi.useRealTimers()
+      }
+    })
+
+    it('should timeout after max retries and warn', async () => {
+      vi.useFakeTimers()
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const originalQuerySelector = HTMLElement.prototype.querySelector
+      try {
+        // Always return null to force timeout
+        HTMLElement.prototype.querySelector = vi.fn(() => null)
+
+        const scrollPromise = wrapper.vm.scrollToTask(999)
+
+        // Advance timers beyond max retries (40 * 25ms = 1000ms)
+        await vi.advanceTimersByTimeAsync(1100)
+
+        await scrollPromise
+
+        expect(consoleWarnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('[TaskList] Could not find task row with ID 999 after 1000ms')
+        )
+      } finally {
+        HTMLElement.prototype.querySelector = originalQuerySelector
+        consoleWarnSpy.mockRestore()
+        vi.useRealTimers()
+      }
     })
   })
 

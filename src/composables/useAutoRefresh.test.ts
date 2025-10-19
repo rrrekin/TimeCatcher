@@ -59,6 +59,17 @@ describe('useAutoRefresh', () => {
       }),
       clearInterval: vi.fn((id: any) => {
         clearInterval(id)
+      }),
+      setTimeout: vi.fn((fn: Function, ms: number) => {
+        return setTimeout(fn, ms) as any
+      }),
+      clearTimeout: vi.fn((id: any) => {
+        clearTimeout(id)
+      }),
+      requestAnimationFrame: vi.fn((fn: FrameRequestCallback) => {
+        // Execute immediately in tests
+        fn(0)
+        return 0
       })
     }
 
@@ -257,7 +268,7 @@ describe('useAutoRefresh', () => {
       }).not.toThrow()
     })
 
-    it('should call scrollToTask callback when HTTP task includes taskId', () => {
+    it('should call scrollToTask callback when HTTP task includes taskId', async () => {
       const mockScrollCallback = vi.fn()
 
       scope.run(() => useAutoRefresh(selectedDate, mockCallback, mockScrollCallback))
@@ -272,13 +283,15 @@ describe('useAutoRefresh', () => {
         date: todayString,
         taskId: 42
       }
-      mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      const eventPromise = mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      await vi.runAllTimersAsync()
+      await eventPromise
 
       expect(mockCallback).toHaveBeenCalledTimes(1)
       expect(mockScrollCallback).toHaveBeenCalledWith(42)
     })
 
-    it('should handle HTTP task without scrollToTask callback gracefully', () => {
+    it('should handle HTTP task without scrollToTask callback gracefully', async () => {
       // Call without scrollToTaskCallback parameter
       scope.run(() => useAutoRefresh(selectedDate, mockCallback))
 
@@ -292,14 +305,14 @@ describe('useAutoRefresh', () => {
       }
 
       // Should not throw even though callback is undefined
-      expect(() => {
-        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
-      }).not.toThrow()
+      const eventPromise = mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      await vi.runAllTimersAsync()
+      await eventPromise
 
       expect(mockCallback).toHaveBeenCalledTimes(1)
     })
 
-    it('should not call scrollToTask callback when taskId is missing', () => {
+    it('should not call scrollToTask callback when taskId is missing', async () => {
       const mockScrollCallback = vi.fn()
 
       scope.run(() => useAutoRefresh(selectedDate, mockCallback, mockScrollCallback))
@@ -312,13 +325,15 @@ describe('useAutoRefresh', () => {
         date: todayString
         // No taskId
       }
-      mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      const eventPromise = mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      await vi.runAllTimersAsync()
+      await eventPromise
 
       expect(mockCallback).toHaveBeenCalledTimes(1)
       expect(mockScrollCallback).not.toHaveBeenCalled()
     })
 
-    it('should handle errors thrown by refreshCallback during HTTP task', () => {
+    it('should handle errors thrown by refreshCallback during HTTP task', async () => {
       const errorCallback = vi.fn(() => {
         throw new Error('Refresh failed')
       })
@@ -334,9 +349,7 @@ describe('useAutoRefresh', () => {
         date: todayString
       }
 
-      expect(() => {
-        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
-      }).not.toThrow()
+      await expect(mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)).resolves.toBeUndefined()
 
       expect(consoleSpy).toHaveBeenCalledWith(
         '[useAutoRefresh] Error during HTTP task creation refresh:',
@@ -346,7 +359,7 @@ describe('useAutoRefresh', () => {
       consoleSpy.mockRestore()
     })
 
-    it('should handle errors thrown by scrollToTaskCallback', () => {
+    it('should handle errors thrown by scrollToTaskCallback', async () => {
       const errorScrollCallback = vi.fn(() => {
         throw new Error('Scroll failed')
       })
@@ -363,9 +376,9 @@ describe('useAutoRefresh', () => {
         taskId: 42
       }
 
-      expect(() => {
-        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
-      }).not.toThrow()
+      const eventPromise = mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      await vi.runAllTimersAsync()
+      await eventPromise
 
       expect(consoleSpy).toHaveBeenCalledWith(
         '[useAutoRefresh] Error during HTTP task creation refresh:',

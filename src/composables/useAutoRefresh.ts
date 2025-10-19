@@ -2,6 +2,14 @@ import { ref, onUnmounted, watch, type Ref } from 'vue'
 import { isToday } from '@/utils/dateUtils'
 
 /**
+ * HTTP server task creation event payload
+ */
+interface HttpTaskCreatedEvent {
+  date: string
+  taskId?: number
+}
+
+/**
  * Format Date as local YYYY-MM-DD string (avoiding UTC conversion)
  */
 function formatLocalDateString(date: Date): string {
@@ -13,8 +21,8 @@ function formatLocalDateString(date: Date): string {
 
 export function useAutoRefresh(
   selectedDate: Ref<Date>,
-  refreshCallback: () => void,
-  scrollToTaskCallback?: (taskId: number) => void
+  refreshCallback: () => void | Promise<void>,
+  scrollToTaskCallback?: (taskId: number) => void | Promise<void>
 ) {
   /**
    * NOTE: Periodic auto-refresh (15-second interval) has been removed.
@@ -50,16 +58,25 @@ export function useAutoRefresh(
   })
 
   // Listen for HTTP server task creation events
-  const handleHttpTaskCreated = (data: any) => {
+  const handleHttpTaskCreated = async (data: HttpTaskCreatedEvent) => {
     const currentDateString = formatLocalDateString(selectedDate.value)
 
     // Only refresh if the task was created for the currently viewed date
     if (data.date === currentDateString) {
       try {
-        refreshCallback()
+        // Await data refresh to ensure DOM is updated
+        await Promise.resolve(refreshCallback())
+
+        // Wait for DOM update tick before scrolling
+        await Promise.resolve(
+          typeof requestAnimationFrame === 'function'
+            ? new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+            : new Promise<void>(resolve => setTimeout(resolve, 0))
+        )
+
         // Scroll to the newly created task if callback provided and task ID available
-        if (scrollToTaskCallback && data.taskId) {
-          scrollToTaskCallback(data.taskId)
+        if (scrollToTaskCallback && typeof data.taskId === 'number') {
+          await Promise.resolve(scrollToTaskCallback(data.taskId))
         }
       } catch (error) {
         console.error('[useAutoRefresh] Error during HTTP task creation refresh:', error)
