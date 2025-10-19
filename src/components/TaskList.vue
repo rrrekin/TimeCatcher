@@ -304,9 +304,9 @@ const lastTaskId = computed(() => {
   const sorted = [...props.taskRecords]
     .filter(r => r.start_time.trim().length > 0)
     .sort((a, b) => {
-      const timeA = parseInt(a.start_time.replace(':', ''))
-      const timeB = parseInt(b.start_time.replace(':', ''))
-      return timeA - timeB
+      const [ah = 0, am = 0] = a.start_time.split(':').map(Number)
+      const [bh = 0, bm = 0] = b.start_time.split(':').map(Number)
+      return ah * 60 + am - (bh * 60 + bm)
     })
   return sorted.length > 0 ? sorted[sorted.length - 1]!.id : null
 })

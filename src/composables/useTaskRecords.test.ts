@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { ref } from 'vue'
 import { useTaskRecords } from './useTaskRecords'
 import { TASK_TYPE_END, SPECIAL_TASK_CATEGORY } from '../shared/types'
+import { toYMDLocal } from '@/utils/dateUtils'
 
 describe('useTaskRecords', () => {
   let selectedDate: any
@@ -47,16 +48,23 @@ describe('useTaskRecords', () => {
 
   it('should add task record', async () => {
     const { addTaskRecord } = useTaskRecords(selectedDate)
-    await addTaskRecord({ category_name: 'Work', task_name: 'Task', start_time: '10:00', date: '2025-08-24' })
+    const newId = await addTaskRecord({
+      category_name: 'Work',
+      task_name: 'Task',
+      start_time: '10:00',
+      date: '2025-08-24'
+    })
     expect(electronAPI.addTaskRecord).toHaveBeenCalled()
+    expect(newId).toBe(42)
   })
 
   it('should add special task', async () => {
     const { addSpecialTask } = useTaskRecords(selectedDate)
-    await addSpecialTask('pause', 'Break')
+    const newId = await addSpecialTask('pause', 'Break')
     expect(electronAPI.addTaskRecord).toHaveBeenCalledWith(
       expect.objectContaining({ category_name: SPECIAL_TASK_CATEGORY })
     )
+    expect(newId).toBe(42)
   })
 
   it('should prevent duplicate end task', async () => {
@@ -158,7 +166,7 @@ describe('useTaskRecords', () => {
   it('should call updateContextSetter when provided in addTaskRecord', async () => {
     const mockContextSetter = vi.fn()
     const { addTaskRecord } = useTaskRecords(selectedDate, mockContextSetter)
-    await addTaskRecord(
+    const newId = await addTaskRecord(
       {
         category_name: 'Work',
         task_name: 'Task',
@@ -169,13 +177,15 @@ describe('useTaskRecords', () => {
       'edit'
     )
     expect(mockContextSetter).toHaveBeenCalledWith('edit')
+    expect(newId).toBe(42)
   })
 
   it('should call updateContextSetter when provided in addSpecialTask', async () => {
     const mockContextSetter = vi.fn()
     const { addSpecialTask } = useTaskRecords(selectedDate, mockContextSetter)
-    await addSpecialTask('pause', 'Break', 'edit')
+    const newId = await addSpecialTask('pause', 'Break', 'edit')
     expect(mockContextSetter).toHaveBeenCalledWith('edit')
+    expect(newId).toBe(42)
   })
 
   it('should call updateContextSetter when provided in updateTaskRecord', async () => {
@@ -197,13 +207,13 @@ describe('useTaskRecords', () => {
         date: '2025-08-24',
         task_type: 'normal'
       })
-    ).rejects.toThrow('API method addTaskRecord not available')
+    ).rejects.toThrow(/API method addTaskRecord not available/i)
   })
 
   it('should throw when electronAPI is unavailable in addSpecialTask', async () => {
     delete (window as any).electronAPI
     const { addSpecialTask } = useTaskRecords(selectedDate)
-    await expect(addSpecialTask('pause', 'Break')).rejects.toThrow('API method addTaskRecord not available')
+    await expect(addSpecialTask('pause', 'Break')).rejects.toThrow(/API method addTaskRecord not available/i)
   })
 
   it('should throw when electronAPI is unavailable in updateTaskRecord', async () => {
@@ -306,7 +316,7 @@ describe('useTaskRecords', () => {
       // Calculate expected cutoff date (180 days ago from 2025-01-15)
       const cutoffDate = new Date('2025-01-15T10:00:00')
       cutoffDate.setDate(cutoffDate.getDate() - 180)
-      const expectedCutoff = cutoffDate.toISOString().split('T')[0]
+      const expectedCutoff = toYMDLocal(cutoffDate)
 
       expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(expectedCutoff)
 
@@ -366,7 +376,7 @@ describe('useTaskRecords', () => {
       // Calculate expected cutoff date (180 days ago)
       const cutoffDate = new Date('2025-01-15T10:00:00')
       cutoffDate.setDate(cutoffDate.getDate() - 180)
-      const expectedCutoff = cutoffDate.toISOString().split('T')[0]
+      const expectedCutoff = toYMDLocal(cutoffDate)
 
       expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(expectedCutoff)
 
@@ -432,7 +442,7 @@ describe('useTaskRecords', () => {
 
       const cutoff30 = new Date('2025-06-15T14:30:00')
       cutoff30.setDate(cutoff30.getDate() - 30)
-      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(cutoff30.toISOString().split('T')[0])
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(toYMDLocal(cutoff30))
 
       // Test 365 days
       electronAPI.deleteOldTaskRecords.mockClear()
@@ -442,7 +452,7 @@ describe('useTaskRecords', () => {
 
       const cutoff365 = new Date('2025-06-15T14:30:00')
       cutoff365.setDate(cutoff365.getDate() - 365)
-      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(cutoff365.toISOString().split('T')[0])
+      expect(electronAPI.deleteOldTaskRecords).toHaveBeenCalledWith(toYMDLocal(cutoff365))
 
       vi.useRealTimers()
     })
