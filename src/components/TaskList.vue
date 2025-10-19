@@ -33,6 +33,7 @@
           v-else
           v-for="record in taskRecords"
           :key="record.id"
+          :data-task-id="record.id"
           :class="{
             'special-task-row': isSpecial(record.task_type),
             'pause-task-row': record.task_type === TASK_TYPE_PAUSE,
@@ -115,7 +116,7 @@
           </td>
           <!-- Duration column (visibility based on task type) -->
           <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
-            {{ calculateDuration(record) }}
+            {{ getTaskDuration(record) }}
           </td>
           <td v-else class="duration-cell" data-test="task-duration">-</td>
           <td class="actions-cell">
@@ -167,7 +168,41 @@ const componentId =
 // Template ref for component root element
 const taskTableRef = ref<HTMLElement>()
 
-// Scroll to bottom method
+// Smart scroll to specific task by ID
+const scrollToTask = async (taskId: number): Promise<void> => {
+  await nextTick()
+
+  const selector = `tr[data-task-id="${taskId}"]`
+
+  // Check user's motion preference
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  // Wait for the row to render (retry with timeout)
+  let taskRow: HTMLElement | null = null
+  const maxRetries = 40 // 40 * 25ms = 1 second max wait
+  for (let i = 0; i < maxRetries; i++) {
+    taskRow = taskTableRef.value?.querySelector(selector) as HTMLElement | null
+    if (taskRow) break
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+
+  if (!taskRow) {
+    console.warn(`[TaskList] Could not find task row with ID ${taskId} after ${maxRetries * 25}ms`)
+    return
+  }
+
+  // Scroll the row into view, respecting motion preferences
+  taskRow.scrollIntoView({
+    behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    block: 'nearest', // Scrolls only if needed, keeps task visible
+    inline: 'nearest'
+  })
+}
+
+// Legacy scroll to bottom method (kept for backward compatibility)
 const scrollToBottom = async (parentPaneRef?: Ref<HTMLElement | undefined>): Promise<void> => {
   await nextTick()
 
@@ -247,9 +282,85 @@ const emit = defineEmits<{
   confirmDeleteTask: [record: TaskRecordWithId]
 }>()
 
-// Expose scrollToBottom method to parent
+// Reactive current time for duration updates (only for last task on today's date)
+const currentTimeMinutes = ref<number>(0)
+let durationUpdateTimer: number | null = null
+
+// Update current time in minutes
+const updateCurrentTime = () => {
+  const now = new Date()
+  currentTimeMinutes.value = Math.floor(now.getHours() * 60 + now.getMinutes())
+}
+
+// Check if we're viewing today
+const isViewingToday = computed(() => {
+  const today = new Date()
+  const [year, month, day] = props.displayDate.split('-').map(Number)
+  return year === today.getFullYear() && month === today.getMonth() + 1 && day === today.getDate()
+})
+
+// Get ID of the last task (for duration optimization)
+const lastTaskId = computed(() => {
+  const sorted = [...props.taskRecords]
+    .filter(r => r.start_time.trim().length > 0)
+    .sort((a, b) => {
+      const [ah = 0, am = 0] = a.start_time.split(':').map(Number)
+      const [bh = 0, bm = 0] = b.start_time.split(':').map(Number)
+      return ah * 60 + am - (bh * 60 + bm)
+    })
+  return sorted.length > 0 ? sorted[sorted.length - 1]!.id : null
+})
+
+// Enhanced duration calculation with reactive current time
+const getTaskDuration = (record: TaskRecordWithId): string => {
+  // For the last task when viewing today, trigger reactivity on currentTimeMinutes
+  if (isViewingToday.value && record.id === lastTaskId.value) {
+    // Access reactive ref to create dependency
+    void currentTimeMinutes.value
+  }
+  // Delegate to parent's calculateDuration which contains the full logic
+  return props.calculateDuration(record)
+}
+
+// Start/stop duration update timer
+const startDurationTimer = () => {
+  if (!isViewingToday.value || durationUpdateTimer !== null) return
+
+  updateCurrentTime() // Initial update
+  durationUpdateTimer = window.setInterval(() => {
+    updateCurrentTime()
+  }, 15000) // Update every 15 seconds
+}
+
+const stopDurationTimer = () => {
+  if (durationUpdateTimer !== null) {
+    clearInterval(durationUpdateTimer)
+    durationUpdateTimer = null
+  }
+}
+
+// Watch for date changes to manage timer
+watch(
+  isViewingToday,
+  newValue => {
+    if (newValue) {
+      startDurationTimer()
+    } else {
+      stopDurationTimer()
+    }
+  },
+  { immediate: true }
+)
+
+// Cleanup on unmount
+onUnmounted(() => {
+  stopDurationTimer()
+})
+
+// Expose scroll methods to parent
 defineExpose({
-  scrollToBottom
+  scrollToBottom, // Legacy method
+  scrollToTask // New smart scroll method
 })
 
 // Convert props.categories to ref for composable

@@ -93,19 +93,27 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
 
   /**
    * Add a new task record
+   * @returns The ID of the newly created task
    */
-  const addTaskRecord = async (record: TaskRecordInsert, context: UpdateContext = 'initial-load'): Promise<void> => {
-    if (!window.electronAPI) {
-      throw new Error('API not available. Please restart the application.')
+  const addTaskRecord = async (record: TaskRecordInsert, context: UpdateContext = 'initial-load'): Promise<number> => {
+    if (!window.electronAPI || !window.electronAPI.addTaskRecord) {
+      throw new Error('API method addTaskRecord not available. Please restart the application.')
     }
 
     try {
-      await window.electronAPI.addTaskRecord(record)
+      const newTask = await window.electronAPI.addTaskRecord(record)
+
+      // Validate that backend returned an ID
+      if (newTask.id == null) {
+        throw new Error('Created task did not return an ID')
+      }
+
       // Set context before loading data
       if (updateContextSetter) {
         updateContextSetter(context)
       }
       await loadTaskRecords()
+      return newTask.id
     } catch (error) {
       console.error('Failed to add task record:', error)
       throw error
@@ -114,14 +122,15 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
 
   /**
    * Add a special task (pause or end)
+   * @returns The ID of the newly created special task
    */
   const addSpecialTask = async (
     taskType: SpecialTaskType,
     taskName: string,
     context: UpdateContext = 'initial-load'
-  ): Promise<void> => {
-    if (!window.electronAPI) {
-      throw new Error('API not available. Please restart the application.')
+  ): Promise<number> => {
+    if (!window.electronAPI || !window.electronAPI.addTaskRecord) {
+      throw new Error('API method addTaskRecord not available. Please restart the application.')
     }
 
     // Early guard: prevent creating a second 'end' task
@@ -141,7 +150,12 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
         task_type: taskType
       }
 
-      await window.electronAPI.addTaskRecord(taskRecord)
+      const newTask = await window.electronAPI.addTaskRecord(taskRecord)
+
+      // Validate that backend returned an ID
+      if (newTask.id == null) {
+        throw new Error('Created task did not return an ID')
+      }
 
       // Trigger eviction after End task creation
       if (taskType === TASK_TYPE_END) {
@@ -153,6 +167,7 @@ export function useTaskRecords(selectedDate: Ref<Date>, updateContextSetter?: (c
         updateContextSetter(context)
       }
       await loadTaskRecords()
+      return newTask.id
     } catch (error) {
       console.error(`Failed to add ${taskType} task:`, error)
 

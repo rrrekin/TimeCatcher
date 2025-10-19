@@ -288,12 +288,19 @@ const {
 const { sortedTaskRecords, calculateDuration, getTotalMinutesTracked, getCategoryBreakdown } =
   useDurationCalculations(taskRecords)
 
-const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(selectedDate, () => {
-  updateContext.value = 'auto-refresh'
-  // Reload tasks from the database to include newly added entries (e.g., via HTTP server)
-  // Intentionally not awaited; useAutoRefresh wraps calls in try/catch
-  void loadTaskRecords()
-})
+const { startAutoRefresh, stopAutoRefresh, restartAutoRefresh } = useAutoRefresh(
+  selectedDate,
+  () => {
+    updateContext.value = 'auto-refresh'
+    // Reload tasks from the database to include newly added entries (e.g., via HTTP server)
+    // Intentionally not awaited; useAutoRefresh wraps calls in try/catch
+    void loadTaskRecords()
+  },
+  (taskId: number) => {
+    // Scroll to newly created task from HTTP server
+    void safeScrollToTask(taskId)
+  }
+)
 
 // Media query references for cleanup
 let mediaQueryList: MediaQueryList | null = null
@@ -344,9 +351,10 @@ const taskTablePaneRef = ref<HTMLElement | undefined>(undefined)
 const scrollableContainerRef = ref<HTMLElement | undefined>(undefined)
 const taskListRef = ref<ComponentPublicInstance<{
   scrollToBottom?: (parentPaneRef?: Ref<HTMLElement | undefined>) => Promise<void>
+  scrollToTask?: (taskId: number) => Promise<void>
 }> | null>(null)
 
-// Safe scroller helper
+// Safe scroller helpers
 const safeScrollToBottom = async (): Promise<void> => {
   await nextTick()
   try {
@@ -355,6 +363,16 @@ const safeScrollToBottom = async (): Promise<void> => {
     if (typeof fn === 'function') await fn(scrollableContainerRef)
   } catch (error) {
     console.warn('Failed to scroll to bottom:', error)
+  }
+}
+
+const safeScrollToTask = async (taskId: number): Promise<void> => {
+  await nextTick()
+  try {
+    const fn = taskListRef.value?.scrollToTask
+    if (typeof fn === 'function') await fn(taskId)
+  } catch (error) {
+    console.warn(`Failed to scroll to task ${taskId}:`, error)
   }
 }
 
@@ -778,13 +796,11 @@ const addTask = async () => {
       task_type: TASK_TYPE_NORMAL
     }
 
-    await addTaskRecord(taskRecord, 'edit')
+    const newTaskId = await addTaskRecord(taskRecord, 'edit')
     showToastMessage('Task added successfully!', 'success')
 
-    // Scroll only when viewing today
-    if (isToday.value) {
-      await safeScrollToBottom()
-    }
+    // Scroll to show the newly added task (always, not just for today)
+    await safeScrollToTask(newTaskId)
 
     // Reset form
     initializeNewTask()
@@ -798,12 +814,11 @@ const addTask = async () => {
 // Special task functions
 const addSpecialTaskWrapper = async (taskType: SpecialTaskType, taskName: string, successMessage: string) => {
   try {
-    await addSpecialTask(taskType, taskName, 'edit')
+    const newTaskId = await addSpecialTask(taskType, taskName, 'edit')
     showToastMessage(successMessage, 'success')
 
-    if (isToday.value) {
-      await safeScrollToBottom()
-    }
+    // Scroll to show the newly added special task
+    await safeScrollToTask(newTaskId)
   } catch (error) {
     console.error(`Failed to add ${taskType} task:`, error)
     showToastMessage((error as Error).message, 'error')
@@ -858,9 +873,7 @@ watch(
     // Await loading the new task records with date-change context
     await loadTaskRecordsWrapper('date-change')
 
-    if (isToday.value) {
-      await safeScrollToBottom()
-    }
+    // No scrolling on date change - user is intentionally navigating, not adding tasks
 
     // Start auto-refresh if we're viewing today
     if (isToday.value) {
@@ -1002,7 +1015,7 @@ const replayTask = async (record: TaskRecordWithId) => {
       task_type: TASK_TYPE_NORMAL
     }
 
-    await addTaskRecord(taskRecord, 'edit')
+    const newTaskId = await addTaskRecord(taskRecord, 'edit')
 
     // Check if the user is viewing today's date
     const todayString = toYMDLocalUtil(now)
@@ -1012,13 +1025,14 @@ const replayTask = async (record: TaskRecordWithId) => {
       // Automatically switch to today to show the replayed task
       selectedDate.value = now
       showToastMessage(`Task "${record.task_name}" replayed for today. Switched to today's view.`, 'success')
+      // Scroll will happen after date change completes and task list reloads
+      await nextTick()
+      await safeScrollToTask(newTaskId)
     } else {
       // No need to reload since addTaskRecord automatically updates the list
       showToastMessage(`Task "${record.task_name}" replayed successfully!`, 'success')
-
-      if (isToday.value) {
-        await safeScrollToBottom()
-      }
+      // Scroll to show the replayed task
+      await safeScrollToTask(newTaskId)
     }
   } catch (error) {
     console.error('Failed to replay task:', error)
