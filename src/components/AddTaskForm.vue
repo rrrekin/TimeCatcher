@@ -253,16 +253,16 @@ watch(
 .add-task-form {
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
-  padding: 16px;
+  padding: var(--spacing-md);
   flex-shrink: 0;
 }
 
 .add-task-fields {
   display: grid;
   grid-template-columns: 140px 1fr 100px auto;
-  gap: 12px;
+  gap: var(--spacing-sm);
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .add-task-field {
@@ -272,15 +272,15 @@ watch(
 
 .add-task-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-base);
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .add-task-input:focus {
@@ -305,17 +305,17 @@ watch(
 
 .dropdown-trigger {
   width: 100%;
-  padding: 8px 32px 8px 12px;
+  padding: var(--spacing-sm) 32px var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-base);
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .dropdown-trigger:hover {
@@ -357,7 +357,7 @@ watch(
   z-index: 1000;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 12px var(--shadow-color);
   max-height: 200px;
   overflow-y: auto;
@@ -374,12 +374,12 @@ watch(
 }
 
 .dropdown-item {
-  padding: 8px 12px;
+  padding: var(--spacing-sm) var(--spacing-md);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-base);
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast);
 }
 
 .dropdown-item:last-child {
@@ -438,8 +438,8 @@ watch(
   --success-hover: color-mix(in srgb, var(--success) 80%, var(--text-primary) 20%);
 
   display: flex;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   justify-content: center;
@@ -447,11 +447,12 @@ watch(
 
 .special-task-btn {
   flex: 1;
-  padding: 10px 16px;
+  padding: var(--spacing-sm) var(--spacing-lg);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
   font-weight: 500;
+  font-size: var(--font-base);
   transition: all var(--transition-fast);
   color: white;
   max-width: 120px;

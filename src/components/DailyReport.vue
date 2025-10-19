@@ -471,8 +471,8 @@ const exportReportToClipboard = async () => {
 
 .daily-report {
   background: var(--bg-primary);
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
   box-shadow: 0 4px 20px var(--shadow-color);
   position: relative;
 }
@@ -483,27 +483,28 @@ const exportReportToClipboard = async () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0;
-  font-size: 24px;
+  font-size: var(--font-xl);
   font-weight: 700;
 }
 
 .report-header {
-  margin-bottom: 8px;
+  margin-bottom: var(--spacing-sm);
 }
 
 .header-line-1 {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
 }
 
 .header-line-2 {
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-left: 4px;
+  color: var(--primary);
+  margin-left: var(--spacing-xs);
+  letter-spacing: 0.5px;
 }
 
 .status-emojis {
@@ -518,119 +519,136 @@ const exportReportToClipboard = async () => {
 
 .daily-report p {
   color: var(--text-secondary);
-  margin: 0 0 24px 0;
-  font-size: 16px;
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--font-base);
 }
 
 .report-section {
-  margin-bottom: 24px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .report-section h3 {
-  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
+  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0 0 16px 0;
-  font-size: 18px;
-  font-weight: 600;
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-lg);
+  font-weight: 700;
 }
 
 .empty-report {
   text-align: center;
-  padding: 32px;
+  padding: var(--spacing-xl);
   color: var(--text-muted);
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   font-style: italic;
+  font-size: var(--font-md);
 }
 
 .category-breakdown {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--spacing-md);
 }
 
 .category-section {
   background: var(--bg-secondary);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  transition: box-shadow var(--transition-fast);
+}
+
+.category-section:hover {
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .category-header {
-  padding: 16px;
+  padding: var(--spacing-md) var(--spacing-lg);
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 16px;
+  gap: var(--spacing-lg);
   align-items: center;
-  background: linear-gradient(90deg, var(--bg-secondary), var(--bg-primary));
+  background: linear-gradient(90deg, rgba(87, 189, 175, 0.03), var(--bg-primary));
+  border-bottom: 1px solid var(--border-color);
 }
 
 .category-info {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .category-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 16px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: var(--font-base);
 }
 
 .category-tasks {
-  font-size: 13px;
+  font-size: var(--font-sm);
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .category-time {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--primary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 14px;
+  font-size: var(--font-md);
 }
 
 .task-summaries {
-  padding: 0 16px 16px 16px;
+  padding: 0 var(--spacing-md) var(--spacing-md) var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr minmax(50px, auto) minmax(100px, auto);
-  gap: 12px;
+  grid-template-columns: 1fr 35px 100px;
+  gap: var(--spacing-sm);
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--spacing-sm);
   background: var(--bg-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
 }
 
 .task-name {
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--font-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-count {
   color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 500;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: var(--font-xs);
+  font-weight: 600;
   background: var(--bg-secondary);
-  padding: 2px 6px;
-  border-radius: 3px;
-  min-width: 30px;
+  padding: 2px var(--spacing-xs);
+  border-radius: var(--radius-sm);
+  width: 35px;
   text-align: center;
+  letter-spacing: 0.5px;
 }
 
 .task-time-combined {
   color: var(--text-primary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 12px;
+  font-size: var(--font-xs);
   font-weight: 500;
-  min-width: 100px;
+  width: 100px;
   text-align: right;
 }
 
@@ -699,6 +717,8 @@ const exportReportToClipboard = async () => {
 
 .task-summary:hover {
   background: var(--bg-secondary);
+  border-color: var(--primary);
+  box-shadow: 0 1px 3px var(--shadow-color);
 }
 
 /* Copied task highlighting */
@@ -744,21 +764,21 @@ const exportReportToClipboard = async () => {
 }
 
 .export-button {
-  padding: 10px 24px;
-  font-size: 14px;
+  padding: var(--spacing-sm) var(--spacing-xl);
+  font-size: var(--font-base);
   font-weight: 600;
   color: white;
-  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
+  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .export-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--mantis), var(--emerald));
-  box-shadow: 0 4px 8px var(--shadow-color);
+  background: linear-gradient(135deg, var(--emerald), var(--mantis));
+  box-shadow: 0 2px 6px var(--shadow-color);
   transform: translateY(-1px);
 }
 
