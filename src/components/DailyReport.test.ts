@@ -107,6 +107,11 @@ describe('DailyReport Component', () => {
     }
   ]
 
+  const mockCategories = [
+    { id: 1, name: 'Work', code: 'WRK', is_default: true },
+    { id: 2, name: 'Personal', code: 'PER', is_default: false }
+  ]
+
   beforeEach(() => {
     wrapper = mount(DailyReport, {
       props: {
@@ -118,6 +123,7 @@ describe('DailyReport Component', () => {
         totalTimeTrackedRounded: '5h 0m',
         totalTimeTrackedCombined: '5h 0m (5h 0m)',
         totalMinutesTracked: 300,
+        categories: mockCategories,
         categoryBreakdown: mockCategoryBreakdown
       }
     })
@@ -772,6 +778,251 @@ describe('DailyReport Component', () => {
       expect(wrapper.find('.daily-report').exists()).toBe(true)
       expect(wrapper.find('.category-breakdown').exists()).toBe(true)
       expect(wrapper.find('.task-summaries').exists()).toBe(true)
+    })
+  })
+
+  describe('Export Functionality', () => {
+    let clipboardWriteTextSpy: any
+
+    beforeEach(() => {
+      // Mock navigator.clipboard
+      clipboardWriteTextSpy = vi.fn().mockResolvedValue(undefined)
+      Object.assign(navigator, {
+        clipboard: {
+          writeText: clipboardWriteTextSpy
+        }
+      })
+    })
+
+    it('should render export button', () => {
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.exists()).toBe(true)
+      expect(exportButton.text()).toBe('Export to Clipboard')
+    })
+
+    it('should enable export button when tasks exist', () => {
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.attributes('disabled')).toBeUndefined()
+    })
+
+    it('should disable export button when no tasks exist', async () => {
+      await wrapper.setProps({
+        taskRecords: [],
+        categoryBreakdown: []
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.attributes('disabled')).toBeDefined()
+    })
+
+    it('should export report data to clipboard with correct JSON structure', async () => {
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      expect(clipboardWriteTextSpy).toHaveBeenCalledTimes(1)
+
+      const exportedData = JSON.parse(clipboardWriteTextSpy.mock.calls[0][0])
+      expect(Array.isArray(exportedData)).toBe(true)
+      expect(exportedData).toHaveLength(3) // 2 Work tasks + 1 Personal task
+
+      // Check first task (Development)
+      expect(exportedData[0]).toEqual({
+        category: 'Work',
+        code: 'WRK',
+        name: 'Development',
+        time: 8100 // 2h 15m = 135 minutes = 8100 seconds
+      })
+
+      // Check second task (Meeting)
+      expect(exportedData[1]).toEqual({
+        category: 'Work',
+        code: 'WRK',
+        name: 'Meeting',
+        time: 4500 // 1h 15m = 75 minutes = 4500 seconds
+      })
+
+      // Check third task (Exercise)
+      expect(exportedData[2]).toEqual({
+        category: 'Personal',
+        code: 'PER',
+        name: 'Exercise',
+        time: 5400 // 1h 30m = 90 minutes = 5400 seconds
+      })
+    })
+
+    it('should convert various time formats to seconds correctly', async () => {
+      const customBreakdown = [
+        {
+          name: 'Test',
+          taskCount: 4,
+          totalTime: '0m',
+          totalTimeRounded: '0m',
+          totalTimeCombined: '0m (0m)',
+          taskSummaries: [
+            { name: 'Zero time', count: 1, totalTime: '0m', totalTimeRounded: '0m', totalTimeCombined: '0m (0m)' },
+            {
+              name: 'Minutes only',
+              count: 1,
+              totalTime: '45m',
+              totalTimeRounded: '45m',
+              totalTimeCombined: '45m (45m)'
+            },
+            {
+              name: 'Hours only',
+              count: 1,
+              totalTime: '2h 0m',
+              totalTimeRounded: '2h',
+              totalTimeCombined: '2h 0m (2h)'
+            },
+            {
+              name: 'Hours and minutes',
+              count: 1,
+              totalTime: '3h 42m',
+              totalTimeRounded: '3h 40m',
+              totalTimeCombined: '3h 42m (3h 40m)'
+            }
+          ]
+        }
+      ]
+
+      const customCategories = [{ id: 1, name: 'Test', code: 'TST', is_default: true }]
+
+      await wrapper.setProps({
+        categories: customCategories,
+        categoryBreakdown: customBreakdown
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      const exportedData = JSON.parse(clipboardWriteTextSpy.mock.calls[0][0])
+
+      expect(exportedData[0].time).toBe(0) // 0m = 0 seconds
+      expect(exportedData[1].time).toBe(2700) // 45m = 2700 seconds
+      expect(exportedData[2].time).toBe(7200) // 2h = 7200 seconds
+      expect(exportedData[3].time).toBe(13200) // 3h 40m = 13200 seconds
+    })
+
+    it('should handle missing category code with empty string', async () => {
+      const categoriesWithoutCode = [
+        { id: 1, name: 'Work', code: '', is_default: true },
+        { id: 2, name: 'Personal', code: '', is_default: false }
+      ]
+
+      await wrapper.setProps({
+        categories: categoriesWithoutCode
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      const exportedData = JSON.parse(clipboardWriteTextSpy.mock.calls[0][0])
+
+      exportedData.forEach((entry: any) => {
+        expect(entry.code).toBe('')
+      })
+    })
+
+    it('should handle category not found in categories list', async () => {
+      await wrapper.setProps({
+        categories: [] // Empty categories list
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      const exportedData = JSON.parse(clipboardWriteTextSpy.mock.calls[0][0])
+
+      exportedData.forEach((entry: any) => {
+        expect(entry.code).toBe('') // Should default to empty string
+      })
+    })
+
+    it('should show success toast after export', async () => {
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      await wrapper.vm.$nextTick()
+
+      const toast = wrapper.find('.copy-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.text()).toBe('Report exported to clipboard')
+    })
+
+    it('should handle clipboard API errors with fallback', async () => {
+      // Mock clipboard failure
+      clipboardWriteTextSpy.mockRejectedValue(new Error('Clipboard not available'))
+
+      // Mock document.execCommand
+      const execCommandSpy = vi.spyOn(document, 'execCommand').mockReturnValue(true)
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      await wrapper.vm.$nextTick()
+
+      // Should have called fallback method
+      expect(execCommandSpy).toHaveBeenCalledWith('copy')
+
+      // Toast should still show success
+      const toast = wrapper.find('.copy-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.text()).toBe('Report exported to clipboard')
+
+      execCommandSpy.mockRestore()
+    })
+
+    it('should show error toast when both clipboard methods fail', async () => {
+      // Mock clipboard failure
+      clipboardWriteTextSpy.mockRejectedValue(new Error('Clipboard not available'))
+
+      // Mock document.execCommand to throw an error (simulating complete failure)
+      const execCommandSpy = vi.spyOn(document, 'execCommand').mockImplementation(() => {
+        throw new Error('execCommand failed')
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      await exportButton.trigger('click')
+
+      await wrapper.vm.$nextTick()
+
+      // Toast should show error
+      const toast = wrapper.find('.copy-toast')
+      expect(toast.exists()).toBe(true)
+      expect(toast.text()).toBe('Failed to export report')
+
+      execCommandSpy.mockRestore()
+    })
+
+    it('should export empty array when category breakdown is empty', async () => {
+      // Set props with a normal task (button enabled) but empty breakdown
+      await wrapper.setProps({
+        taskRecords: [mockTaskRecords[0]], // Has normal task, enables button
+        categoryBreakdown: []
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.attributes('disabled')).toBeUndefined()
+
+      await exportButton.trigger('click')
+
+      const exportedData = JSON.parse(clipboardWriteTextSpy.mock.calls[0][0])
+      expect(exportedData).toEqual([])
+    })
+
+    it('should have correct ARIA label when enabled', () => {
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.attributes('aria-label')).toBe('Export report data to clipboard as JSON')
+    })
+
+    it('should have correct ARIA label when disabled', async () => {
+      await wrapper.setProps({
+        taskRecords: [],
+        categoryBreakdown: []
+      })
+
+      const exportButton = wrapper.find('[data-testid="export-button"]')
+      expect(exportButton.attributes('aria-label')).toBe('No data to export')
     })
   })
 })

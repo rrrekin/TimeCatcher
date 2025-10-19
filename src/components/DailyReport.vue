@@ -86,6 +86,20 @@
           </ul>
         </div>
       </div>
+
+      <!-- Export Button -->
+      <div class="export-section">
+        <button
+          class="export-button"
+          @click="exportReportToClipboard"
+          :disabled="standardTaskCount === 0 || isExporting"
+          :aria-busy="isExporting ? 'true' : 'false'"
+          :aria-label="standardTaskCount === 0 ? 'No data to export' : 'Export report data to clipboard as JSON'"
+          data-testid="export-button"
+        >
+          Export to Clipboard
+        </button>
+      </div>
     </div>
 
     <!-- Tooltip for task appearances -->
@@ -118,7 +132,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onUnmounted } from 'vue'
-import type { TaskRecord } from '@/shared/types'
+import type { TaskRecord, Category } from '@/shared/types'
 import { TASK_TYPE_NORMAL } from '@/shared/types'
 
 interface DailyReportProps {
@@ -130,6 +144,7 @@ interface DailyReportProps {
   totalTimeTrackedRounded: string
   totalTimeTrackedCombined: string
   totalMinutesTracked: number
+  categories: Category[]
   categoryBreakdown: Array<{
     name: string
     taskCount: number
@@ -170,6 +185,9 @@ const copiedTaskName = ref('')
 // Copy confirmation toast state
 const showCopyToast = ref(false)
 const copyToastMessage = ref('')
+
+// Export state
+const isExporting = ref(false)
 
 // Timer cleanup
 let activeTimer: number | null = null
@@ -347,6 +365,93 @@ const getStatusText = () => {
   }
 
   return statusMessages.length > 0 ? statusMessages.join(', ') : 'No status alerts'
+}
+
+// Parse time string to seconds
+const parseTimeToSeconds = (timeString: string): number => {
+  // Extract hours and minutes from format like "1h 25m", "45m", "0m"
+  // Tolerates odd spacing and case variations (e.g., " 2H", "3H 05M")
+  const s = (timeString || '').trim()
+  const hourMatch = s.match(/(\d+)\s*h/i)
+  const minuteMatch = s.match(/(\d+)\s*m/i)
+
+  const hours = hourMatch ? parseInt(hourMatch[1]!, 10) : 0
+  const minutes = minuteMatch ? parseInt(minuteMatch[1]!, 10) : 0
+
+  return hours * 3600 + minutes * 60
+}
+
+// Build export payload once
+const buildExportData = (): Array<{ category: string; code: string; name: string; time: number }> => {
+  const out: Array<{ category: string; code: string; name: string; time: number }> = []
+  props.categoryBreakdown.forEach(categoryData => {
+    const category = props.categories.find(cat => cat.name === categoryData.name)
+    const categoryCode = category?.code || ''
+    categoryData.taskSummaries.forEach(task => {
+      out.push({
+        category: categoryData.name,
+        code: categoryCode,
+        name: task.name,
+        time: parseTimeToSeconds(task.totalTimeRounded)
+      })
+    })
+  })
+  return out
+}
+
+// Clipboard writer with fallback
+const writeToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      document.execCommand('copy')
+      textArea.remove()
+      return true
+    } catch {
+      return false
+    }
+  }
+}
+
+// Export report data to clipboard as JSON
+const exportReportToClipboard = async () => {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    const jsonString = JSON.stringify(buildExportData(), null, 2)
+    const ok = await writeToClipboard(jsonString)
+    copyToastMessage.value = ok ? 'Report exported to clipboard' : 'Failed to export report'
+    showCopyToast.value = true
+    if (activeTimer) clearTimeout(activeTimer)
+    activeTimer = window.setTimeout(
+      () => {
+        showCopyToast.value = false
+        activeTimer = null
+      },
+      ok ? 2000 : 3000
+    )
+  } catch (error) {
+    console.error('Failed to export report to clipboard:', error)
+    copyToastMessage.value = 'Failed to export report'
+    showCopyToast.value = true
+    if (activeTimer) clearTimeout(activeTimer)
+    activeTimer = window.setTimeout(() => {
+      showCopyToast.value = false
+      activeTimer = null
+    }, 3000)
+  } finally {
+    isExporting.value = false
+  }
 }
 </script>
 
@@ -627,5 +732,49 @@ const getStatusText = () => {
     transform: translateX(0);
     opacity: 1;
   }
+}
+
+/* Export section */
+.export-section {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: center;
+}
+
+.export-button {
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.export-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--mantis), var(--emerald));
+  box-shadow: 0 4px 8px var(--shadow-color);
+  transform: translateY(-1px);
+}
+
+.export-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px var(--shadow-color);
+}
+
+.export-button:focus-visible {
+  outline: 2px solid var(--verdigris);
+  outline-offset: 2px;
+}
+
+.export-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, var(--text-muted), var(--text-muted));
 }
 </style>
