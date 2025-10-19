@@ -36,6 +36,11 @@ describe('formatLocalDateString helper', () => {
   })
 })
 
+/**
+ * NOTE: Many tests in this file are now skipped because periodic 15-second auto-refresh
+ * was intentionally removed. Duration updates are now handled by TaskList component's
+ * internal timer. useAutoRefresh only handles HTTP server task creation events.
+ */
 describe('useAutoRefresh', () => {
   let mockCallback: ReturnType<typeof vi.fn>
   let selectedDate: ReturnType<typeof ref<Date>>
@@ -75,19 +80,9 @@ describe('useAutoRefresh', () => {
     vi.restoreAllMocks()
   })
 
-  it('should call callback every 15s when date is today', () => {
-    const { startAutoRefresh, stopAutoRefresh } = scope.run(() => useAutoRefresh(selectedDate, mockCallback))!
-    startAutoRefresh()
-
-    expect(mockCallback).not.toHaveBeenCalled()
-
-    vi.advanceTimersByTime(15000)
-    expect(mockCallback).toHaveBeenCalledTimes(1)
-
-    vi.advanceTimersByTime(30000)
-    expect(mockCallback).toHaveBeenCalledTimes(3)
-
-    stopAutoRefresh()
+  it.skip('should call callback every 15s when date is today - SKIPPED: periodic refresh removed', () => {
+    // Test skipped: Periodic refresh functionality was intentionally removed
+    // Duration updates now handled by TaskList component's internal timer
   })
 
   it('should not start auto-refresh if date is not today', () => {
@@ -107,32 +102,12 @@ describe('useAutoRefresh', () => {
     expect(mockCallback).not.toHaveBeenCalled()
   })
 
-  it('should stop refreshing when stopAutoRefresh is called', () => {
-    const { startAutoRefresh, stopAutoRefresh } = scope.run(() => useAutoRefresh(selectedDate, mockCallback))!
-    startAutoRefresh()
-
-    vi.advanceTimersByTime(30000)
-    expect(mockCallback).toHaveBeenCalledTimes(2)
-
-    stopAutoRefresh()
-    vi.advanceTimersByTime(60000)
-    expect(mockCallback).toHaveBeenCalledTimes(2)
+  it.skip('should stop refreshing when stopAutoRefresh is called - SKIPPED: periodic refresh removed', () => {
+    // Test skipped: Periodic refresh functionality was intentionally removed
   })
 
-  it('should restart when restartAutoRefresh is called', () => {
-    scope.run(() => {
-      const { startAutoRefresh, restartAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback)
-      startAutoRefresh()
-
-      vi.advanceTimersByTime(15000)
-      expect(mockCallback).toHaveBeenCalledTimes(1)
-
-      restartAutoRefresh()
-      vi.advanceTimersByTime(15000)
-      expect(mockCallback).toHaveBeenCalledTimes(2)
-
-      stopAutoRefresh()
-    })
+  it.skip('should restart when restartAutoRefresh is called - SKIPPED: periodic refresh removed', () => {
+    // Test skipped: Periodic refresh functionality was intentionally removed
   })
 
   describe('HTTP Server Integration', () => {
@@ -281,52 +256,133 @@ describe('useAutoRefresh', () => {
         scope.run(() => useAutoRefresh(selectedDate, mockCallback))
       }).not.toThrow()
     })
-  })
 
-  describe('Auto-refresh Error Handling', () => {
-    it('should handle auto-refresh callback errors gracefully', () => {
+    it('should call scrollToTask callback when HTTP task includes taskId', () => {
+      const mockScrollCallback = vi.fn()
+
+      scope.run(() => useAutoRefresh(selectedDate, mockCallback, mockScrollCallback))
+
+      // Set today's date
+      const today = new Date()
+      selectedDate.value = today
+      const todayString = formatLocalDateString(today)
+
+      // Trigger HTTP task created event with taskId
+      const eventData = {
+        date: todayString,
+        taskId: 42
+      }
+      mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+
+      expect(mockCallback).toHaveBeenCalledTimes(1)
+      expect(mockScrollCallback).toHaveBeenCalledWith(42)
+    })
+
+    it('should handle HTTP task without scrollToTask callback gracefully', () => {
+      // Call without scrollToTaskCallback parameter
+      scope.run(() => useAutoRefresh(selectedDate, mockCallback))
+
+      const today = new Date()
+      selectedDate.value = today
+      const todayString = formatLocalDateString(today)
+
+      const eventData = {
+        date: todayString,
+        taskId: 42
+      }
+
+      // Should not throw even though callback is undefined
+      expect(() => {
+        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      }).not.toThrow()
+
+      expect(mockCallback).toHaveBeenCalledTimes(1)
+    })
+
+    it('should not call scrollToTask callback when taskId is missing', () => {
+      const mockScrollCallback = vi.fn()
+
+      scope.run(() => useAutoRefresh(selectedDate, mockCallback, mockScrollCallback))
+
+      const today = new Date()
+      selectedDate.value = today
+      const todayString = formatLocalDateString(today)
+
+      const eventData = {
+        date: todayString
+        // No taskId
+      }
+      mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+
+      expect(mockCallback).toHaveBeenCalledTimes(1)
+      expect(mockScrollCallback).not.toHaveBeenCalled()
+    })
+
+    it('should handle errors thrown by refreshCallback during HTTP task', () => {
       const errorCallback = vi.fn(() => {
         throw new Error('Refresh failed')
       })
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-      const { startAutoRefresh } = scope.run(() => useAutoRefresh(selectedDate, errorCallback))!
-      startAutoRefresh()
+      scope.run(() => useAutoRefresh(selectedDate, errorCallback))
 
-      // Advance timer to trigger callback
-      vi.advanceTimersByTime(15000)
+      const today = new Date()
+      selectedDate.value = today
+      const todayString = formatLocalDateString(today)
 
-      expect(errorCallback).toHaveBeenCalledTimes(1)
-      expect(consoleSpy).toHaveBeenCalledWith('[useAutoRefresh] Error during auto-refresh callback:', expect.any(Error))
+      const eventData = {
+        date: todayString
+      }
 
-      // Should continue running the interval
-      vi.advanceTimersByTime(15000)
-      expect(errorCallback).toHaveBeenCalledTimes(2)
+      expect(() => {
+        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      }).not.toThrow()
+
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useAutoRefresh] Error during HTTP task creation refresh:',
+        expect.any(Error)
+      )
 
       consoleSpy.mockRestore()
     })
 
-    it('should stop auto-refresh when date is no longer today', () => {
-      // Set initial date to today
+    it('should handle errors thrown by scrollToTaskCallback', () => {
+      const errorScrollCallback = vi.fn(() => {
+        throw new Error('Scroll failed')
+      })
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      scope.run(() => useAutoRefresh(selectedDate, mockCallback, errorScrollCallback))
+
       const today = new Date()
       selectedDate.value = today
+      const todayString = formatLocalDateString(today)
 
-      const { startAutoRefresh } = scope.run(() => useAutoRefresh(selectedDate, mockCallback))!
-      startAutoRefresh()
+      const eventData = {
+        date: todayString,
+        taskId: 42
+      }
 
-      // Advance timer once - should work
-      vi.advanceTimersByTime(15000)
-      expect(mockCallback).toHaveBeenCalledTimes(1)
+      expect(() => {
+        mockElectronAPI.onHttpServerTaskCreated.mock.calls[0][0](eventData)
+      }).not.toThrow()
 
-      // Change date to yesterday
-      const yesterday = new Date(today)
-      yesterday.setDate(yesterday.getDate() - 1)
-      selectedDate.value = yesterday
+      expect(consoleSpy).toHaveBeenCalledWith(
+        '[useAutoRefresh] Error during HTTP task creation refresh:',
+        expect.any(Error)
+      )
 
-      // Advance timer again - should stop auto-refresh
-      vi.advanceTimersByTime(15000)
-      // Callback should not be called again since auto-refresh should have stopped
-      expect(mockCallback).toHaveBeenCalledTimes(1)
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Auto-refresh Error Handling', () => {
+    it.skip('should handle auto-refresh callback errors gracefully - SKIPPED: periodic refresh removed', () => {
+      // Test skipped: Periodic refresh functionality was intentionally removed
+    })
+
+    it.skip('should stop auto-refresh when date is no longer today - SKIPPED: periodic refresh removed', () => {
+      // Test skipped: Periodic refresh functionality was intentionally removed
     })
   })
 
@@ -423,33 +479,8 @@ describe('useAutoRefresh', () => {
       wrapper.unmount()
     })
 
-    it('should handle missing window.setInterval gracefully in component', async () => {
-      // Set up window without setInterval to test the specific window method access
-      const originalWindow = (global as any).window
-      ;(global as any).window = {}
-
-      const TestComponent = defineComponent({
-        setup() {
-          const selectedDate = ref(new Date())
-          const mockCallback = vi.fn()
-          const { startAutoRefresh, stopAutoRefresh } = useAutoRefresh(selectedDate, mockCallback)
-
-          return { selectedDate, mockCallback, startAutoRefresh, stopAutoRefresh }
-        },
-        template: '<div>Test Component</div>'
-      })
-
-      const wrapper = mount(TestComponent)
-
-      // This should not throw during component mount, but startAutoRefresh might fail
-      expect(() => {
-        wrapper.vm.startAutoRefresh()
-      }).toThrow() // Expected to throw when window.setInterval is not available
-
-      wrapper.unmount()
-
-      // Restore window object
-      ;(global as any).window = originalWindow
+    it.skip('should handle missing window.setInterval gracefully in component - SKIPPED: periodic refresh removed', () => {
+      // Test skipped: Periodic refresh functionality was intentionally removed
     })
 
     it('should handle missing electronAPI methods in component', async () => {
@@ -483,19 +514,8 @@ describe('useAutoRefresh', () => {
       }).not.toThrow()
     })
 
-    it('should handle startAutoRefresh when already running', () => {
-      const { startAutoRefresh, stopAutoRefresh } = scope.run(() => useAutoRefresh(selectedDate, mockCallback))!
-
-      startAutoRefresh()
-
-      // Try to start again - should return early without creating another interval
-      startAutoRefresh()
-
-      // Should still only have one interval running
-      vi.advanceTimersByTime(15000)
-      expect(mockCallback).toHaveBeenCalledTimes(1)
-
-      stopAutoRefresh()
+    it.skip('should handle startAutoRefresh when already running - SKIPPED: periodic refresh removed', () => {
+      // Test skipped: Periodic refresh functionality was intentionally removed
     })
 
     it('should handle watch callback reactivity properly', () => {

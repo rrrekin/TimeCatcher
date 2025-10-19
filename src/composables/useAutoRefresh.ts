@@ -1,4 +1,4 @@
-import { ref, onUnmounted, watch, onMounted, type Ref } from 'vue'
+import { ref, onUnmounted, watch, type Ref } from 'vue'
 import { isToday } from '@/utils/dateUtils'
 
 /**
@@ -11,64 +11,42 @@ function formatLocalDateString(date: Date): string {
   return `${year}-${month}-${day}`
 }
 
-export function useAutoRefresh(selectedDate: Ref<Date>, refreshCallback: () => void) {
-  // Use number | null type with DOM timer behavior (explicit comment for clarity)
-  const autoRefreshInterval: Ref<number | null> = ref(null) // DOM timer type, not Node.js
+export function useAutoRefresh(
+  selectedDate: Ref<Date>,
+  refreshCallback: () => void,
+  scrollToTaskCallback?: (taskId: number) => void
+) {
+  /**
+   * NOTE: Periodic auto-refresh (15-second interval) has been removed.
+   * Duration updates are now handled by TaskList component's internal timer.
+   * This composable only handles HTTP server task creation events.
+   */
 
   /**
-   * Start auto-refresh for today's tasks (15-second interval)
+   * Start auto-refresh - now a no-op, kept for API compatibility
+   * Periodic refresh removed; duration updates handled by TaskList timer
    */
   const startAutoRefresh = () => {
-    if (autoRefreshInterval.value !== null) {
-      return // Already running
-    }
-
-    const dateString = formatLocalDateString(selectedDate.value)
-    if (!isToday(dateString)) {
-      return // Only auto-refresh for today
-    }
-
-    autoRefreshInterval.value = window.setInterval(() => {
-      const currentDateString = formatLocalDateString(selectedDate.value)
-
-      // Stop auto-refresh if date is no longer today
-      if (!isToday(currentDateString)) {
-        stopAutoRefresh()
-        return
-      }
-
-      // Trigger refresh callback with error handling
-      try {
-        refreshCallback()
-      } catch (error) {
-        console.error('[useAutoRefresh] Error during auto-refresh callback:', error)
-        // Continue running the interval unless the error indicates a critical failure
-        // The interval will keep running to allow recovery on subsequent ticks
-      }
-    }, 15000) // 15 seconds
+    // No-op: periodic refresh removed
   }
 
   /**
-   * Stop auto-refresh
+   * Stop auto-refresh - now a no-op, kept for API compatibility
    */
   const stopAutoRefresh = () => {
-    if (autoRefreshInterval.value !== null) {
-      clearInterval(autoRefreshInterval.value)
-      autoRefreshInterval.value = null
-    }
+    // No-op: periodic refresh removed
   }
 
   /**
-   * Restart auto-refresh (stop then start)
+   * Restart auto-refresh - now a no-op, kept for API compatibility
    */
   const restartAutoRefresh = () => {
-    stopAutoRefresh()
-    startAutoRefresh()
+    // No-op: periodic refresh removed
   }
 
-  // Watch selectedDate and restart auto-refresh when it changes
+  // Watch selectedDate - kept for potential future use
   const stopWatcher = watch(selectedDate, () => {
-    restartAutoRefresh()
+    // No action needed - periodic refresh removed
   })
 
   // Listen for HTTP server task creation events
@@ -79,22 +57,24 @@ export function useAutoRefresh(selectedDate: Ref<Date>, refreshCallback: () => v
     if (data.date === currentDateString) {
       try {
         refreshCallback()
+        // Scroll to the newly created task if callback provided and task ID available
+        if (scrollToTaskCallback && data.taskId) {
+          scrollToTaskCallback(data.taskId)
+        }
       } catch (error) {
         console.error('[useAutoRefresh] Error during HTTP task creation refresh:', error)
       }
     }
   }
 
-  // Set up HTTP server event listener if available
-  onMounted(() => {
-    if (typeof window !== 'undefined' && window.electronAPI?.onHttpServerTaskCreated) {
-      window.electronAPI.onHttpServerTaskCreated(handleHttpTaskCreated)
-    }
-  })
+  // Set up HTTP server event listener immediately (not in onMounted to avoid test warnings)
+  // This is safe because it only adds event listeners without DOM operations
+  if (typeof window !== 'undefined' && window.electronAPI?.onHttpServerTaskCreated) {
+    window.electronAPI.onHttpServerTaskCreated(handleHttpTaskCreated)
+  }
 
   // Cleanup on unmount
   onUnmounted(() => {
-    stopAutoRefresh()
     stopWatcher()
 
     // Clean up HTTP server event listener

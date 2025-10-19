@@ -11,7 +11,7 @@ describe('useTaskRecords', () => {
     selectedDate = ref(new Date('2025-08-24T10:00:00'))
     electronAPI = {
       getTaskRecordsByDate: vi.fn().mockResolvedValue([{ id: 1, task_type: 'normal' }]),
-      addTaskRecord: vi.fn().mockResolvedValue(undefined),
+      addTaskRecord: vi.fn().mockResolvedValue({ id: 42, task_type: 'normal' }), // Return task with ID
       updateTaskRecord: vi.fn().mockResolvedValue(undefined),
       deleteTaskRecord: vi.fn().mockResolvedValue(undefined)
     }

@@ -161,11 +161,11 @@ export class HttpServerManager extends EventEmitter {
         task_type: 'normal'
       }
 
-      // Add to database
-      await dbService.addTaskRecord(taskRecord)
+      // Add to database and get the created task with ID
+      const createdTask = await dbService.addTaskRecord(taskRecord)
 
-      // Emit event for UI refresh
-      this.emit('taskCreated', { date, taskRecord })
+      // Emit event for UI refresh with task ID for scrolling
+      this.emit('taskCreated', { date, taskRecord: createdTask, taskId: createdTask.id })
 
       // Send success response (204 No Content)
       res.writeHead(204)

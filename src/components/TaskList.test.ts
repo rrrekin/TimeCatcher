@@ -904,4 +904,345 @@ describe('TaskList Component', () => {
       })
     })
   })
+
+  describe('scrollToTask Method', () => {
+    it('should warn when task row is not found', async () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const scrollToTask = wrapper.vm.scrollToTask
+      await scrollToTask(42) // Non-existent task ID
+
+      expect(consoleWarnSpy).toHaveBeenCalledWith('[TaskList] Could not find task row with ID 42')
+
+      consoleWarnSpy.mockRestore()
+    })
+
+    it('should scroll to task when found', async () => {
+      const mockScrollIntoView = vi.fn()
+
+      // Override querySelector to return a mock element
+      const originalQuerySelector = HTMLElement.prototype.querySelector
+      HTMLElement.prototype.querySelector = vi.fn((selector: string) => {
+        if (selector === 'tr[data-task-id="1"]') {
+          return {
+            scrollIntoView: mockScrollIntoView
+          } as any
+        }
+        return originalQuerySelector.call(this, selector)
+      })
+
+      const scrollToTask = wrapper.vm.scrollToTask
+      await scrollToTask(1)
+
+      expect(mockScrollIntoView).toHaveBeenCalledWith({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest'
+      })
+
+      // Restore original querySelector
+      HTMLElement.prototype.querySelector = originalQuerySelector
+    })
+  })
+
+  describe('Duration Timer Lifecycle', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2024-01-15T10:30:00'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should not start duration timer if already running', async () => {
+      // Create wrapper viewing today
+      const todayWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15', // Today
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      await todayWrapper.vm.$nextTick()
+
+      // Timer should already be running
+      const setIntervalSpy = vi.spyOn(window, 'setInterval')
+
+      // Try to start timer again (should be no-op)
+      todayWrapper.vm.startDurationTimer()
+
+      expect(setIntervalSpy).not.toHaveBeenCalled()
+
+      setIntervalSpy.mockRestore()
+      todayWrapper.unmount()
+    })
+
+    it('should handle stopDurationTimer when timer is null', () => {
+      // Create wrapper viewing a past date (timer won't start)
+      const pastWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-10', // Past date
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // Should not throw when stopping non-existent timer
+      expect(() => {
+        pastWrapper.vm.stopDurationTimer()
+      }).not.toThrow()
+
+      pastWrapper.unmount()
+    })
+
+    it('should start duration timer when date changes to today', async () => {
+      // Create wrapper with past date
+      const dateChangeWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-10', // Past date
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      await dateChangeWrapper.vm.$nextTick()
+
+      const setIntervalSpy = vi.spyOn(window, 'setInterval')
+
+      // Change to today's date
+      await dateChangeWrapper.setProps({ displayDate: '2024-01-15' })
+      await dateChangeWrapper.vm.$nextTick()
+
+      // Timer should start
+      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 15000)
+
+      setIntervalSpy.mockRestore()
+      dateChangeWrapper.unmount()
+    })
+
+    it('should stop duration timer when date changes away from today', async () => {
+      // Create wrapper viewing today
+      const dateChangeWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15', // Today
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      await dateChangeWrapper.vm.$nextTick()
+
+      const clearIntervalSpy = vi.spyOn(window, 'clearInterval')
+
+      // Change to past date
+      await dateChangeWrapper.setProps({ displayDate: '2024-01-10' })
+      await dateChangeWrapper.vm.$nextTick()
+
+      // Timer should stop
+      expect(clearIntervalSpy).toHaveBeenCalled()
+
+      clearIntervalSpy.mockRestore()
+      dateChangeWrapper.unmount()
+    })
+  })
+
+  describe('Duration Calculation Reactivity', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2024-01-15T10:30:00'))
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should trigger reactive duration update for last task when viewing today', async () => {
+      const calculateDurationMock = vi.fn(() => '1h 30m')
+
+      // Create wrapper viewing today
+      const todayWrapper = mount(TaskList, {
+        props: {
+          taskRecords: mockTaskRecords,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15', // Today
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: calculateDurationMock,
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:30'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      await todayWrapper.vm.$nextTick()
+
+      // Clear calls from initial render
+      calculateDurationMock.mockClear()
+
+      // Advance time by 15 seconds (timer interval) to update currentTimeMinutes
+      await vi.advanceTimersByTimeAsync(15000)
+      await todayWrapper.vm.$nextTick()
+
+      // Force a re-render by checking the getTaskDuration function
+      const lastTask = mockTaskRecords[mockTaskRecords.length - 1]
+      todayWrapper.vm.getTaskDuration(lastTask)
+
+      // Duration should be calculated at least once (reactivity triggered)
+      expect(calculateDurationMock.mock.calls.length).toBeGreaterThanOrEqual(1)
+
+      todayWrapper.unmount()
+    })
+  })
+
+  describe('lastTaskId Computed Property', () => {
+    it('should compute last task ID based on sorted start times', () => {
+      const tasksWithDifferentTimes = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'First Task',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Last Task',
+          start_time: '14:30',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        },
+        {
+          id: 3,
+          category_name: 'Work',
+          task_name: 'Middle Task',
+          start_time: '11:00',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        }
+      ]
+
+      const testWrapper = mount(TaskList, {
+        props: {
+          taskRecords: tasksWithDifferentTimes,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '15:00'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // Last task should be the one with latest time (14:30 = task ID 2)
+      expect(testWrapper.vm.lastTaskId).toBe(2)
+
+      testWrapper.unmount()
+    })
+
+    it('should filter out tasks with empty start_time when computing lastTaskId', () => {
+      const tasksWithEmptyTimes = [
+        {
+          id: 1,
+          category_name: 'Work',
+          task_name: 'Task With Time',
+          start_time: '09:00',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        },
+        {
+          id: 2,
+          category_name: 'Work',
+          task_name: 'Task Without Time',
+          start_time: '  ',
+          date: '2024-01-15',
+          task_type: 'normal' as const
+        }
+      ]
+
+      const testWrapper = mount(TaskList, {
+        props: {
+          taskRecords: tasksWithEmptyTimes,
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:00'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      // Should return task 1 (empty times filtered out)
+      expect(testWrapper.vm.lastTaskId).toBe(1)
+
+      testWrapper.unmount()
+    })
+
+    it('should return null when taskRecords array is empty', () => {
+      const emptyWrapper = mount(TaskList, {
+        props: {
+          taskRecords: [],
+          categories: mockCategories,
+          isLoadingTasks: false,
+          displayDate: '2024-01-15',
+          hasEndTaskForSelectedDate: false,
+          showInlineDropdown: {},
+          updateContext: 'initial-load' as UpdateContext,
+          calculateDuration: vi.fn(() => '1h 30m'),
+          convertToTimeInput: vi.fn(time => time),
+          getCurrentTime: vi.fn(() => '10:00'),
+          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
+        }
+      })
+
+      expect(emptyWrapper.vm.lastTaskId).toBeNull()
+
+      emptyWrapper.unmount()
+    })
+  })
 })
