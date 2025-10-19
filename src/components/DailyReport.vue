@@ -92,7 +92,8 @@
         <button
           class="export-button"
           @click="exportReportToClipboard"
-          :disabled="standardTaskCount === 0"
+          :disabled="standardTaskCount === 0 || isExporting"
+          :aria-busy="isExporting ? 'true' : 'false'"
           :aria-label="standardTaskCount === 0 ? 'No data to export' : 'Export report data to clipboard as JSON'"
           data-testid="export-button"
         >
@@ -184,6 +185,9 @@ const copiedTaskName = ref('')
 // Copy confirmation toast state
 const showCopyToast = ref(false)
 const copyToastMessage = ref('')
+
+// Export state
+const isExporting = ref(false)
 
 // Timer cleanup
 let activeTimer: number | null = null
@@ -366,8 +370,10 @@ const getStatusText = () => {
 // Parse time string to seconds
 const parseTimeToSeconds = (timeString: string): number => {
   // Extract hours and minutes from format like "1h 25m", "45m", "0m"
-  const hourMatch = timeString.match(/(\d+)h/)
-  const minuteMatch = timeString.match(/(\d+)m/)
+  // Tolerates odd spacing and case variations (e.g., " 2H", "3H 05M")
+  const s = (timeString || '').trim()
+  const hourMatch = s.match(/(\d+)\s*h/i)
+  const minuteMatch = s.match(/(\d+)\s*m/i)
 
   const hours = hourMatch ? parseInt(hourMatch[1]!, 10) : 0
   const minutes = minuteMatch ? parseInt(minuteMatch[1]!, 10) : 0
@@ -375,85 +381,33 @@ const parseTimeToSeconds = (timeString: string): number => {
   return hours * 3600 + minutes * 60
 }
 
-// Export report data to clipboard as JSON
-const exportReportToClipboard = async () => {
-  try {
-    // Build export data
-    const exportData: Array<{
-      category: string
-      code: string
-      name: string
-      time: number
-    }> = []
-
-    props.categoryBreakdown.forEach(categoryData => {
-      // Find category code from categories prop
-      const category = props.categories.find(cat => cat.name === categoryData.name)
-      const categoryCode = category?.code || ''
-
-      // Add each task summary
-      categoryData.taskSummaries.forEach(task => {
-        const timeInSeconds = parseTimeToSeconds(task.totalTimeRounded)
-
-        exportData.push({
-          category: categoryData.name,
-          code: categoryCode,
-          name: task.name,
-          time: timeInSeconds
-        })
+// Build export payload once
+const buildExportData = (): Array<{ category: string; code: string; name: string; time: number }> => {
+  const out: Array<{ category: string; code: string; name: string; time: number }> = []
+  props.categoryBreakdown.forEach(categoryData => {
+    const category = props.categories.find(cat => cat.name === categoryData.name)
+    const categoryCode = category?.code || ''
+    categoryData.taskSummaries.forEach(task => {
+      out.push({
+        category: categoryData.name,
+        code: categoryCode,
+        name: task.name,
+        time: parseTimeToSeconds(task.totalTimeRounded)
       })
     })
+  })
+  return out
+}
 
-    // Convert to JSON
-    const jsonString = JSON.stringify(exportData, null, 2)
-
-    // Copy to clipboard
-    await navigator.clipboard.writeText(jsonString)
-
-    // Show success toast
-    copyToastMessage.value = 'Report exported to clipboard'
-    showCopyToast.value = true
-
-    // Set timer to hide toast after 2 seconds
-    if (activeTimer) {
-      clearTimeout(activeTimer)
-    }
-    activeTimer = window.setTimeout(() => {
-      showCopyToast.value = false
-      activeTimer = null
-    }, 2000)
-  } catch (error) {
-    console.error('Failed to export report to clipboard:', error)
-
-    // Fallback for older browsers or when clipboard API is not available
+// Clipboard writer with fallback
+const writeToClipboard = async (text: string): Promise<boolean> => {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
     try {
-      const exportData: Array<{
-        category: string
-        code: string
-        name: string
-        time: number
-      }> = []
-
-      props.categoryBreakdown.forEach(categoryData => {
-        const category = props.categories.find(cat => cat.name === categoryData.name)
-        const categoryCode = category?.code || ''
-
-        categoryData.taskSummaries.forEach(task => {
-          const timeInSeconds = parseTimeToSeconds(task.totalTimeRounded)
-
-          exportData.push({
-            category: categoryData.name,
-            code: categoryCode,
-            name: task.name,
-            time: timeInSeconds
-          })
-        })
-      })
-
-      const jsonString = JSON.stringify(exportData, null, 2)
-
       const textArea = document.createElement('textarea')
-      textArea.value = jsonString
+      textArea.value = text
       textArea.style.position = 'fixed'
       textArea.style.left = '-999999px'
       textArea.style.top = '-999999px'
@@ -462,30 +416,41 @@ const exportReportToClipboard = async () => {
       textArea.select()
       document.execCommand('copy')
       textArea.remove()
-
-      copyToastMessage.value = 'Report exported to clipboard'
-      showCopyToast.value = true
-
-      if (activeTimer) {
-        clearTimeout(activeTimer)
-      }
-      activeTimer = window.setTimeout(() => {
-        showCopyToast.value = false
-        activeTimer = null
-      }, 2000)
-    } catch (fallbackError) {
-      console.error('Clipboard fallback also failed:', fallbackError)
-      copyToastMessage.value = 'Failed to export report'
-      showCopyToast.value = true
-
-      if (activeTimer) {
-        clearTimeout(activeTimer)
-      }
-      activeTimer = window.setTimeout(() => {
-        showCopyToast.value = false
-        activeTimer = null
-      }, 3000)
+      return true
+    } catch {
+      return false
     }
+  }
+}
+
+// Export report data to clipboard as JSON
+const exportReportToClipboard = async () => {
+  if (isExporting.value) return
+  isExporting.value = true
+  try {
+    const jsonString = JSON.stringify(buildExportData(), null, 2)
+    const ok = await writeToClipboard(jsonString)
+    copyToastMessage.value = ok ? 'Report exported to clipboard' : 'Failed to export report'
+    showCopyToast.value = true
+    if (activeTimer) clearTimeout(activeTimer)
+    activeTimer = window.setTimeout(
+      () => {
+        showCopyToast.value = false
+        activeTimer = null
+      },
+      ok ? 2000 : 3000
+    )
+  } catch (error) {
+    console.error('Failed to export report to clipboard:', error)
+    copyToastMessage.value = 'Failed to export report'
+    showCopyToast.value = true
+    if (activeTimer) clearTimeout(activeTimer)
+    activeTimer = window.setTimeout(() => {
+      showCopyToast.value = false
+      activeTimer = null
+    }, 3000)
+  } finally {
+    isExporting.value = false
   }
 }
 </script>
@@ -802,7 +767,7 @@ const exportReportToClipboard = async () => {
   box-shadow: 0 1px 2px var(--shadow-color);
 }
 
-.export-button:focus {
+.export-button:focus-visible {
   outline: 2px solid var(--verdigris);
   outline-offset: 2px;
 }

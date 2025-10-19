@@ -995,15 +995,14 @@ describe('DailyReport Component', () => {
     })
 
     it('should export empty array when category breakdown is empty', async () => {
+      // Set props with a normal task (button enabled) but empty breakdown
       await wrapper.setProps({
-        taskRecords: [],
+        taskRecords: [mockTaskRecords[0]], // Has normal task, enables button
         categoryBreakdown: []
       })
 
-      // Temporarily enable button for this test
       const exportButton = wrapper.find('[data-testid="export-button"]')
-      const buttonElement = exportButton.element as HTMLButtonElement
-      buttonElement.disabled = false
+      expect(exportButton.attributes('disabled')).toBeUndefined()
 
       await exportButton.trigger('click')
 
