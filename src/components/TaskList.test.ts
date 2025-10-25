@@ -49,6 +49,7 @@ describe('TaskList Component', () => {
         categories: mockCategories,
         isLoadingTasks: false,
         displayDate: '2024-01-15',
+        currentTimeMinutes: 0, // Default to 0 for tests
         hasEndTaskForSelectedDate: false,
         showInlineDropdown: {},
         updateContext: 'initial-load' as UpdateContext,
@@ -358,6 +359,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           updateContext: 'initial-load' as UpdateContext,
@@ -488,6 +490,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           calculateDuration: vi.fn(() => '1h 30m'),
@@ -823,6 +826,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           calculateDuration: vi.fn(() => '1h 30m'),
@@ -1046,140 +1050,8 @@ describe('TaskList Component', () => {
     })
   })
 
-  describe('Duration Timer Lifecycle', () => {
-    beforeEach(() => {
-      vi.useFakeTimers()
-      vi.setSystemTime(new Date('2024-01-15T10:30:00'))
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    it('should not start duration timer if already running', async () => {
-      // Create wrapper viewing today
-      const todayWrapper = mount(TaskList, {
-        props: {
-          taskRecords: mockTaskRecords,
-          categories: mockCategories,
-          isLoadingTasks: false,
-          displayDate: '2024-01-15', // Today
-          hasEndTaskForSelectedDate: false,
-          showInlineDropdown: {},
-          updateContext: 'initial-load' as UpdateContext,
-          calculateDuration: vi.fn(() => '1h 30m'),
-          convertToTimeInput: vi.fn(time => time),
-          getCurrentTime: vi.fn(() => '10:30'),
-          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
-        }
-      })
-
-      await todayWrapper.vm.$nextTick()
-
-      // Timer should already be running
-      const setIntervalSpy = vi.spyOn(window, 'setInterval')
-
-      // Try to start timer again (should be no-op)
-      todayWrapper.vm.startDurationTimer()
-
-      expect(setIntervalSpy).not.toHaveBeenCalled()
-
-      setIntervalSpy.mockRestore()
-      todayWrapper.unmount()
-    })
-
-    it('should handle stopDurationTimer when timer is null', () => {
-      // Create wrapper viewing a past date (timer won't start)
-      const pastWrapper = mount(TaskList, {
-        props: {
-          taskRecords: mockTaskRecords,
-          categories: mockCategories,
-          isLoadingTasks: false,
-          displayDate: '2024-01-10', // Past date
-          hasEndTaskForSelectedDate: false,
-          showInlineDropdown: {},
-          updateContext: 'initial-load' as UpdateContext,
-          calculateDuration: vi.fn(() => '1h 30m'),
-          convertToTimeInput: vi.fn(time => time),
-          getCurrentTime: vi.fn(() => '10:30'),
-          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
-        }
-      })
-
-      // Should not throw when stopping non-existent timer
-      expect(() => {
-        pastWrapper.vm.stopDurationTimer()
-      }).not.toThrow()
-
-      pastWrapper.unmount()
-    })
-
-    it('should start duration timer when date changes to today', async () => {
-      // Create wrapper with past date
-      const dateChangeWrapper = mount(TaskList, {
-        props: {
-          taskRecords: mockTaskRecords,
-          categories: mockCategories,
-          isLoadingTasks: false,
-          displayDate: '2024-01-10', // Past date
-          hasEndTaskForSelectedDate: false,
-          showInlineDropdown: {},
-          updateContext: 'initial-load' as UpdateContext,
-          calculateDuration: vi.fn(() => '1h 30m'),
-          convertToTimeInput: vi.fn(time => time),
-          getCurrentTime: vi.fn(() => '10:30'),
-          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
-        }
-      })
-
-      await dateChangeWrapper.vm.$nextTick()
-
-      const setIntervalSpy = vi.spyOn(window, 'setInterval')
-
-      // Change to today's date
-      await dateChangeWrapper.setProps({ displayDate: '2024-01-15' })
-      await dateChangeWrapper.vm.$nextTick()
-
-      // Timer should start
-      expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 15000)
-
-      setIntervalSpy.mockRestore()
-      dateChangeWrapper.unmount()
-    })
-
-    it('should stop duration timer when date changes away from today', async () => {
-      // Create wrapper viewing today
-      const dateChangeWrapper = mount(TaskList, {
-        props: {
-          taskRecords: mockTaskRecords,
-          categories: mockCategories,
-          isLoadingTasks: false,
-          displayDate: '2024-01-15', // Today
-          hasEndTaskForSelectedDate: false,
-          showInlineDropdown: {},
-          updateContext: 'initial-load' as UpdateContext,
-          calculateDuration: vi.fn(() => '1h 30m'),
-          convertToTimeInput: vi.fn(time => time),
-          getCurrentTime: vi.fn(() => '10:30'),
-          isSpecial: vi.fn(taskType => SPECIAL_TASK_TYPES.includes(taskType))
-        }
-      })
-
-      await dateChangeWrapper.vm.$nextTick()
-
-      const clearIntervalSpy = vi.spyOn(window, 'clearInterval')
-
-      // Change to past date
-      await dateChangeWrapper.setProps({ displayDate: '2024-01-10' })
-      await dateChangeWrapper.vm.$nextTick()
-
-      // Timer should stop
-      expect(clearIntervalSpy).toHaveBeenCalled()
-
-      clearIntervalSpy.mockRestore()
-      dateChangeWrapper.unmount()
-    })
-  })
+  // Duration timer lifecycle tests removed - timer management moved to App.vue
+  // TaskList now receives currentTimeMinutes as a prop for reactive duration updates
 
   describe('Duration Calculation Reactivity', () => {
     beforeEach(() => {
@@ -1194,13 +1066,15 @@ describe('TaskList Component', () => {
     it('should trigger reactive duration update for last task when viewing today', async () => {
       const calculateDurationMock = vi.fn(() => '1h 30m')
 
-      // Create wrapper viewing today
+      // Create wrapper viewing today with a specific task at 10:00
+      // System time is 10:30, so currentTimeMinutes = 10*60 + 30 = 630
       const todayWrapper = mount(TaskList, {
         props: {
           taskRecords: mockTaskRecords,
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15', // Today
+          currentTimeMinutes: 630, // 10:30 in minutes (10*60 + 30)
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           updateContext: 'initial-load' as UpdateContext,
@@ -1213,19 +1087,22 @@ describe('TaskList Component', () => {
 
       await todayWrapper.vm.$nextTick()
 
-      // Clear calls from initial render
-      calculateDurationMock.mockClear()
+      // Get initial duration for the last task via the computed property
+      const initialDuration = todayWrapper.vm.lastTaskDuration
 
-      // Advance time by 15 seconds (timer interval) to update currentTimeMinutes
-      await vi.advanceTimersByTimeAsync(15000)
+      // Verify initial duration is calculated (last task starts at 10:00, current time is 10:30)
+      // Duration should be 30m (30 minutes)
+      expect(initialDuration).toBe('30m')
+
+      // Simulate timer update by changing currentTimeMinutes prop to 11:30 (690 minutes)
+      await todayWrapper.setProps({ currentTimeMinutes: 690 }) // 11:30 in minutes (11*60 + 30)
       await todayWrapper.vm.$nextTick()
 
-      // Force a re-render by checking the getTaskDuration function
-      const lastTask = mockTaskRecords[mockTaskRecords.length - 1]
-      todayWrapper.vm.getTaskDuration(lastTask)
+      // Get duration after time update - should reflect the new current time via computed property
+      const updatedDuration = todayWrapper.vm.lastTaskDuration
 
-      // Duration should be calculated at least once (reactivity triggered)
-      expect(calculateDurationMock.mock.calls.length).toBeGreaterThanOrEqual(1)
+      // Duration should now be 1h 30m (90 minutes from 10:00 to 11:30)
+      expect(updatedDuration).toBe('1h 30m')
 
       todayWrapper.unmount()
     })
@@ -1266,6 +1143,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           updateContext: 'initial-load' as UpdateContext,
@@ -1308,6 +1186,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           updateContext: 'initial-load' as UpdateContext,
@@ -1331,6 +1210,7 @@ describe('TaskList Component', () => {
           categories: mockCategories,
           isLoadingTasks: false,
           displayDate: '2024-01-15',
+          currentTimeMinutes: 0,
           hasEndTaskForSelectedDate: false,
           showInlineDropdown: {},
           updateContext: 'initial-load' as UpdateContext,

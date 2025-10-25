@@ -22,6 +22,7 @@
             :categories="categories"
             :is-loading-tasks="isLoadingTasks"
             :display-date="displayDate"
+            :current-time-minutes="currentTimeMinutes"
             :has-end-task-for-selected-date="hasEndTaskForSelectedDate"
             :show-inline-dropdown="showInlineDropdown"
             :calculate-duration="calculateDuration"
@@ -229,6 +230,11 @@ const isSetupModalOpen = ref(false)
 // Update context for task highlighting
 const updateContext = ref<UpdateContext>('initial-load')
 
+// Initialize with current time to ensure consistent display on startup
+const now = new Date()
+const currentTimeMinutes = ref<number>(Math.round(now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60))
+let reportDurationUpdateTimer: number | null = null // Timer for periodic updates
+
 // Composables
 const {
   categories,
@@ -382,7 +388,7 @@ const formattedDate = computed(() => {
 })
 
 const displayDate = computed(() => {
-  return formattedDate.value.split(',')[0] || formattedDate.value
+  return toYMDLocalUtil(selectedDate.value)
 })
 
 const dateTitle = computed(() => {
@@ -411,6 +417,11 @@ const isToday = computed(() => {
 })
 
 const totalTimeTracked = computed(() => {
+  // Access currentTimeMinutes to create reactive dependency for today's date
+  // This ensures DailyReport totals update every 15 seconds when viewing today
+  if (isToday.value) {
+    void currentTimeMinutes.value
+  }
   return getTotalTimeTracked()
 })
 
@@ -434,6 +445,29 @@ const goToToday = () => {
 const updateDateFromInput = (value: string) => {
   const [year, month, day] = value.split('-').map(Number)
   selectedDate.value = new Date(year!, (month ?? 1) - 1, day!)
+}
+
+// Update current time in minutes
+const updateCurrentTimeForReport = () => {
+  const now = new Date()
+  currentTimeMinutes.value = Math.round(now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60)
+}
+
+// Start/stop duration update timer
+const startReportDurationTimer = () => {
+  if (!isToday.value || reportDurationUpdateTimer !== null) return
+
+  updateCurrentTimeForReport() // Initial update
+  reportDurationUpdateTimer = window.setInterval(() => {
+    updateCurrentTimeForReport()
+  }, 15000) // Update every 15 seconds
+}
+
+const stopReportDurationTimer = () => {
+  if (reportDurationUpdateTimer !== null) {
+    clearInterval(reportDurationUpdateTimer)
+    reportDurationUpdateTimer = null
+  }
 }
 
 const openSetup = async () => {
@@ -868,15 +902,17 @@ watch(
   async () => {
     // Stop any existing auto-refresh first
     stopAutoRefresh()
+    stopReportDurationTimer()
 
     // Await loading the new task records with date-change context
     await loadTaskRecordsWrapper('date-change')
 
     // No scrolling on date change - user is intentionally navigating, not adding tasks
 
-    // Start auto-refresh if we're viewing today
+    // Start auto-refresh and report timer if we're viewing today
     if (isToday.value) {
       startAutoRefresh()
+      startReportDurationTimer()
     }
   },
   { immediate: false }
@@ -917,9 +953,10 @@ onMounted(async () => {
     console.log('App initialization complete')
   }
 
-  // Start auto-refresh for today's tasks
+  // Start auto-refresh and report timer for today's tasks
   if (isToday.value) {
     startAutoRefresh()
+    startReportDurationTimer()
   }
 
   // Start HTTP server if enabled
@@ -953,8 +990,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  // Stop auto-refresh
+  // Stop auto-refresh and report timer
   stopAutoRefresh()
+  stopReportDurationTimer()
 
   // Clean up click outside event listener
   if (typeof document !== 'undefined') {
@@ -1360,6 +1398,12 @@ const parseDurationToMinutes = (durationStr: string): number => {
 }
 
 const getEnhancedCategoryBreakdown = computed(() => {
+  // Access currentTimeMinutes to create reactive dependency for today's date
+  // This ensures category breakdown updates every 15 seconds when viewing today
+  if (isToday.value) {
+    void currentTimeMinutes.value
+  }
+
   if (taskRecords.value.length === 0) return []
 
   const categoryMap = new Map<string, { tasks: Map<string, TaskSummary> }>()

@@ -116,7 +116,7 @@
           </td>
           <!-- Duration column (visibility based on task type) -->
           <td v-if="DURATION_VISIBLE_BY_TASK_TYPE[record.task_type]" class="duration-cell" data-test="task-duration">
-            {{ getTaskDuration(record) }}
+            {{ getDurationReactive(record) }}
           </td>
           <td v-else class="duration-cell" data-test="task-duration">-</td>
           <td class="actions-cell">
@@ -241,6 +241,10 @@ const props = defineProps({
     type: String,
     required: true
   },
+  currentTimeMinutes: {
+    type: Number,
+    required: true
+  },
   hasEndTaskForSelectedDate: {
     type: Boolean,
     required: true
@@ -282,16 +286,6 @@ const emit = defineEmits<{
   confirmDeleteTask: [record: TaskRecordWithId]
 }>()
 
-// Reactive current time for duration updates (only for last task on today's date)
-const currentTimeMinutes = ref<number>(0)
-let durationUpdateTimer: number | null = null
-
-// Update current time in minutes
-const updateCurrentTime = () => {
-  const now = new Date()
-  currentTimeMinutes.value = Math.floor(now.getHours() * 60 + now.getMinutes())
-}
-
 // Check if we're viewing today
 const isViewingToday = computed(() => {
   const today = new Date()
@@ -311,50 +305,50 @@ const lastTaskId = computed(() => {
   return sorted.length > 0 ? sorted[sorted.length - 1]!.id : null
 })
 
-// Enhanced duration calculation with reactive current time
-const getTaskDuration = (record: TaskRecordWithId): string => {
-  // For the last task when viewing today, trigger reactivity on currentTimeMinutes
-  if (isViewingToday.value && record.id === lastTaskId.value) {
-    // Access reactive ref to create dependency
-    void currentTimeMinutes.value
+// Computed property for the last task's duration
+const lastTaskDuration = computed(() => {
+  if (!isViewingToday.value || !lastTaskId.value) {
+    return '-'
   }
-  // Delegate to parent's calculateDuration which contains the full logic
-  return props.calculateDuration(record)
-}
 
-// Start/stop duration update timer
-const startDurationTimer = () => {
-  if (!isViewingToday.value || durationUpdateTimer !== null) return
-
-  updateCurrentTime() // Initial update
-  durationUpdateTimer = window.setInterval(() => {
-    updateCurrentTime()
-  }, 15000) // Update every 15 seconds
-}
-
-const stopDurationTimer = () => {
-  if (durationUpdateTimer !== null) {
-    clearInterval(durationUpdateTimer)
-    durationUpdateTimer = null
+  const lastTask = props.taskRecords.find(r => r.id === lastTaskId.value)
+  if (!lastTask) {
+    return '-'
   }
-}
 
-// Watch for date changes to manage timer
-watch(
-  isViewingToday,
-  newValue => {
-    if (newValue) {
-      startDurationTimer()
-    } else {
-      stopDurationTimer()
+  const reactiveTimeMinutes = props.currentTimeMinutes
+
+  // Parse the task start time
+  const [hours = 0, minutes = 0] = lastTask.start_time.split(':').map(Number)
+  const taskStartMinutes = hours * 60 + minutes
+
+  // Calculate duration from start to current time
+  const durationMinutes = reactiveTimeMinutes - taskStartMinutes
+
+  // Return formatted duration or '0m' if negative
+  if (durationMinutes > 0) {
+    const hours = Math.floor(durationMinutes / 60)
+    const mins = Math.floor(durationMinutes % 60)
+    if (hours > 0) {
+      return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
     }
-  },
-  { immediate: true }
-)
+    return `${mins}m`
+  }
+  return '0m'
+})
 
-// Cleanup on unmount
-onUnmounted(() => {
-  stopDurationTimer()
+// Returns a function for getting task duration with reactive tracking
+const getDurationReactive = computed(() => {
+  const currentLastTaskDuration = lastTaskDuration.value
+  const currentLastTaskId = lastTaskId.value
+  const currentIsViewingToday = isViewingToday.value
+
+  return (record: TaskRecordWithId): string => {
+    if (currentIsViewingToday && record.id === currentLastTaskId) {
+      return currentLastTaskDuration
+    }
+    return props.calculateDuration(record)
+  }
 })
 
 // Expose scroll methods to parent
