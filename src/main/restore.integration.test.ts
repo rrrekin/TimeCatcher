@@ -195,6 +195,56 @@ describe('Restore integration (normalized insertions)', () => {
 
     expect(h.electronState.showErrorBoxMock).not.toHaveBeenCalled()
   })
+
+  it('restores old backup format without code field successfully (backward compatibility)', async () => {
+    const oldBackup = {
+      version: 1,
+      settings: {},
+      database: {
+        categories: [
+          { name: 'Dev', is_default: true }, // no code field
+          { name: 'Personal', is_default: false },
+          { name: 'Meetings' }
+        ],
+        task_records: [
+          {
+            category_name: 'Dev',
+            task_name: 'Legacy task',
+            start_time: '09:00',
+            date: '2024-01-01',
+            task_type: 'normal'
+          }
+        ]
+      }
+    }
+
+    h.electronState.showOpenDialogMock.mockResolvedValue({ canceled: false, filePaths: ['old-backup.json'] })
+    h.fsState.readFileMock.mockResolvedValue(JSON.stringify(oldBackup))
+
+    const restoreHandler = h.electronState.handlers['app:restore']
+    expect(typeof restoreHandler).toBe('function')
+    const res = await restoreHandler()
+    expect(res?.ok).toBe(true)
+
+    const sqlCalls = h.dbState.calls
+    const catInserts = sqlCalls['INSERT INTO categories (name, code, is_default) VALUES (?, ?, ?)'] || []
+    expect(catInserts.length).toBe(3)
+
+    // Verify that categories without code field get empty string default
+    const devCategory = catInserts.find(args => args[0] === 'Dev')
+    expect(devCategory).toBeDefined()
+    expect(devCategory?.[1]).toBe('') // code defaults to empty string
+
+    const personalCategory = catInserts.find(args => args[0] === 'Personal')
+    expect(personalCategory).toBeDefined()
+    expect(personalCategory?.[1]).toBe('') // code defaults to empty string
+
+    const meetingsCategory = catInserts.find(args => args[0] === 'Meetings')
+    expect(meetingsCategory).toBeDefined()
+    expect(meetingsCategory?.[1]).toBe('') // code defaults to empty string
+
+    expect(h.electronState.showErrorBoxMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('Backup integration', () => {
