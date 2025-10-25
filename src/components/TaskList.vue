@@ -12,7 +12,7 @@
         <tr>
           <th scope="col">Category</th>
           <th scope="col">Task</th>
-          <th scope="col">Start time</th>
+          <th scope="col">Start</th>
           <th scope="col">Duration</th>
           <th scope="col">Actions</th>
         </tr>
@@ -579,7 +579,7 @@ th {
 }
 
 td {
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: 2px var(--spacing-sm);
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }

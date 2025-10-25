@@ -37,7 +37,6 @@
 
     <!-- Category Breakdown -->
     <div class="report-section">
-      <h3>Summary per Category & Task</h3>
       <div v-if="standardTaskCount === 0" class="empty-report">No standard tasks recorded for this day</div>
       <div v-else class="category-breakdown" data-testid="category-breakdown">
         <div
@@ -48,9 +47,8 @@
         >
           <div class="category-header">
             <div class="category-info">
-              <span class="category-name" :id="`category-name-${index}`">{{ categoryData.name }}</span>
-              <span class="category-tasks"
-                >{{ categoryData.taskCount }} {{ categoryData.taskCount === 1 ? 'task' : 'tasks' }}</span
+              <span class="category-name" :id="`category-name-${index}`"
+                >{{ categoryData.taskCount }} × {{ categoryData.name }}</span
               >
             </div>
             <div class="category-time">{{ categoryData.totalTimeCombined }}</div>
@@ -73,8 +71,7 @@
               @click="copyTaskNameToClipboard(task.name)"
               @keydown="handleTaskKeydown($event, task.name)"
             >
-              <span class="task-name">{{ task.name }}</span>
-              <span class="task-count">{{ task.count }}x</span>
+              <span class="task-name">{{ task.count }} × {{ task.name }}</span>
               <span
                 class="task-time-combined"
                 :title="`Actual time (Rounded to nearest 5m)`"
@@ -87,8 +84,8 @@
         </div>
       </div>
 
-      <!-- Export Button -->
-      <div class="export-section">
+      <!-- Export Button (only for complete days) -->
+      <div v-if="hasEndTaskForSelectedDate" class="export-section">
         <button
           class="export-button"
           @click="exportReportToClipboard"
@@ -523,10 +520,6 @@ const exportReportToClipboard = async () => {
   font-size: var(--font-base);
 }
 
-.report-section {
-  margin-bottom: var(--spacing-lg);
-}
-
 .report-section h3 {
   background: linear-gradient(135deg, var(--verdigris), var(--emerald));
   background-clip: text;
@@ -550,7 +543,7 @@ const exportReportToClipboard = async () => {
 .category-breakdown {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
 }
 
 .category-section {
@@ -566,7 +559,7 @@ const exportReportToClipboard = async () => {
 }
 
 .category-header {
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-sm) var(--spacing-md);
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--spacing-lg);
@@ -590,12 +583,6 @@ const exportReportToClipboard = async () => {
   font-size: var(--font-base);
 }
 
-.category-tasks {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
 .category-time {
   font-weight: 600;
   color: var(--primary);
@@ -604,15 +591,16 @@ const exportReportToClipboard = async () => {
 }
 
 .task-summaries {
-  padding: 0 var(--spacing-md) var(--spacing-md) var(--spacing-md);
+  padding: 0 var(--spacing-sm) 0 var(--spacing-sm);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin: var(--spacing-sm) 0 var(--spacing-sm) 0;
 }
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr 35px 100px;
+  grid-template-columns: 1fr 100px;
   gap: var(--spacing-sm);
   align-items: center;
   padding: var(--spacing-sm);
@@ -630,25 +618,11 @@ const exportReportToClipboard = async () => {
   white-space: nowrap;
 }
 
-.task-count {
-  color: var(--text-muted);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: var(--font-xs);
-  font-weight: 600;
-  background: var(--bg-secondary);
-  padding: 2px var(--spacing-xs);
-  border-radius: var(--radius-sm);
-  width: 35px;
-  text-align: center;
-  letter-spacing: 0.5px;
-}
-
 .task-time-combined {
   color: var(--text-primary);
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   font-size: var(--font-xs);
   font-weight: 500;
-  width: 100px;
   text-align: right;
 }
 
@@ -756,9 +730,7 @@ const exportReportToClipboard = async () => {
 
 /* Export section */
 .export-section {
-  margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
 }

@@ -200,10 +200,7 @@ describe('DailyReport Component', () => {
       const workCategory = wrapper.findAll('.category-section')[0]
 
       const categoryName = workCategory.find('.category-name')
-      expect(categoryName.text()).toBe('Work')
-
-      const categoryTasks = workCategory.find('.category-tasks')
-      expect(categoryTasks.text()).toBe('2 tasks')
+      expect(categoryName.text()).toBe('2 × Work')
 
       const categoryTime = workCategory.find('.category-time')
       expect(categoryTime.text()).toBe('3h 30m (3h 30m)')
@@ -212,8 +209,8 @@ describe('DailyReport Component', () => {
     it('should display singular "task" for single task count', () => {
       const personalCategory = wrapper.findAll('.category-section')[1]
 
-      const categoryTasks = personalCategory.find('.category-tasks')
-      expect(categoryTasks.text()).toBe('1 task')
+      const categoryName = personalCategory.find('.category-name')
+      expect(categoryName.text()).toBe('1 × Personal')
     })
   })
 
@@ -226,8 +223,7 @@ describe('DailyReport Component', () => {
 
       // Check first task summary
       const firstTask = taskSummaries[0]
-      expect(firstTask.find('.task-name').text()).toBe('Development')
-      expect(firstTask.find('.task-count').text()).toBe('1x')
+      expect(firstTask.find('.task-name').text()).toBe('1 × Development')
     })
 
     it('should display combined time for each task', () => {
