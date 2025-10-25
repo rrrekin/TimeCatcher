@@ -78,7 +78,7 @@ describe('TaskList Component', () => {
       const headers = wrapper.findAll('th')
       const headerTexts = headers.map(header => header.text())
 
-      expect(headerTexts).toEqual(['Category', 'Task', 'Start time', 'Duration', 'Actions'])
+      expect(headerTexts).toEqual(['Category', 'Task', 'Start', 'Duration', 'Actions'])
     })
 
     it('should display task records in the table', () => {
