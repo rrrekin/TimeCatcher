@@ -352,10 +352,12 @@ ipcMain.handle('app:backup', async (_evt, settings: SettingsSnapshot) => {
     }
 
     // Collect database snapshot
-    const categories = dbService.db.prepare('SELECT id, name, is_default, created_at FROM categories ORDER BY id').all()
+    const categories = dbService.db
+      .prepare('SELECT id, name, code, is_default, created_at FROM categories ORDER BY id')
+      .all()
     const taskRecords = dbService.db
       .prepare(
-        `SELECT id, category_name, task_name, start_time, date, task_type, created_at 
+        `SELECT id, category_name, task_name, start_time, date, task_type, created_at
          FROM task_records ORDER BY id`
       )
       .all()

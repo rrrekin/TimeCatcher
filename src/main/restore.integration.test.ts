@@ -108,16 +108,16 @@ describe('Restore integration (normalized insertions)', () => {
     h.fsState.writeFileMock.mockReset()
   })
 
-  it('inserts deduped categories and skips duplicate END per day without errors', async () => {
+  it('inserts deduped categories with code field and skips duplicate END per day without errors', async () => {
     const backup = {
       version: 1,
       settings: {},
       database: {
         categories: [
-          { name: 'Dev', is_default: true },
-          { name: 'Dev' },
-          { name: 'Personal', is_default: true },
-          { name: 'Meetings' }
+          { name: 'Dev', code: 'DEV', is_default: true },
+          { name: 'Dev', code: 'DEV' },
+          { name: 'Personal', code: 'PER', is_default: true },
+          { name: 'Meetings', code: '' }
         ],
         task_records: [
           { category_name: 'Dev', task_name: 'Start', start_time: '09:00', date: '2024-01-01', task_type: 'normal' },
@@ -163,6 +163,16 @@ describe('Restore integration (normalized insertions)', () => {
     expect(catInserts.length).toBe(3)
     const defaultCount = catInserts.reduce((acc, args) => acc + (args[2] ? 1 : 0), 0)
     expect(defaultCount).toBe(1)
+    // Verify code column is properly inserted
+    const devCategory = catInserts.find(args => args[0] === 'Dev')
+    expect(devCategory).toBeDefined()
+    expect(devCategory?.[1]).toBe('DEV')
+    const personalCategory = catInserts.find(args => args[0] === 'Personal')
+    expect(personalCategory).toBeDefined()
+    expect(personalCategory?.[1]).toBe('PER')
+    const meetingsCategory = catInserts.find(args => args[0] === 'Meetings')
+    expect(meetingsCategory).toBeDefined()
+    expect(meetingsCategory?.[1]).toBe('')
 
     const recInsert =
       sqlCalls[
@@ -182,6 +192,56 @@ describe('Restore integration (normalized insertions)', () => {
     }
     expect(endDateCounts['2024-01-01']).toBe(1)
     expect(endDateCounts['2024-01-02']).toBe(1)
+
+    expect(h.electronState.showErrorBoxMock).not.toHaveBeenCalled()
+  })
+
+  it('restores old backup format without code field successfully (backward compatibility)', async () => {
+    const oldBackup = {
+      version: 1,
+      settings: {},
+      database: {
+        categories: [
+          { name: 'Dev', is_default: true }, // no code field
+          { name: 'Personal', is_default: false },
+          { name: 'Meetings' }
+        ],
+        task_records: [
+          {
+            category_name: 'Dev',
+            task_name: 'Legacy task',
+            start_time: '09:00',
+            date: '2024-01-01',
+            task_type: 'normal'
+          }
+        ]
+      }
+    }
+
+    h.electronState.showOpenDialogMock.mockResolvedValue({ canceled: false, filePaths: ['old-backup.json'] })
+    h.fsState.readFileMock.mockResolvedValue(JSON.stringify(oldBackup))
+
+    const restoreHandler = h.electronState.handlers['app:restore']
+    expect(typeof restoreHandler).toBe('function')
+    const res = await restoreHandler()
+    expect(res?.ok).toBe(true)
+
+    const sqlCalls = h.dbState.calls
+    const catInserts = sqlCalls['INSERT INTO categories (name, code, is_default) VALUES (?, ?, ?)'] || []
+    expect(catInserts.length).toBe(3)
+
+    // Verify that categories without code field get empty string default
+    const devCategory = catInserts.find(args => args[0] === 'Dev')
+    expect(devCategory).toBeDefined()
+    expect(devCategory?.[1]).toBe('') // code defaults to empty string
+
+    const personalCategory = catInserts.find(args => args[0] === 'Personal')
+    expect(personalCategory).toBeDefined()
+    expect(personalCategory?.[1]).toBe('') // code defaults to empty string
+
+    const meetingsCategory = catInserts.find(args => args[0] === 'Meetings')
+    expect(meetingsCategory).toBeDefined()
+    expect(meetingsCategory?.[1]).toBe('') // code defaults to empty string
 
     expect(h.electronState.showErrorBoxMock).not.toHaveBeenCalled()
   })
@@ -207,11 +267,14 @@ describe('Backup integration', () => {
     expect(h.fsState.writeFileMock.mock.calls.length).toBe(0)
   })
 
-  it('creates backup JSON with expected shape', async () => {
+  it('creates backup JSON with expected shape including code column', async () => {
     h.electronState.showSaveDialogMock.mockReset()
     h.electronState.showSaveDialogMock.mockResolvedValue({ canceled: false, filePath: 'backup.json' })
 
-    h.dbState.selectCategories = [{ id: 1, name: 'Dev', is_default: 1, created_at: '2024-01-01T00:00:00Z' }]
+    h.dbState.selectCategories = [
+      { id: 1, name: 'Dev', code: 'DEV', is_default: 1, created_at: '2024-01-01T00:00:00Z' },
+      { id: 2, name: 'Personal', code: '', is_default: 0, created_at: '2024-01-01T00:00:00Z' }
+    ]
     h.dbState.selectTaskRecords = [
       {
         id: 1,
@@ -247,7 +310,10 @@ describe('Backup integration', () => {
     })
     expect(Array.isArray(json.database.categories)).toBe(true)
     expect(Array.isArray(json.database.task_records)).toBe(true)
-    expect(json.database.categories.length).toBe(1)
+    expect(json.database.categories.length).toBe(2)
     expect(json.database.task_records.length).toBe(1)
+    // Verify code column is included in backup
+    expect(json.database.categories[0]).toMatchObject({ name: 'Dev', code: 'DEV' })
+    expect(json.database.categories[1]).toMatchObject({ name: 'Personal', code: '' })
   })
 })
