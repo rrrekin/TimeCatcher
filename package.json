@@ -51,7 +51,7 @@
     "@vue/test-utils": "^2.4.6",
     "@vue/tsconfig": "^0.8.0",
     "concurrently": "^9.2.0",
-    "electron": "^38.0.0",
+    "electron": "^39.0.0",
     "electron-builder": "^26.0.12",
     "jsdom": "^26.1.0",
     "markdownlint-cli2": "^0.20.0",
