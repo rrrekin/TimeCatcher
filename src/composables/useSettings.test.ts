@@ -8,8 +8,12 @@ describe('useSettings', () => {
   let setItemSpy: any
   let getItemSpy: any
   let removeItemSpy: any
+  let originalDocument: Document
 
   beforeEach(() => {
+    // Save original document for restoration (Vitest v4 requires proper cleanup)
+    originalDocument = global.document
+
     localStorageMock = {}
     setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation((k, v) => {
       localStorageMock[k] = v
@@ -21,7 +25,26 @@ describe('useSettings', () => {
   })
 
   afterEach(() => {
+    // Restore document if it was modified (Vitest v4 requires proper cleanup)
+    if (global.document !== originalDocument) {
+      global.document = originalDocument
+    }
     vi.restoreAllMocks()
+
+    // Re-establish matchMedia after restoreAllMocks (required in Vitest v4)
+    // This ensures matchMedia is available for all tests after cleanup
+    if (!window.matchMedia) {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        configurable: true,
+        value: (query: string) => ({
+          matches: false,
+          media: query,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn()
+        })
+      })
+    }
   })
 
   it('should applyTheme light and dark', () => {
@@ -49,6 +72,9 @@ describe('useSettings', () => {
     const { applyTheme } = useSettings()
     const origDoc = global.document
     const setPropertySpy = vi.spyOn(document.documentElement.style, 'setProperty')
+
+    // Clear calls from onMounted/loadSettings (Vitest v4 stricter isolation)
+    setPropertySpy.mockClear()
 
     // @ts-expect-error override
     global.document = undefined
