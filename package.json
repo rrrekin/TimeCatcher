@@ -1,6 +1,6 @@
 {
   "name": "timecatcher",
-  "version": "0.32.6",
+  "version": "0.32.7",
   "description": "Task &amp; time tracking desktop app",
   "main": "dist/main/main.js",
   "scripts": {
