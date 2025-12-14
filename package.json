@@ -60,7 +60,7 @@
     "vite": "^7.1.2",
     "vitest": "^3.2.4",
     "vue-tsc": "^3.0.5",
-    "wait-on": "^8.0.4"
+    "wait-on": "^9.0.0"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
