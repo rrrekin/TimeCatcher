@@ -16,9 +16,8 @@
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": true,
     "sourceMap": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [
@@ -35,11 +34,5 @@
     "src/shared/**/*.ts",
     "src/shared/**/*.vue"
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/main/**/*",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+  "exclude": ["node_modules", "dist", "src/main/**/*", "**/*.test.ts", "**/*.spec.ts"]
 }
