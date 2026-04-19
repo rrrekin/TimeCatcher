@@ -43,7 +43,7 @@
         {{ totalTimeTrackedCombined }}
       </div>
     </div>
-    <div id="report-body" v-if="!isCollapsed" data-testid="report-body">
+    <div id="report-body" v-show="!isCollapsed" data-testid="report-body">
       <p data-testid="report-date">
         {{ dateTitle }}
         {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}

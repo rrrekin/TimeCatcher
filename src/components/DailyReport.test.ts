@@ -1045,7 +1045,9 @@ describe('DailyReport Component', () => {
     })
 
     it('should show report body when expanded', () => {
-      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(true)
+      const body = wrapper.find('[data-testid="report-body"]')
+      expect(body.exists()).toBe(true)
+      expect(body.isVisible()).toBe(true)
       expect(wrapper.find('[data-testid="report-date"]').exists()).toBe(true)
       expect(wrapper.find('[data-testid="category-breakdown"]').exists()).toBe(true)
     })
@@ -1054,9 +1056,10 @@ describe('DailyReport Component', () => {
       const toggle = wrapper.find('[data-testid="report-collapse-toggle"]')
       await toggle.trigger('click')
 
-      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(false)
-      expect(wrapper.find('[data-testid="report-date"]').exists()).toBe(false)
-      expect(wrapper.find('[data-testid="category-breakdown"]').exists()).toBe(false)
+      const body = wrapper.find('[data-testid="report-body"]')
+      // v-show keeps element in DOM so aria-controls IDREF stays valid
+      expect(body.exists()).toBe(true)
+      expect(body.isVisible()).toBe(false)
       expect(toggle.attributes('aria-expanded')).toBe('false')
       expect(toggle.attributes('aria-label')).toBe('Expand report')
     })
@@ -1074,7 +1077,7 @@ describe('DailyReport Component', () => {
       await toggle.trigger('click')
       await toggle.trigger('click')
 
-      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="report-body"]').isVisible()).toBe(true)
       expect(toggle.attributes('aria-expanded')).toBe('true')
     })
 
@@ -1093,7 +1096,7 @@ describe('DailyReport Component', () => {
       const fresh = mount(DailyReport, {
         props: (wrapper.vm as any).$props
       })
-      expect(fresh.find('[data-testid="report-body"]').exists()).toBe(false)
+      expect(fresh.find('[data-testid="report-body"]').isVisible()).toBe(false)
       expect(fresh.find('[data-testid="report-collapse-toggle"]').attributes('aria-expanded')).toBe('false')
       fresh.unmount()
     })
@@ -1112,7 +1115,7 @@ describe('DailyReport Component', () => {
       const fresh = mount(DailyReport, {
         props: (wrapper.vm as any).$props
       })
-      expect(fresh.find('[data-testid="report-body"]').exists()).toBe(true)
+      expect(fresh.find('[data-testid="report-body"]').isVisible()).toBe(true)
       fresh.unmount()
       getSpy.mockRestore()
     })
