@@ -29,10 +29,6 @@ jobs:
     timeout-minutes: 10
     permissions:
       id-token: write
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [22, 24]
 
     steps:
       - name: Checkout code
@@ -40,10 +36,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -55,24 +51,23 @@ jobs:
         run: mkdir -p test-results && npm run test:coverage
 
       - name: Publish test results
-        if: ${{ always() && !cancelled() && matrix.node-version == 22 && hashFiles('test-results/junit.xml') != '' }}
+        if: ${{ always() && !cancelled() && hashFiles('test-results/junit.xml') != '' }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Enforce coverage thresholds
-        if: ${{ matrix.node-version == 22 }}
         run: node scripts/check-coverage.js
 
       - name: Run build
         run: npm run build
 
-      - name: Upload coverage to Codecov (Node.js 22 only)
-        if: ${{ always() && matrix.node-version == 22 && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
+      - name: Upload coverage to Codecov
+        if: ${{ always() && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@v6
         with:
           files: ./coverage/lcov.info
-          name: node-${{ matrix.node-version }}
+          name: node-24
           flags: unit
           fail_ci_if_error: false
           verbose: true
