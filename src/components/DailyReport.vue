@@ -1,5 +1,18 @@
 <template>
-  <div class="daily-report">
+  <div class="daily-report" :class="{ 'daily-report-collapsed': isCollapsed }">
+    <button
+      type="button"
+      class="collapse-toggle"
+      :class="{ 'collapse-toggle-collapsed': isCollapsed }"
+      :aria-expanded="!isCollapsed"
+      aria-controls="report-body"
+      :aria-label="isCollapsed ? 'Expand report' : 'Collapse report'"
+      :title="isCollapsed ? 'Expand report' : 'Collapse report'"
+      data-testid="report-collapse-toggle"
+      @click="toggleCollapsed"
+    >
+      <span class="collapse-toggle-icon" aria-hidden="true">{{ isCollapsed ? '◂' : '▸' }}</span>
+    </button>
     <div class="report-header">
       <div class="header-line-1">
         <h2 data-testid="report-header-title">Daily Report</h2>
@@ -30,72 +43,74 @@
         {{ totalTimeTrackedCombined }}
       </div>
     </div>
-    <p data-testid="report-date">
-      {{ dateTitle }}
-      {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
-    </p>
+    <div id="report-body" v-show="!isCollapsed" data-testid="report-body">
+      <p data-testid="report-date">
+        {{ dateTitle }}
+        {{ hasEndTaskForSelectedDate ? '' : ' (Day not finalized)' }}
+      </p>
 
-    <!-- Category Breakdown -->
-    <div class="report-section">
-      <div v-if="standardTaskCount === 0" class="empty-report">No standard tasks recorded for this day</div>
-      <div v-else class="category-breakdown" data-testid="category-breakdown">
-        <div
-          v-for="(categoryData, index) in categoryBreakdown"
-          :key="`${categoryData.name}-${index}`"
-          class="category-section"
-          data-testid="category-section"
-        >
-          <div class="category-header">
-            <div class="category-info">
-              <span class="category-name" :id="`category-name-${index}`"
-                >{{ categoryData.taskCount }} × {{ categoryData.name }}</span
-              >
+      <!-- Category Breakdown -->
+      <div class="report-section">
+        <div v-if="standardTaskCount === 0" class="empty-report">No standard tasks recorded for this day</div>
+        <div v-else class="category-breakdown" data-testid="category-breakdown">
+          <div
+            v-for="(categoryData, index) in categoryBreakdown"
+            :key="`${categoryData.name}-${index}`"
+            class="category-section"
+            data-testid="category-section"
+          >
+            <div class="category-header">
+              <div class="category-info">
+                <span class="category-name" :id="`category-name-${index}`"
+                  >{{ categoryData.taskCount }} × {{ categoryData.name }}</span
+                >
+              </div>
+              <div class="category-time">{{ categoryData.totalTimeCombined }}</div>
             </div>
-            <div class="category-time">{{ categoryData.totalTimeCombined }}</div>
-          </div>
 
-          <!-- Task summaries within category -->
-          <ul class="task-summaries">
-            <li
-              v-for="(task, index) in categoryData.taskSummaries"
-              :key="task.name ? `${task.name}-${index}` : index"
-              class="task-summary"
-              :class="{ 'task-summary-copied': copiedTaskName === task.name }"
-              tabindex="0"
-              role="button"
-              :aria-label="`Copy task name: ${task.name}`"
-              :aria-describedby="getTooltipId(task.name, categoryData.name, index)"
-              aria-keyshortcuts="Enter Space"
-              @mouseenter="showTooltip(task, $event, categoryData.name, index)"
-              @mouseleave="hideTooltip"
-              @click="copyTaskNameToClipboard(task.name)"
-              @keydown="handleTaskKeydown($event, task.name)"
-            >
-              <span class="task-name">{{ task.count }} × {{ task.name }}</span>
-              <span
-                class="task-time-combined"
-                :title="`Actual time (Rounded to nearest 5m)`"
-                :aria-label="`Time: ${task.totalTimeCombined}`"
+            <!-- Task summaries within category -->
+            <ul class="task-summaries">
+              <li
+                v-for="(task, index) in categoryData.taskSummaries"
+                :key="task.name ? `${task.name}-${index}` : index"
+                class="task-summary"
+                :class="{ 'task-summary-copied': copiedTaskName === task.name }"
+                tabindex="0"
+                role="button"
+                :aria-label="`Copy task name: ${task.name}`"
+                :aria-describedby="getTooltipId(task.name, categoryData.name, index)"
+                aria-keyshortcuts="Enter Space"
+                @mouseenter="showTooltip(task, $event, categoryData.name, index)"
+                @mouseleave="hideTooltip"
+                @click="copyTaskNameToClipboard(task.name)"
+                @keydown="handleTaskKeydown($event, task.name)"
               >
-                {{ task.totalTimeCombined }}
-              </span>
-            </li>
-          </ul>
+                <span class="task-name">{{ task.count }} × {{ task.name }}</span>
+                <span
+                  class="task-time-combined"
+                  :title="`Actual time (Rounded to nearest 5m)`"
+                  :aria-label="`Time: ${task.totalTimeCombined}`"
+                >
+                  {{ task.totalTimeCombined }}
+                </span>
+              </li>
+            </ul>
+          </div>
         </div>
-      </div>
 
-      <!-- Export Button (only for complete days) -->
-      <div v-if="hasEndTaskForSelectedDate" class="export-section">
-        <button
-          class="export-button"
-          @click="exportReportToClipboard"
-          :disabled="standardTaskCount === 0 || isExporting"
-          :aria-busy="isExporting ? 'true' : 'false'"
-          :aria-label="standardTaskCount === 0 ? 'No data to export' : 'Export report data to clipboard as JSON'"
-          data-testid="export-button"
-        >
-          Export to Clipboard
-        </button>
+        <!-- Export Button (only for complete days) -->
+        <div v-if="hasEndTaskForSelectedDate" class="export-section">
+          <button
+            class="export-button"
+            @click="exportReportToClipboard"
+            :disabled="standardTaskCount === 0 || isExporting"
+            :aria-busy="isExporting ? 'true' : 'false'"
+            :aria-label="standardTaskCount === 0 ? 'No data to export' : 'Export report data to clipboard as JSON'"
+            data-testid="export-button"
+          >
+            Export to Clipboard
+          </button>
+        </div>
       </div>
     </div>
 
@@ -128,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted } from 'vue'
+import { computed, ref, watch, onUnmounted } from 'vue'
 import type { TaskRecord, Category } from '@/shared/types'
 import { TASK_TYPE_NORMAL } from '@/shared/types'
 
@@ -185,6 +200,27 @@ const copyToastMessage = ref('')
 
 // Export state
 const isExporting = ref(false)
+
+// Collapse state with localStorage persistence
+const COLLAPSE_STORAGE_KEY = 'timecatcher.reportCollapsed'
+const loadCollapsed = (): boolean => {
+  try {
+    return localStorage.getItem(COLLAPSE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+const isCollapsed = ref<boolean>(loadCollapsed())
+watch(isCollapsed, value => {
+  try {
+    localStorage.setItem(COLLAPSE_STORAGE_KEY, value ? 'true' : 'false')
+  } catch {
+    // Ignore storage errors (e.g., private mode, disabled storage)
+  }
+})
+const toggleCollapsed = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 
 // Timer cleanup
 let activeTimer: number | null = null
@@ -508,6 +544,101 @@ const exportReportToClipboard = async () => {
 
 .report-header {
   margin-bottom: var(--spacing-sm);
+  padding-right: 36px;
+}
+
+.collapse-toggle {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e9d9b7;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.collapse-toggle:hover {
+  background: rgba(195, 224, 78, 0.18);
+  border-color: rgba(195, 224, 78, 0.4);
+  color: var(--uranium);
+}
+
+.collapse-toggle:focus-visible {
+  outline: 2px solid var(--verdigris);
+  outline-offset: 2px;
+}
+
+.collapse-toggle-icon {
+  display: block;
+  pointer-events: none;
+}
+
+.daily-report-collapsed {
+  padding: var(--spacing-lg) var(--spacing-xs);
+}
+
+.daily-report-collapsed .collapse-toggle {
+  top: var(--spacing-lg);
+  right: 50%;
+  transform: translateX(50%);
+}
+
+.daily-report-collapsed .report-header {
+  margin-top: calc(28px + var(--spacing-sm) + var(--spacing-sm));
+  margin-bottom: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.daily-report-collapsed .header-line-1 {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: 0;
+}
+
+.daily-report-collapsed .header-line-1 h2 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+}
+
+.daily-report-collapsed .status-emojis {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.daily-report-collapsed .status-emoji {
+  font-size: 16px;
+}
+
+.daily-report-collapsed .header-line-2 {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 18px;
+  margin-left: 0;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
 }
 
 .header-line-1 {

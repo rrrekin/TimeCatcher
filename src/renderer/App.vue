@@ -1680,7 +1680,8 @@ body[data-theme='dark'] {
 }
 
 .task-table-pane {
-  width: 60%;
+  flex: 1 1 60%;
+  min-width: 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   box-shadow: 1px 0 3px var(--shadow-color);
@@ -1719,13 +1720,19 @@ body[data-theme='dark'] {
 }
 
 .reports-pane {
-  width: 40%;
+  flex: 0 0 40%;
   padding: var(--spacing-lg);
   overflow-y: auto;
   background: var(--bg-secondary);
+  transition: flex-basis var(--transition-fast);
   /* Smooth scrolling */
   scrollbar-width: thin;
   scrollbar-color: var(--primary) transparent;
+}
+
+.reports-pane:has(.daily-report-collapsed) {
+  flex: 0 0 64px;
+  padding: var(--spacing-lg) 0;
 }
 
 .reports-pane::-webkit-scrollbar {
