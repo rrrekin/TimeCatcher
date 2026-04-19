@@ -226,30 +226,37 @@ vi.mock('@/composables/useTaskRecords', () => ({
   }
 }))
 
-// Mock useSettings composable
+// Mock useSettings composable — hoist refs so tests can mutate them
 const mockApplyTheme = vi.fn()
 const mockSaveSettings = vi.fn()
 const mockInitializeTempSettings = vi.fn()
 const mockApplyRestoredSettings = vi.fn()
 const mockIsValidUrl = vi.fn(() => true)
 
+const mockReportingAppUrl = ref('')
+const mockReportingAppButtonText = ref('Tempo')
+const mockHttpServerEnabled = ref(false)
+const mockHttpServerPort = ref(14474)
+const mockCurrentTheme = ref('light')
+const mockTargetWorkHours = ref(8)
+
 vi.mock('@/composables/useSettings', () => ({
   useSettings: () => ({
-    currentTheme: ref('light'),
+    currentTheme: mockCurrentTheme,
     tempTheme: ref('light'),
-    targetWorkHours: ref(8),
+    targetWorkHours: mockTargetWorkHours,
     tempTargetWorkHours: ref(8),
-    reportingAppButtonText: ref('Tempo'),
-    reportingAppUrl: ref(''),
+    reportingAppButtonText: mockReportingAppButtonText,
+    reportingAppUrl: mockReportingAppUrl,
     tempReportingAppButtonText: ref('Tempo'),
     tempReportingAppUrl: ref(''),
     evictionEnabled: ref(true),
     tempEvictionEnabled: ref(true),
     evictionDaysToKeep: ref(180),
     tempEvictionDaysToKeep: ref(180),
-    httpServerEnabled: ref(false),
+    httpServerEnabled: mockHttpServerEnabled,
     tempHttpServerEnabled: ref(false),
-    httpServerPort: ref(14474),
+    httpServerPort: mockHttpServerPort,
     tempHttpServerPort: ref(14474),
     isValidUrl: mockIsValidUrl,
     isValidEvictionDaysToKeep: vi.fn(() => true),
@@ -3040,6 +3047,301 @@ describe('App Component', () => {
       // Should not scroll when not viewing today
       expect(mockSafeScrollToBottom).not.toHaveBeenCalled()
 
+      wrapper.unmount()
+    })
+  })
+
+  describe('Reporting App Branch Coverage', () => {
+    afterEach(() => {
+      mockReportingAppUrl.value = ''
+      mockIsValidUrl.mockReturnValue(true)
+    })
+
+    it('shows error when URL is empty', async () => {
+      mockReportingAppUrl.value = '   '
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(wrapper.text()).toContain('No reporting application URL configured')
+      wrapper.unmount()
+    })
+
+    it('shows error when URL is invalid', async () => {
+      mockReportingAppUrl.value = 'not-a-url'
+      mockIsValidUrl.mockReturnValueOnce(false)
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(wrapper.text()).toContain('Invalid reporting application URL configured')
+      wrapper.unmount()
+    })
+
+    it('shows error when electronAPI unavailable', async () => {
+      mockReportingAppUrl.value = 'https://example.com'
+      // Nullify openExternalUrl to trigger IPC guard
+      global.window.electronAPI = createElectronAPIMock({ openExternalUrl: undefined as any })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(wrapper.text()).toContain('IPC unavailable')
+      wrapper.unmount()
+    })
+
+    it('shows error when openExternalUrl returns false', async () => {
+      mockReportingAppUrl.value = 'https://example.com'
+      const openExt = vi.fn().mockResolvedValue(false)
+      global.window.electronAPI = createElectronAPIMock({ openExternalUrl: openExt })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(openExt).toHaveBeenCalledWith('https://example.com')
+      expect(wrapper.text()).toContain('Failed to open reporting application')
+      wrapper.unmount()
+    })
+
+    it('shows success toast when URL opens', async () => {
+      mockReportingAppUrl.value = 'https://example.com'
+      const openExt = vi.fn().mockResolvedValue(true)
+      global.window.electronAPI = createElectronAPIMock({ openExternalUrl: openExt })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(wrapper.text()).toContain('Opened Tempo')
+      wrapper.unmount()
+    })
+
+    it('catches openExternalUrl throw', async () => {
+      mockReportingAppUrl.value = 'https://example.com'
+      const openExt = vi.fn().mockRejectedValue(new Error('boom'))
+      global.window.electronAPI = createElectronAPIMock({ openExternalUrl: openExt })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.openReportingApp()
+      expect(wrapper.text()).toContain('Failed to open reporting application')
+      wrapper.unmount()
+    })
+  })
+
+  describe('Backup Branch Coverage', () => {
+    it('shows error when backupApp IPC missing', async () => {
+      global.window.electronAPI = createElectronAPIMock({ backupApp: undefined as any })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(wrapper.text()).toContain('Backup not available')
+      wrapper.unmount()
+    })
+
+    it('shows error on unexpected response shape', async () => {
+      const backupSpy = vi.fn().mockResolvedValue({})
+      global.window.electronAPI = createElectronAPIMock({ backupApp: backupSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(wrapper.text()).toContain('Backup returned unexpected response')
+      wrapper.unmount()
+    })
+
+    it('shows error when backupApp throws with Error message', async () => {
+      const backupSpy = vi.fn().mockRejectedValue(new Error('disk full'))
+      global.window.electronAPI = createElectronAPIMock({ backupApp: backupSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(wrapper.text()).toContain('Backup failed: disk full')
+      wrapper.unmount()
+    })
+
+    it('shows error when backupApp throws non-Error', async () => {
+      const backupSpy = vi.fn().mockRejectedValue('string error')
+      global.window.electronAPI = createElectronAPIMock({ backupApp: backupSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.backupApp()
+      expect(wrapper.text()).toContain('Backup failed: string error')
+      wrapper.unmount()
+    })
+  })
+
+  describe('Restore Branch Coverage', () => {
+    it('shows error when restoreApp IPC missing', async () => {
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: undefined as any })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(wrapper.text()).toContain('Restore not available')
+      wrapper.unmount()
+    })
+
+    it('shows error when restoreApp throws', async () => {
+      const restoreSpy = vi.fn().mockRejectedValue(new Error('bad file'))
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(wrapper.text()).toContain('Restore failed')
+      wrapper.unmount()
+    })
+
+    it('still completes when applyRestoredSettings throws', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: true, settings: { theme: 'dark' } })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      mockApplyRestoredSettings.mockImplementationOnce(() => {
+        throw new Error('apply blew up')
+      })
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(warnSpy).toHaveBeenCalledWith('Failed to apply restored settings:', expect.any(Error))
+      expect(wrapper.text()).toContain('Restore completed successfully')
+      warnSpy.mockRestore()
+      wrapper.unmount()
+    })
+
+    it('uses empty settings when restoreApp returns no settings', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: true })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(mockApplyRestoredSettings).toHaveBeenCalledWith({})
+      wrapper.unmount()
+    })
+
+    it('shows error without message when failure has no error field', async () => {
+      const restoreSpy = vi.fn().mockResolvedValue({ ok: false })
+      global.window.electronAPI = createElectronAPIMock({ restoreApp: restoreSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.restoreBackup()
+      expect(wrapper.text()).toContain('Restore failed')
+      wrapper.unmount()
+    })
+  })
+
+  describe('Category Null-Id Branch Coverage', () => {
+    it('deleteCategoryWrapper returns early when id is null', async () => {
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      await vm.deleteCategoryWrapper({ name: 'X', code: '' })
+      expect(confirmSpy).not.toHaveBeenCalled()
+      confirmSpy.mockRestore()
+      wrapper.unmount()
+    })
+
+    it('deleteCategoryWrapper aborts when confirm returns false', async () => {
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      mockDeleteCategory.mockClear()
+      await vm.deleteCategoryWrapper({ id: 42, name: 'X', code: '' })
+      expect(mockDeleteCategory).not.toHaveBeenCalled()
+      confirmSpy.mockRestore()
+      wrapper.unmount()
+    })
+
+    it('startEditCategory returns early when id is null', () => {
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      vm.startEditCategory({ name: 'X', code: '' })
+      expect(vm.editingCategoryId).toBeNull()
+      wrapper.unmount()
+    })
+
+    it('saveEditCategory returns when id is null', async () => {
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      vm.editingCategoryName = 'New'
+      mockUpdateCategory.mockClear()
+      await vm.saveEditCategory({ name: 'X', code: '' })
+      expect(mockUpdateCategory).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it('setDefaultCategoryWrapper returns when id is null', async () => {
+      global.window.electronAPI = createElectronAPIMock()
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      mockSetDefaultCategory.mockClear()
+      await vm.setDefaultCategoryWrapper({ name: 'X', code: '' })
+      expect(mockSetDefaultCategory).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+  })
+
+  describe('HTTP Server Config Change Branch Coverage', () => {
+    afterEach(() => {
+      mockHttpServerEnabled.value = false
+      mockHttpServerPort.value = 14474
+    })
+
+    it('does nothing when nothing changed', async () => {
+      const startSpy = vi.fn().mockResolvedValue({ success: true })
+      const stopSpy = vi.fn()
+      global.window.electronAPI = createElectronAPIMock({
+        startHttpServer: startSpy,
+        stopHttpServer: stopSpy
+      })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.handleHttpServerConfigChange(false, 14474)
+      expect(startSpy).not.toHaveBeenCalled()
+      expect(stopSpy).not.toHaveBeenCalled()
+      wrapper.unmount()
+    })
+
+    it('stops server when previously enabled and now disabled', async () => {
+      mockHttpServerEnabled.value = false
+      const stopSpy = vi.fn().mockResolvedValue(undefined)
+      global.window.electronAPI = createElectronAPIMock({ stopHttpServer: stopSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.handleHttpServerConfigChange(true, 14474)
+      expect(stopSpy).toHaveBeenCalled()
+      expect(wrapper.text()).toContain('HTTP server disabled')
+      wrapper.unmount()
+    })
+
+    it('starts server on enable and reports success', async () => {
+      mockHttpServerEnabled.value = true
+      mockHttpServerPort.value = 14475
+      const startSpy = vi.fn().mockResolvedValue({ success: true })
+      global.window.electronAPI = createElectronAPIMock({ startHttpServer: startSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.handleHttpServerConfigChange(false, 14474)
+      expect(startSpy).toHaveBeenCalledWith(14475)
+      expect(wrapper.text()).toContain('HTTP server started on port 14475')
+      wrapper.unmount()
+    })
+
+    it('reports error when server fails to start', async () => {
+      mockHttpServerEnabled.value = true
+      const startSpy = vi.fn().mockResolvedValue({ success: false, error: 'EADDRINUSE' })
+      global.window.electronAPI = createElectronAPIMock({ startHttpServer: startSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.handleHttpServerConfigChange(false, 14474)
+      expect(wrapper.text()).toContain('Failed to start HTTP server: EADDRINUSE')
+      wrapper.unmount()
+    })
+
+    it('catches thrown error during server config change', async () => {
+      mockHttpServerEnabled.value = true
+      const startSpy = vi.fn().mockRejectedValue(new Error('crash'))
+      global.window.electronAPI = createElectronAPIMock({ startHttpServer: startSpy })
+      const wrapper = mount(App)
+      const vm = wrapper.vm as any
+      await vm.handleHttpServerConfigChange(false, 14474)
+      expect(wrapper.text()).toContain('Error configuring HTTP server')
       wrapper.unmount()
     })
   })

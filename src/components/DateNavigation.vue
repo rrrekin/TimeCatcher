@@ -189,8 +189,19 @@ const dateInputId = useId()
 }
 
 @keyframes tc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
   50% {
     opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .date-display::before {
+    animation: none;
+    opacity: 1;
   }
 }
 
