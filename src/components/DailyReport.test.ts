@@ -113,6 +113,11 @@ describe('DailyReport Component', () => {
   ]
 
   beforeEach(() => {
+    try {
+      localStorage.removeItem('timecatcher.reportCollapsed')
+    } catch {
+      // ignore
+    }
     wrapper = mount(DailyReport, {
       props: {
         taskRecords: mockTaskRecords,
@@ -1019,6 +1024,97 @@ describe('DailyReport Component', () => {
 
       const exportButton = wrapper.find('[data-testid="export-button"]')
       expect(exportButton.attributes('aria-label')).toBe('No data to export')
+    })
+  })
+
+  describe('Collapse Toggle', () => {
+    afterEach(() => {
+      try {
+        localStorage.removeItem('timecatcher.reportCollapsed')
+      } catch {
+        // ignore
+      }
+    })
+
+    it('should render collapse toggle button with expanded state by default', () => {
+      const toggle = wrapper.find('[data-testid="report-collapse-toggle"]')
+      expect(toggle.exists()).toBe(true)
+      expect(toggle.attributes('aria-expanded')).toBe('true')
+      expect(toggle.attributes('aria-controls')).toBe('report-body')
+      expect(toggle.attributes('aria-label')).toBe('Collapse report')
+    })
+
+    it('should show report body when expanded', () => {
+      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="report-date"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="category-breakdown"]').exists()).toBe(true)
+    })
+
+    it('should hide report body and switch aria label when collapsed', async () => {
+      const toggle = wrapper.find('[data-testid="report-collapse-toggle"]')
+      await toggle.trigger('click')
+
+      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="report-date"]').exists()).toBe(false)
+      expect(wrapper.find('[data-testid="category-breakdown"]').exists()).toBe(false)
+      expect(toggle.attributes('aria-expanded')).toBe('false')
+      expect(toggle.attributes('aria-label')).toBe('Expand report')
+    })
+
+    it('should keep header, total time, and toggle visible when collapsed', async () => {
+      await wrapper.find('[data-testid="report-collapse-toggle"]').trigger('click')
+
+      expect(wrapper.find('[data-testid="report-header-title"]').exists()).toBe(true)
+      expect(wrapper.find('[data-testid="total-time-display"]').text()).toContain('5h 0m (5h 0m)')
+      expect(wrapper.find('[data-testid="report-collapse-toggle"]').exists()).toBe(true)
+    })
+
+    it('should toggle body back on second click', async () => {
+      const toggle = wrapper.find('[data-testid="report-collapse-toggle"]')
+      await toggle.trigger('click')
+      await toggle.trigger('click')
+
+      expect(wrapper.find('[data-testid="report-body"]').exists()).toBe(true)
+      expect(toggle.attributes('aria-expanded')).toBe('true')
+    })
+
+    it('should persist collapsed state to localStorage', async () => {
+      const setSpy = vi.spyOn(Storage.prototype, 'setItem')
+      await wrapper.find('[data-testid="report-collapse-toggle"]').trigger('click')
+      expect(setSpy).toHaveBeenCalledWith('timecatcher.reportCollapsed', 'true')
+
+      await wrapper.find('[data-testid="report-collapse-toggle"]').trigger('click')
+      expect(setSpy).toHaveBeenCalledWith('timecatcher.reportCollapsed', 'false')
+      setSpy.mockRestore()
+    })
+
+    it('should initialize collapsed from localStorage', () => {
+      localStorage.setItem('timecatcher.reportCollapsed', 'true')
+      const fresh = mount(DailyReport, {
+        props: (wrapper.vm as any).$props
+      })
+      expect(fresh.find('[data-testid="report-body"]').exists()).toBe(false)
+      expect(fresh.find('[data-testid="report-collapse-toggle"]').attributes('aria-expanded')).toBe('false')
+      fresh.unmount()
+    })
+
+    it('should apply collapsed class to root when collapsed', async () => {
+      const root = wrapper.find('.daily-report')
+      expect(root.classes()).not.toContain('daily-report-collapsed')
+      await wrapper.find('[data-testid="report-collapse-toggle"]').trigger('click')
+      expect(wrapper.find('.daily-report').classes()).toContain('daily-report-collapsed')
+    })
+
+    it('should gracefully handle localStorage read errors', () => {
+      const getSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('storage blocked')
+      })
+      const fresh = mount(DailyReport, {
+        props: (wrapper.vm as any).$props
+      })
+      expect(fresh.find('[data-testid="report-body"]').exists()).toBe(true)
+      fresh.unmount()
+      getSpy.mockRestore()
     })
   })
 })
