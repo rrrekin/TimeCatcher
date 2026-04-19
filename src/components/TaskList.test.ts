@@ -168,11 +168,11 @@ describe('TaskList Component', () => {
         showInlineDropdown: { 1: true }
       })
 
-      const firstTaskRow = wrapper.findAll('tbody tr')[0]
-      const dropdownMenu = firstTaskRow.find('[role="listbox"]')
-      expect(dropdownMenu.exists()).toBe(true)
+      // Dropdown menu is teleported to document.body
+      const dropdownMenu = document.body.querySelector('[role="listbox"]')
+      expect(dropdownMenu).toBeTruthy()
 
-      const dropdownItems = dropdownMenu.findAll('[role="option"]')
+      const dropdownItems = dropdownMenu!.querySelectorAll('[role="option"]')
       expect(dropdownItems).toHaveLength(3) // Three categories
     })
 
@@ -181,11 +181,10 @@ describe('TaskList Component', () => {
         showInlineDropdown: { 1: true }
       })
 
-      const firstTaskRow = wrapper.findAll('tbody tr')[0]
-      const dropdownMenu = firstTaskRow.find('[role="listbox"]')
-      const dropdownItems = dropdownMenu.findAll('[role="option"]')
+      const dropdownMenu = document.body.querySelector('[role="listbox"]')
+      const dropdownItems = Array.from(dropdownMenu!.querySelectorAll('[role="option"]'))
 
-      const categoryNames = dropdownItems.map(item => item.text())
+      const categoryNames = dropdownItems.map(item => (item.textContent || '').trim())
       expect(categoryNames).toEqual(['Work', 'Personal', 'Learning'])
     })
   })
@@ -245,20 +244,19 @@ describe('TaskList Component', () => {
         showInlineDropdown: { 1: true }
       })
 
-      const taskRows = wrapper.findAll('tbody tr')
-      const targetRow = taskRows.find(row => row.find('[role="listbox"]').exists())
+      // Trigger stays in the table row; menu is teleported to body
+      const triggers = wrapper.findAll('.dropdown-trigger')
+      const trigger = triggers.find(t => t.attributes('aria-expanded') === 'true')
+      expect(trigger).toBeTruthy()
 
-      expect(targetRow?.exists()).toBe(true)
+      const menu = document.body.querySelector('[role="listbox"]')
+      expect(menu).toBeTruthy()
 
-      const trigger = targetRow.find('.dropdown-trigger')
-      const menu = targetRow.find('[role="listbox"]')
+      expect(trigger!.attributes('aria-haspopup')).toBe('listbox')
+      expect(trigger!.attributes('aria-controls')).toBeTruthy()
 
-      expect(trigger.attributes('aria-expanded')).toBe('true')
-      expect(trigger.attributes('aria-haspopup')).toBe('listbox')
-      expect(trigger.attributes('aria-controls')).toBeTruthy()
-
-      expect(menu.attributes('role')).toBe('listbox')
-      expect(menu.attributes('aria-labelledby')).toBeTruthy()
+      expect(menu!.getAttribute('role')).toBe('listbox')
+      expect(menu!.getAttribute('aria-labelledby')).toBeTruthy()
     })
   })
 
@@ -858,8 +856,9 @@ describe('TaskList Component', () => {
         showInlineDropdown: { [mockTaskRecords[0].id]: true }
       })
 
-      const dropdownItem = wrapper.find('.dropdown-item')
-      await dropdownItem.trigger('click')
+      const dropdownItem = document.body.querySelector('.dropdown-item') as HTMLElement
+      expect(dropdownItem).toBeTruthy()
+      dropdownItem.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
       expect(wrapper.emitted('selectInlineCategory')).toBeTruthy()
       // Parent component handles closing dropdown via selectInlineCategory handler
@@ -870,13 +869,14 @@ describe('TaskList Component', () => {
         showInlineDropdown: { [mockTaskRecords[0].id]: true }
       })
 
-      const dropdown = wrapper.find('.dropdown-menu')
+      const dropdown = document.body.querySelector('.dropdown-menu') as HTMLElement
+      expect(dropdown).toBeTruthy()
 
       // Test arrow down navigation
-      await dropdown.trigger('keydown', { key: 'ArrowDown' })
+      dropdown.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
 
       // Test escape key
-      await dropdown.trigger('keydown', { key: 'Escape' })
+      dropdown.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
 
       expect(wrapper.emitted('toggleInlineDropdown')).toBeTruthy()
     })

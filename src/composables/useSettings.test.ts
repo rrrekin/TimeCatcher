@@ -490,13 +490,13 @@ describe('useSettings', () => {
 
       applyTheme('light')
 
-      // Check that color palette variables are set
-      expect(setPropertySpy).toHaveBeenCalledWith('--verdigris', '#57bdaf')
-      expect(setPropertySpy).toHaveBeenCalledWith('--mantis', '#59c964')
-      expect(setPropertySpy).toHaveBeenCalledWith('--asparagus', '#69966f')
-      expect(setPropertySpy).toHaveBeenCalledWith('--emerald', '#56b372')
-      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#1fbff0')
-      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#57bdaf')
+      // Check that color palette variables are set (atompunk palette)
+      expect(setPropertySpy).toHaveBeenCalledWith('--verdigris', '#20b59a')
+      expect(setPropertySpy).toHaveBeenCalledWith('--mantis', '#c3e04e')
+      expect(setPropertySpy).toHaveBeenCalledWith('--asparagus', '#c99456')
+      expect(setPropertySpy).toHaveBeenCalledWith('--emerald', '#0f4a4e')
+      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#b4642b')
+      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#0f4a4e')
 
       setPropertySpy.mockRestore()
     })
@@ -508,8 +508,8 @@ describe('useSettings', () => {
       applyTheme('dark')
 
       // Color palette should be the same regardless of theme
-      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#1fbff0')
-      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#57bdaf')
+      expect(setPropertySpy).toHaveBeenCalledWith('--aero', '#b4642b')
+      expect(setPropertySpy).toHaveBeenCalledWith('--primary', '#0f4a4e')
 
       setPropertySpy.mockRestore()
     })

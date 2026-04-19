@@ -206,13 +206,13 @@ API methods: getCategories, addCategory, deleteCategory, updateCategory, getDefa
 ### Design Principles
 
 - Compact design, consistent color palette, green theme for deletions
-- Minimum window: 1050x750 pixels
+- Minimum window: 840x600 pixels
 
 ## Settings & Configuration
 
 __Setup Modal__: Theme settings, target work hours, category management
 __Persistence__: localStorage for theme and target hours
-__Window__: 1200x800 default, 1050x750 minimum, context isolation enabled
+__Window__: 1200x800 default, 840x600 minimum, context isolation enabled
 
 ## Testing
 
