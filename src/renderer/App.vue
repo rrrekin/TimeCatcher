@@ -1549,32 +1549,49 @@ const formatTime12Hour = (timeString: string): string => {
 
 <style>
 :root {
-  --verdigris: #57bdaf;
-  --mantis: #59c964;
-  --asparagus: #69966f;
-  --emerald: #56b372;
-  --aero: #1fbff0;
+  /* Atompunk palette — creamy paper, deep teal, copper, uranium */
+  --paper: #f1e8d6;
+  --paper-2: #e6dcc4;
+  --paper-edge: #c9bc9a;
+  --ink: #16272a;
+  --ink-2: #2c3f43;
+  --ink-soft: #49595c;
+  --teal: #0f4a4e;
+  --teal-2: #0a3538;
+  --teal-glow: #20b59a;
+  --copper: #b4642b;
+  --copper-2: #8a4416;
+  --brass: #c99456;
+  --cream: #f8f1df;
+  --uranium: #c3e04e;
+  --rust: #a6482c;
 
-  --primary: var(--verdigris);
-  --secondary: var(--emerald);
-  --accent: var(--aero);
-  --success: var(--mantis);
-  --neutral: var(--asparagus);
-  --error: var(--asparagus);
-  --warning: var(--aero);
+  --verdigris: #20b59a;
+  --mantis: #c3e04e;
+  --asparagus: #c99456;
+  --emerald: #0f4a4e;
+  --aero: #b4642b;
 
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fffe;
-  --text-primary: #2d4a3d;
-  --text-secondary: #4a6b56;
-  --text-muted: #7a9184;
-  --border-color: #e0ede8;
-  --shadow-color: rgba(87, 189, 175, 0.1);
-  --focus-shadow: rgba(87, 189, 175, 0.2);
+  --primary: var(--teal);
+  --secondary: var(--teal-2);
+  --accent: var(--uranium);
+  --accent-soft: rgba(195, 224, 78, 0.4);
+  --success: var(--teal-glow);
+  --neutral: var(--brass);
+  --error: var(--rust);
+  --warning: var(--copper);
+
+  --bg-primary: var(--cream);
+  --bg-secondary: var(--paper);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-muted: var(--ink-soft);
+  --border-color: var(--paper-edge);
+  --shadow-color: rgba(22, 39, 42, 0.12);
+  --focus-shadow: rgba(32, 181, 154, 0.25);
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
 
-  /* Design system tokens for consistency */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 12px;
@@ -1591,15 +1608,60 @@ const formatTime12Hour = (timeString: string): string => {
   --font-base: 14px;
   --font-lg: 16px;
   --font-xl: 18px;
+
+  --font-display: 'Major Mono Display', 'JetBrains Mono', monospace;
+  --font-body: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Roboto Mono', monospace;
+
+  /* Themed surface tokens — swap atomically in dark mode */
+  --btn-bg: linear-gradient(#fff8e7, #ecdfbd);
+  --btn-bg-hover: linear-gradient(#fff, #e3d3a8);
+  --btn-icon-bg: linear-gradient(#fbf3dd, #e8dbb4);
+  --btn-icon-bg-hover: linear-gradient(#fff, #d8c896);
+  --input-bg: linear-gradient(#fff8e7, #f1e3b8);
+  --sheet-bg: #fff8e7;
+  --form-bg: linear-gradient(#f5e8c3, #ebdfb5);
+  --footer-bg: linear-gradient(#ecdfb5, #e1d39e);
+  --segment-bg: #ecdfbd;
+  --dateblock-bg: repeating-linear-gradient(90deg, #f5e8c3 0 6px, #ecdfb8 6px 7px);
+  --toolbar-bg: linear-gradient(#fbf3dd, #ebdfbf);
 }
 
+body[data-theme='dark'] {
+  --btn-bg: linear-gradient(#1f2d30, #152225);
+  --btn-bg-hover: linear-gradient(#263538, #1a2a2d);
+  --btn-icon-bg: linear-gradient(#1f2d30, #152225);
+  --btn-icon-bg-hover: linear-gradient(#263538, #1a2a2d);
+  --input-bg: linear-gradient(#1a2426, #121a1c);
+  --sheet-bg: #0f1819;
+  --form-bg: linear-gradient(#182224, #121a1c);
+  --footer-bg: linear-gradient(#182224, #121a1c);
+  --segment-bg: #0d1517;
+  --dateblock-bg: repeating-linear-gradient(90deg, #1a2426 0 6px, #141c1e 6px 7px);
+  --toolbar-bg: linear-gradient(#1a2426, #121a1c);
+}
+
+html,
 body {
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-body);
   height: 100vh;
   overflow: hidden;
-  background: var(--bg-secondary);
+  color: var(--text-primary);
+  background:
+    radial-gradient(circle at 20% -10%, rgba(32, 181, 154, 0.1), transparent 40%),
+    radial-gradient(circle at 95% 100%, rgba(180, 100, 43, 0.08), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(22, 39, 42, 0.05) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(22, 39, 42, 0.05) 23px 24px), var(--paper);
+}
+
+body[data-theme='dark'] {
+  background:
+    radial-gradient(circle at 20% -10%, rgba(32, 181, 154, 0.18), transparent 40%),
+    radial-gradient(circle at 95% 100%, rgba(180, 100, 43, 0.12), transparent 40%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(201, 188, 154, 0.04) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(201, 188, 154, 0.04) 23px 24px), #0f1819;
 }
 
 #app {
@@ -1614,7 +1676,7 @@ body {
 
 .layout {
   display: flex;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 44px);
 }
 
 .task-table-pane {
@@ -1683,7 +1745,7 @@ body {
 /* Toast Notification Styles */
 .toast-overlay {
   position: fixed;
-  top: var(--spacing-lg);
+  bottom: var(--spacing-lg);
   right: var(--spacing-lg);
   z-index: 2000;
   pointer-events: none;

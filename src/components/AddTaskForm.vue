@@ -251,9 +251,9 @@ watch(
 }
 
 .add-task-form {
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  padding: var(--spacing-md);
+  background: var(--form-bg);
+  border-top: 1px solid var(--paper-edge, var(--border-color));
+  padding: 8px var(--spacing-sm);
   flex-shrink: 0;
 }
 
@@ -272,12 +272,14 @@ watch(
 
 .add-task-input {
   width: 100%;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-base);
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
@@ -285,8 +287,8 @@ watch(
 
 .add-task-input:focus {
   outline: none;
-  border-color: var(--verdigris);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.2);
+  border-color: var(--teal, var(--verdigris));
+  box-shadow: 0 0 0 3px rgba(32, 181, 154, 0.2);
 }
 
 .add-task-input::placeholder {
@@ -305,12 +307,14 @@ watch(
 
 .dropdown-trigger {
   width: 100%;
-  padding: var(--spacing-sm) 32px var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-base);
+  height: 28px;
+  padding: 0 32px 0 10px;
+  border: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: 7px;
+  background: var(--input-bg);
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   text-align: left;
   cursor: pointer;
   transition:
@@ -319,13 +323,13 @@ watch(
 }
 
 .dropdown-trigger:hover {
-  border-color: var(--verdigris);
+  border-color: var(--teal, var(--verdigris));
 }
 
 .dropdown-trigger:focus {
   outline: none;
-  border-color: var(--verdigris);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.2);
+  border-color: var(--teal, var(--verdigris));
+  box-shadow: 0 0 0 3px rgba(32, 181, 154, 0.2);
 }
 
 .dropdown-value {
@@ -399,85 +403,93 @@ watch(
 
 /* Action button */
 .action-btn {
-  padding: 8px 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 500;
+  height: 28px;
+  padding: 0 14px;
+  border: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: 7px;
+  background: var(--btn-bg);
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .add-btn {
-  background: var(--verdigris);
-  color: white;
-  border-color: var(--verdigris);
+  background: linear-gradient(#1a6d6f, #0b4244);
+  color: #f4ead0;
+  border-color: #062b2d;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .add-btn:hover:not(:disabled) {
-  background: var(--emerald);
-  border-color: var(--emerald);
-  transform: translateY(-1px);
+  filter: brightness(1.08);
 }
 
 .add-btn:disabled {
-  background: var(--border-color);
-  color: var(--text-muted);
-  border-color: var(--border-color);
+  opacity: 0.55;
   cursor: not-allowed;
   transform: none;
 }
 
 /* Special task buttons */
 .special-task-buttons {
-  /* Define hover colors for special buttons */
-  --warning-hover: color-mix(in srgb, var(--warning) 80%, var(--text-primary) 20%);
-  --success-hover: color-mix(in srgb, var(--success) 80%, var(--text-primary) 20%);
-
   display: flex;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md);
-  background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
+  gap: 8px;
+  padding: 8px var(--spacing-sm);
+  background: var(--footer-bg);
+  border-top: 1px solid var(--paper-edge, var(--border-color));
   justify-content: center;
 }
 
 .special-task-btn {
   flex: 1;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  border: none;
+  height: 32px;
+  padding: 0 18px;
+  border: 1px solid #062b2d;
   border-radius: var(--radius-lg);
   cursor: pointer;
-  font-weight: 500;
-  font-size: var(--font-base);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   transition: all var(--transition-fast);
-  color: white;
-  max-width: 120px;
+  color: #f4ead0;
+  max-width: 160px;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
 
 .pause-btn {
-  background: var(--warning);
+  background: linear-gradient(#1a6d6f, #0b4244);
 }
 
 .pause-btn:hover {
-  background: var(--warning-hover);
-  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .end-btn {
-  background: var(--success);
+  background: linear-gradient(#d88449, #a15323);
+  color: #fff2d6;
+  border-color: #4d2710;
 }
 
 .end-btn:hover:not(:disabled) {
-  background: var(--success-hover);
-  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .end-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 </style>

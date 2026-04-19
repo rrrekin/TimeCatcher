@@ -92,14 +92,18 @@ const dateInputId = useId()
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-md) var(--spacing-xl);
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  gap: 10px;
+  padding: 6px var(--spacing-md);
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--paper-edge, var(--border-color));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 2px 0 rgba(0, 0, 0, 0.04);
   position: sticky;
   top: 0;
   z-index: 100;
-  min-height: 56px;
+  min-height: 44px;
 }
 
 .nav-controls {
@@ -109,24 +113,25 @@ const dateInputId = useId()
 }
 
 .nav-btn {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  border: 1px solid var(--paper-edge, var(--border-color));
   border-radius: var(--radius-lg);
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 28px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition-fast);
-  color: var(--text-primary);
+  color: var(--ink, var(--text-primary));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+  font-family: var(--font-body);
 }
 
 .nav-btn:hover {
-  background: var(--primary);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  background: var(--btn-bg-hover);
 }
 
 .nav-arrow {
@@ -136,78 +141,126 @@ const dateInputId = useId()
 }
 
 .today-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
+  background: var(--btn-bg);
+  color: var(--ink, var(--text-primary));
+  border: 1px solid var(--paper-edge, var(--border-color));
   border-radius: var(--radius-lg);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: 0 14px;
+  height: 28px;
   cursor: pointer;
+  font-family: var(--font-body);
   font-weight: 600;
-  font-size: var(--font-base);
+  font-size: var(--font-md);
   transition: all var(--transition-fast);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .today-btn:hover {
-  background: var(--emerald);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  background: var(--btn-bg-hover);
 }
 
 .date-display {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 10px;
+  padding: 0 12px;
+  height: 28px;
+  background: var(--dateblock-bg);
+  border: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: var(--radius-lg);
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
+  letter-spacing: 0.04em;
   position: relative;
 }
 
+.date-display::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal-glow);
+  box-shadow: 0 0 8px var(--teal-glow);
+  animation: tc-pulse 2s infinite;
+}
+
+@keyframes tc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .date-display::before {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 .date-label {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: var(--font-base);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--ink, var(--text-primary));
+  font-size: var(--font-sm);
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
 .date-picker {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-sm) var(--spacing-md);
-  color: var(--text-primary);
-  font-size: var(--font-base);
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: 0;
+  padding: 0 0 0 10px;
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-mono);
+  font-size: var(--font-sm);
   cursor: pointer;
+  outline: none;
   transition: all var(--transition-fast);
 }
 
-.date-picker:hover {
-  border-color: var(--primary);
+:global(body[data-theme='dark']) .date-picker {
+  color-scheme: dark;
+  border-left-color: #2a3b3e;
 }
 
 .date-picker:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(87, 189, 175, 0.1);
 }
 
 .reporting-app-btn {
-  background: var(--aero);
-  color: white;
-  border: none;
+  background: linear-gradient(#1a6d6f, #0b4244);
+  color: #f4ead0;
+  border: 1px solid #062b2d;
   border-radius: var(--radius-lg);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  height: 28px;
+  padding: 0 14px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  font-weight: 600;
-  font-size: var(--font-base);
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  font-size: var(--font-sm);
   transition: all var(--transition-fast);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
 
 .reporting-app-btn:hover {
-  background: #1ba3d1;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  filter: brightness(1.1);
 }
 
 .reporting-app-icon {
@@ -215,26 +268,28 @@ const dateInputId = useId()
 }
 
 .setup-btn {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--btn-bg);
+  border: 1px solid var(--paper-edge, var(--border-color));
   border-radius: var(--radius-lg);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  height: 28px;
+  padding: 0 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  color: var(--text-primary);
+  color: var(--ink, var(--text-primary));
+  font-family: var(--font-body);
   font-weight: 600;
-  font-size: var(--font-base);
+  font-size: var(--font-md);
   transition: all var(--transition-fast);
   position: relative;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .setup-btn:hover {
-  background: var(--primary);
-  color: white;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--shadow-color);
+  background: var(--btn-bg-hover);
 }
 
 .setup-icon {

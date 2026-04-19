@@ -54,7 +54,7 @@
                   type="button"
                   class="dropdown-trigger"
                   :id="`${componentId}-dropdown-trigger-${record.id}`"
-                  @click="handleInlineDropdownToggle(record.id, record.category_name)"
+                  @click="handleInlineDropdownToggle(record.id, record.category_name, $event)"
                   :aria-expanded="!!showInlineDropdown[record.id]"
                   :aria-controls="`${componentId}-dropdown-menu-${record.id}`"
                   aria-haspopup="listbox"
@@ -62,30 +62,33 @@
                   <span class="dropdown-value">{{ record.category_name }}</span>
                   <span class="dropdown-arrow">▼</span>
                 </button>
-                <div
-                  v-if="showInlineDropdown[record.id]"
-                  class="dropdown-menu"
-                  role="listbox"
-                  :id="`${componentId}-dropdown-menu-${record.id}`"
-                  :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
-                  @keydown="handleDropdownKeydown($event, record.id)"
-                  tabindex="-1"
-                >
+                <Teleport to="body">
                   <div
-                    v-for="(category, index) in categories"
-                    :key="category.id ?? `inline-cat-${category.name}-${index}`"
-                    class="dropdown-item"
-                    role="option"
-                    :class="{ selected: record.category_name === category.name }"
-                    :aria-selected="record.category_name === category.name"
-                    :tabindex="inlineListbox.getActiveIndex(record.id) === index ? '0' : '-1'"
-                    :data-record-id="record.id"
-                    :data-index="index"
-                    @click="handleCategorySelection(record.id, category.name)"
+                    v-if="showInlineDropdown[record.id]"
+                    class="dropdown-menu dropdown-menu-floating custom-dropdown"
+                    role="listbox"
+                    :id="`${componentId}-dropdown-menu-${record.id}`"
+                    :aria-labelledby="`${componentId}-dropdown-trigger-${record.id}`"
+                    @keydown="handleDropdownKeydown($event, record.id)"
+                    tabindex="-1"
+                    :style="floatingDropdownStyle(record.id)"
                   >
-                    {{ category.name }}
+                    <div
+                      v-for="(category, index) in categories"
+                      :key="category.id ?? `inline-cat-${category.name}-${index}`"
+                      class="dropdown-item"
+                      role="option"
+                      :class="{ selected: record.category_name === category.name }"
+                      :aria-selected="record.category_name === category.name"
+                      :tabindex="inlineListbox.getActiveIndex(record.id) === index ? '0' : '-1'"
+                      :data-record-id="record.id"
+                      :data-index="index"
+                      @click="handleCategorySelection(record.id, category.name)"
+                    >
+                      {{ category.name }}
+                    </div>
                   </div>
-                </div>
+                </Teleport>
               </div>
             </td>
             <td>
@@ -478,10 +481,37 @@ const handleDropdownKeydown = (event: KeyboardEvent, recordId: number) => {
   inlineListbox.handleKeydown(event, recordId)
 }
 
+// Track floating dropdown positions (keyed by record id) for teleported menus
+const dropdownPositions = reactive<Record<number, { top: number; left: number; width: number }>>({})
+
+const floatingDropdownStyle = (recordId: number): Record<string, string> => {
+  const pos = dropdownPositions[recordId]
+  if (!pos) return {}
+  return {
+    position: 'fixed',
+    top: `${pos.top}px`,
+    left: `${pos.left}px`,
+    width: `${pos.width}px`,
+    zIndex: '2000'
+  }
+}
+
 // Handle inline dropdown toggle with proper timing
-const handleInlineDropdownToggle = async (recordId: number, categoryName: string) => {
+const handleInlineDropdownToggle = async (recordId: number, categoryName: string, event?: MouseEvent) => {
   // Capture pre-toggle state to determine if dropdown will open
   const willOpen = !props.showInlineDropdown[recordId]
+
+  if (willOpen && event) {
+    const btn = event.currentTarget as HTMLElement | null
+    const rect = btn?.getBoundingClientRect()
+    if (rect) {
+      dropdownPositions[recordId] = {
+        top: rect.bottom + 2,
+        left: rect.left,
+        width: rect.width
+      }
+    }
+  }
 
   // Emit the toggle
   emit('toggleInlineDropdown', recordId)
@@ -552,9 +582,20 @@ const handleTimeEscapeCancel = (event: KeyboardEvent, record: TaskRecordWithId) 
 
 /* Task table styles */
 .task-table {
-  background: var(--bg-primary);
-  box-shadow: 0 4px 20px var(--shadow-color);
-  margin-bottom: 1rem;
+  background: var(--cream, var(--bg-primary));
+  border: 1px solid var(--paper-edge, var(--border-color));
+  border-radius: var(--radius-lg);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08),
+    0 2px 0 rgba(0, 0, 0, 0.03);
+  margin: var(--spacing-md);
+  overflow: hidden;
+}
+
+:global(body[data-theme='dark']) .task-table {
+  background: #121c1e;
+  border-color: #2a3b3e;
 }
 
 table {
@@ -565,23 +606,54 @@ table {
 }
 
 th {
-  background: var(--primary);
-  color: white;
-  padding: var(--spacing-sm) var(--spacing-xs);
-  text-align: center;
+  background: linear-gradient(#18494b, #0d3133);
+  color: #cfe8d9;
+  height: 24px;
+  padding: 0 var(--spacing-xs);
+  text-align: left;
+  font-family: var(--font-mono);
   font-weight: 600;
-  font-size: var(--font-sm);
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.22em;
+  border-bottom: 1px solid #06282a;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
+tbody tr {
+  height: 28px;
+}
+
 td {
-  padding: 2px var(--spacing-sm);
-  border-bottom: 1px solid var(--border-color);
+  padding: 0 var(--spacing-sm);
+  height: 28px;
+  border-bottom: 1px dashed rgba(22, 39, 42, 0.15);
   vertical-align: middle;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink, var(--text-primary));
+}
+
+tr:nth-child(even) td {
+  background: rgba(201, 188, 154, 0.12);
+}
+
+tr:hover td {
+  background: rgba(32, 181, 154, 0.1);
+}
+
+:global(body[data-theme='dark']) tr:nth-child(even) td {
+  background: rgba(201, 188, 154, 0.04);
+}
+
+:global(body[data-theme='dark']) tr:hover td {
+  background: rgba(32, 181, 154, 0.12);
+}
+
+:global(body[data-theme='dark']) td {
+  border-bottom-color: rgba(201, 188, 154, 0.12);
 }
 
 tr:last-child td {
@@ -742,24 +814,38 @@ tr:last-child td {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border: 1px solid transparent;
+  padding: 0 7px 0 8px;
+  height: 20px;
+  border: 1px solid #06282a;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  background: transparent;
-  font-size: var(--font-md);
+  background: #0f4a4e;
+  color: #a9f0d8;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
   transition: all var(--transition-fast);
   width: 100%;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
 .dropdown-trigger:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
+  filter: brightness(1.1);
+}
+
+:global(body[data-theme='dark']) .dropdown-trigger {
+  background: #0a3538;
+  color: #a9f0d8;
+  border-color: #04181a;
 }
 
 .dropdown-arrow {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 8px;
+  opacity: 0.75;
+  margin-left: 8px;
+  color: currentColor;
   transition: transform 0.2s ease;
 }
 
@@ -772,14 +858,20 @@ tr:last-child td {
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
+  background: var(--cream, var(--bg-primary));
+  border: 1px solid var(--paper-edge, var(--border-color));
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 12px var(--shadow-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   z-index: 1000;
-  max-height: 200px;
+  max-height: 240px;
   overflow-y: auto;
   margin-top: 2px;
+}
+
+.dropdown-menu-floating {
+  top: auto;
+  left: auto;
+  right: auto;
 }
 
 .dropdown-item {
@@ -805,34 +897,45 @@ tr:last-child td {
 }
 
 .action-btn {
-  background: none;
-  border: none;
+  background: var(--btn-icon-bg);
+  border: 1px solid var(--paper-edge, var(--border-color));
   cursor: pointer;
-  padding: var(--spacing-xs);
+  width: 24px;
+  height: 20px;
+  padding: 0;
   margin: 0 2px;
-  border-radius: var(--radius-sm);
+  border-radius: 5px;
   transition: all var(--transition-fast);
-  font-size: var(--font-base);
+  font-size: var(--font-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: var(--ink-2, var(--text-secondary));
 }
 
 .action-btn:hover {
-  background: var(--bg-secondary);
-  transform: scale(1.1);
+  background: var(--btn-icon-bg-hover);
 }
 
 .replay-btn {
-  color: var(--aero);
+  background: linear-gradient(#1a6d6f, #0b4244);
+  color: #c4ecd8;
+  border-color: #062b2d;
 }
 
-.delete-btn {
-  color: var(--mantis);
+.replay-btn:hover {
+  filter: brightness(1.1);
+  background: linear-gradient(#1a6d6f, #0b4244);
+}
+
+.delete-btn:hover {
+  background: #efd2cc;
+  color: var(--rust);
+  border-color: var(--rust);
 }
 
 .add-btn {
-  color: var(--emerald);
+  color: var(--teal);
 }
 
 .primary-add-btn {
@@ -865,19 +968,20 @@ tr:last-child td {
 
 /* Duration cell specific styles */
 .duration-cell {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-family: var(--font-mono);
   font-size: var(--font-sm);
-  color: var(--text-secondary);
+  color: var(--ink-2, var(--text-secondary));
   font-weight: 500;
   text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: 0.04em;
 }
 
 /* Task highlighting styles */
 .highlighted-task {
-  background-color: rgba(87, 189, 175, 0.2);
+  background-color: rgba(195, 224, 78, 0.25);
   transition: background-color 15s ease-out;
 }
 

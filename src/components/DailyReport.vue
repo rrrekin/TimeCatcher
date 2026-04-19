@@ -467,21 +467,43 @@ const exportReportToClipboard = async () => {
 }
 
 .daily-report {
-  background: var(--bg-primary);
+  background: linear-gradient(180deg, #0f3d40 0%, #0a2c2e 100%);
+  color: #e7f1df;
+  border: 1px solid #041a1c;
   border-radius: var(--radius-lg);
   padding: var(--spacing-lg);
-  box-shadow: 0 4px 20px var(--shadow-color);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
   position: relative;
+  overflow: hidden;
+}
+
+.daily-report::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(195, 224, 78, 0.15), transparent 55%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 6px);
+}
+
+.daily-report > * {
+  position: relative;
+  z-index: 1;
 }
 
 .daily-report h2 {
-  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: var(--font-display);
+  letter-spacing: 0.22em;
+  font-size: 15px;
+  color: #e9d9b7;
+  text-transform: lowercase;
   margin: 0;
-  font-size: var(--font-xl);
-  font-weight: 700;
+  font-weight: 400;
+  background: none;
+  -webkit-text-fill-color: #e9d9b7;
 }
 
 .report-header {
@@ -496,12 +518,13 @@ const exportReportToClipboard = async () => {
 }
 
 .header-line-2 {
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--uranium);
+  text-shadow: 0 0 18px rgba(195, 224, 78, 0.4);
   margin-left: var(--spacing-xs);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
 }
 
 .status-emojis {
@@ -515,27 +538,34 @@ const exportReportToClipboard = async () => {
 }
 
 .daily-report p {
-  color: var(--text-secondary);
+  color: #8fb8a9;
   margin: 0 0 var(--spacing-lg) 0;
-  font-size: var(--font-base);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .report-section h3 {
-  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-family: var(--font-display);
+  letter-spacing: 0.22em;
+  color: #f4ead0;
+  text-transform: lowercase;
   margin: 0 0 var(--spacing-md) 0;
-  font-size: var(--font-lg);
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 400;
+  background: none;
+  -webkit-text-fill-color: #f4ead0;
 }
 
 .empty-report {
   text-align: center;
   padding: var(--spacing-xl);
-  color: var(--text-muted);
-  background: var(--bg-secondary);
+  color: #8fb8a9;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-lg);
+  font-family: var(--font-mono);
   font-style: italic;
   font-size: var(--font-md);
 }
@@ -547,25 +577,25 @@ const exportReportToClipboard = async () => {
 }
 
 .category-section {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 7px;
   overflow: hidden;
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   transition: box-shadow var(--transition-fast);
 }
 
 .category-section:hover {
-  box-shadow: 0 2px 8px var(--shadow-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .category-header {
-  padding: var(--spacing-sm) var(--spacing-md);
+  padding: 7px 10px;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--spacing-lg);
   align-items: center;
-  background: linear-gradient(90deg, rgba(87, 189, 175, 0.03), var(--bg-primary));
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 .category-info {
@@ -575,19 +605,22 @@ const exportReportToClipboard = async () => {
 }
 
 .category-name {
+  font-family: var(--font-mono);
   font-weight: 700;
-  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-size: var(--font-base);
+  color: #f4ead0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: none;
+  -webkit-text-fill-color: #f4ead0;
 }
 
 .category-time {
-  font-weight: 600;
-  color: var(--primary);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: var(--font-md);
+  font-family: var(--font-display);
+  color: var(--uranium);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(195, 224, 78, 0.3);
 }
 
 .task-summaries {
@@ -600,54 +633,62 @@ const exportReportToClipboard = async () => {
 
 .task-summary {
   display: grid;
-  grid-template-columns: 1fr 100px;
+  grid-template-columns: 1fr 110px;
   gap: var(--spacing-sm);
   align-items: center;
-  padding: var(--spacing-sm);
-  background: var(--bg-primary);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
+  padding: 5px 10px;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
   transition: all var(--transition-fast);
 }
 
+.task-summaries > .task-summary:first-child {
+  border-top: none;
+}
+
 .task-name {
-  color: var(--text-primary);
-  font-size: var(--font-md);
+  color: #e7f1df;
+  font-family: var(--font-mono);
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .task-time-combined {
-  color: var(--text-primary);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
-  font-size: var(--font-xs);
+  color: var(--uranium);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
   font-weight: 500;
+  letter-spacing: 0.04em;
   text-align: right;
 }
 
 /* Tooltip styles */
 .task-tooltip {
   z-index: 1000;
-  background: var(--bg-primary);
-  border: 2px solid var(--border-color);
+  background: #0f3d40;
+  border: 1px solid #041a1c;
   border-radius: 8px;
-  box-shadow: 0 8px 24px var(--shadow-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   padding: 0;
   min-width: 260px;
   max-width: 390px;
   pointer-events: none;
+  color: #e7f1df;
 }
 
 .tooltip-header {
-  background: linear-gradient(135deg, var(--asparagus), var(--mantis));
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #f4ead0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   padding: 8px 12px 4px 12px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -665,20 +706,20 @@ const exportReportToClipboard = async () => {
   align-items: center;
   padding: 4px 8px;
   margin-bottom: 2px;
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.04);
   border-radius: 4px;
   font-size: 11px;
 }
 
 .appearance-time {
-  color: var(--text-primary);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  color: #e7f1df;
+  font-family: var(--font-mono);
   font-weight: 500;
 }
 
 .appearance-duration {
-  color: var(--text-secondary);
-  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  color: var(--uranium);
+  font-family: var(--font-mono);
   font-weight: 400;
   min-width: 40px;
   text-align: right;
@@ -690,16 +731,13 @@ const exportReportToClipboard = async () => {
 }
 
 .task-summary:hover {
-  background: var(--bg-secondary);
-  border-color: var(--primary);
-  box-shadow: 0 1px 3px var(--shadow-color);
+  background: rgba(32, 181, 154, 0.1);
 }
 
 /* Copied task highlighting */
 .task-summary-copied {
-  background: linear-gradient(90deg, rgba(87, 189, 175, 0.15), rgba(86, 179, 114, 0.15)) !important;
-  border-color: var(--verdigris) !important;
-  box-shadow: 0 0 0 1px rgba(87, 189, 175, 0.3);
+  background: rgba(195, 224, 78, 0.15) !important;
+  box-shadow: inset 0 0 0 1px rgba(195, 224, 78, 0.4);
 }
 
 /* Copy confirmation toast */
@@ -736,22 +774,27 @@ const exportReportToClipboard = async () => {
 }
 
 .export-button {
-  padding: var(--spacing-sm) var(--spacing-xl);
-  font-size: var(--font-base);
-  font-weight: 600;
-  color: white;
-  background: linear-gradient(135deg, var(--verdigris), var(--emerald));
-  border: none;
+  height: 40px;
+  padding: 0 22px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #052b22;
+  background: linear-gradient(#22a78b, #0d6a58);
+  border: 1px solid #062b2d;
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 2px 4px var(--shadow-color);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2),
+    0 0 20px rgba(32, 181, 154, 0.25);
 }
 
 .export-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--emerald), var(--mantis));
-  box-shadow: 0 2px 6px var(--shadow-color);
-  transform: translateY(-1px);
+  filter: brightness(1.08);
 }
 
 .export-button:active:not(:disabled) {
