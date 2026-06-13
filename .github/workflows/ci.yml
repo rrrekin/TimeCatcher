@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ always() && !cancelled() && hashFiles('coverage/lcov.info') != '' }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./coverage/lcov.info
           name: node-24
